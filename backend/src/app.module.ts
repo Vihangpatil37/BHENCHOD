@@ -1,0 +1,50 @@
+import { Module } from '@nestjs/common';
+import { ConfigModule, ConfigService } from '@nestjs/config';
+import { MongooseModule } from '@nestjs/mongoose';
+import { APP_GUARD } from '@nestjs/core';
+import { AuthModule } from './auth/auth.module';
+import { HealthModule } from './health/health.module';
+import { AIServiceModule } from './ai-service/ai-service.module';
+import { CareersModule } from './careers/careers.module';
+import { OnboardingModule } from './onboarding/onboarding.module';
+import { RecommendationModule } from './recommendation/recommendation.module';
+import { CounselorModule } from './counselor/counselor.module';
+import { DashboardModule } from './dashboard/dashboard.module';
+import { ReportsModule } from './reports/reports.module';
+import { AnalyticsModule } from './analytics/analytics.module';
+import { HistoryModule } from './history/history.module';
+import { JwtAuthGuard } from './auth/guards/jwt-auth.guard';
+
+@Module({
+  imports: [
+    ConfigModule.forRoot({
+      isGlobal: true,
+      envFilePath: '.env',
+    }),
+    MongooseModule.forRootAsync({
+      imports: [ConfigModule],
+      useFactory: async (configService: ConfigService) => ({
+        uri: configService.get<string>('MONGODB_URI') || 'mongodb://localhost:27017/scpr',
+      }),
+      inject: [ConfigService],
+    }),
+    AuthModule,
+    HealthModule,
+    AIServiceModule,
+    CareersModule,
+    OnboardingModule,
+    RecommendationModule,
+    CounselorModule,
+    DashboardModule,
+    ReportsModule,
+    AnalyticsModule,
+    HistoryModule,
+  ],
+  providers: [
+    {
+      provide: APP_GUARD,
+      useClass: JwtAuthGuard,
+    },
+  ],
+})
+export class AppModule {}
