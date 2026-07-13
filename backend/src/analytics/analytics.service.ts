@@ -42,6 +42,11 @@ export class AnalyticsService implements OnModuleInit {
     aiServiceEvents.on('AI_PROVIDER_FALLBACK_TRIGGERED', async (data) => {
       await this.trackEvent(data.user_id || 'system', 'AI_PROVIDER_FALLBACK_TRIGGERED', data);
     });
+
+    // 5. Listen to AI Provider Unhealthy Detection
+    aiServiceEvents.on('AI_PROVIDER_UNHEALTHY_DETECTED', async (data) => {
+      await this.trackEvent('system', 'AI_PROVIDER_UNHEALTHY_DETECTED', data);
+    });
   }
 
   /**
@@ -120,12 +125,25 @@ export class AnalyticsService implements OnModuleInit {
     const successRate = totalRequests > 0 ? (stats.success_count / totalRequests) * 100 : 100;
     const fallbackRate = totalRequests > 0 ? (stats.fallback_count / totalRequests) * 100 : 0;
 
+    // ponytail: query unhealthy provider events for a quick health summary
+    const unhealthyEvents = await this.eventModel
+      .find({ event_type: 'AI_PROVIDER_UNHEALTHY_DETECTED' })
+      .sort({ created_at: -1 })
+      .limit(10)
+      .lean()
+      .exec();
+
     return {
       total_api_requests: totalRequests,
       average_latency_ms: Math.round(stats.avg_latency),
       total_tokens_consumed: stats.total_tokens,
       success_rate_percentage: Math.round(successRate * 10) / 10,
       fallback_escalation_rate_percentage: Math.round(fallbackRate * 10) / 10,
+      recent_provider_issues: unhealthyEvents.map((e: any) => ({
+        provider: e.payload?.provider,
+        reason: e.payload?.reason,
+        detected_at: e.created_at,
+      })),
     };
   }
 }

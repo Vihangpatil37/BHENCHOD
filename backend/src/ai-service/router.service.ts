@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { providerModels } from './config/provider-models.config';
 
 export interface RouteConfig {
   provider: string;
@@ -7,47 +8,30 @@ export interface RouteConfig {
 
 @Injectable()
 export class RouterService {
-  private readonly routes: Record<string, RouteConfig[]> = {
-    career_recommendation: [
-      { provider: 'gemini', model: 'gemini-2.5-pro' },
-      { provider: 'deepseek', model: 'deepseek-chat' },
-      { provider: 'groq', model: 'llama-3.3-70b-versatile' },
-    ],
-    roadmap_generation: [
-      { provider: 'gemini', model: 'gemini-2.5-flash' },
-      { provider: 'deepseek', model: 'deepseek-chat' },
-      { provider: 'groq', model: 'llama-3.3-70b-versatile' },
-    ],
-    counselor_chat: [
-      { provider: 'groq', model: 'llama-3.3-70b-versatile' },
-      { provider: 'groq', model: 'mixtral-8x7b-32768' },
-      { provider: 'gemini', model: 'gemini-2.5-flash' },
-    ],
-    career_trait_backfill: [
-      { provider: 'gemini', model: 'gemini-2.5-flash' },
-      { provider: 'groq', model: 'llama-3.3-70b-versatile' },
-      { provider: 'groq', model: 'llama-3.1-8b-instant' },
-    ],
-    report_summary: [
-      { provider: 'mistral', model: 'mistral-large-latest' },
-      { provider: 'gemini', model: 'gemini-2.5-flash' },
-      { provider: 'groq', model: 'llama-3.3-70b-versatile' },
-    ],
-    test_task: [
-      { provider: 'groq', model: 'llama-3.3-70b-versatile' },
-      { provider: 'gemini', model: 'gemini-2.5-flash' },
-    ],
+  private readonly routes: Record<string, string[]> = {
+    career_recommendation: ['gemini', 'deepseek', 'groq'],
+    roadmap_generation: ['gemini', 'deepseek', 'groq'],
+    counselor_chat: ['groq', 'groq', 'gemini'],
+    career_trait_backfill: ['gemini', 'groq', 'groq'],
+    report_summary: ['mistral', 'gemini', 'groq'],
+    test_task: ['groq', 'gemini'],
   };
 
   getRoute(taskType: string): RouteConfig[] {
-    const route = this.routes[taskType];
-    if (!route) {
-      // Default fallback routing if task type is unknown
+    const providers = this.routes[taskType];
+    if (!providers) {
       return [
-        { provider: 'gemini', model: 'gemini-2.5-flash' },
-        { provider: 'groq', model: 'llama-3.3-70b-versatile' },
+        { provider: 'gemini', model: providerModels.gemini.model },
+        { provider: 'groq', model: providerModels.groq.model },
       ];
     }
-    return route;
+    // ponytail: consecutive same-provider entries use fallback_model
+    return providers.map((p, i) => {
+      const cfg = providerModels[p];
+      const model = (i > 0 && providers[i - 1] === p && cfg.fallback_model)
+        ? cfg.fallback_model
+        : cfg.model;
+      return { provider: p, model };
+    });
   }
 }

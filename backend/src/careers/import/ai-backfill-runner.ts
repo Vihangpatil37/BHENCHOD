@@ -80,8 +80,7 @@ async function bootstrap() {
     while (attempts <= MAX_429_RETRIES) {
       attempts++;
       try {
-        // No JSON schema param — the json-validator's checkSchema uses field-key format,
-        // not JSON Schema format, so it always fails on schema objects.
+        // Schema validation is now handled by json-validator via taskType
         const response = await aiService.run('career_trait_backfill', {
           career_name: career.name,
           career_description: career.description || career.name,

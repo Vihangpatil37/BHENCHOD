@@ -85,30 +85,28 @@ export class AIServiceClient {
       throw e;
     }
 
-    // 5. Validate and repair JSON if expected
+    // 5. Validate and repair JSON against the schema for this task type
     let finalData = response.data;
-    if (jsonSchema || taskType !== 'counselor_chat') {
-      try {
-        finalData = this.jsonValidatorService.validateAndRepair(
-          typeof response.data === 'string' ? response.data : JSON.stringify(response.data),
-          jsonSchema
-        );
-      } catch (err: any) {
-        this.logger.error(`Validation and repair failed: ${err.message}`);
-        // Log transaction as failed
-        await this.tokenLoggerService.log({
-          task_type: taskType,
-          provider: response.provider,
-          model: response.model,
-          input_tokens: response.input_tokens,
-          output_tokens: response.output_tokens,
-          latency_ms: response.latency_ms,
-          success: false,
-          fallback_used: response.fallback_used,
-          cached: false,
-        });
-        throw err;
-      }
+    try {
+      finalData = this.jsonValidatorService.validateAndRepair(
+        typeof response.data === 'string' ? response.data : JSON.stringify(response.data),
+        taskType
+      );
+    } catch (err: any) {
+      this.logger.error(`Validation and repair failed: ${err.message}`);
+      // Log transaction as failed
+      await this.tokenLoggerService.log({
+        task_type: taskType,
+        provider: response.provider,
+        model: response.model,
+        input_tokens: response.input_tokens,
+        output_tokens: response.output_tokens,
+        latency_ms: response.latency_ms,
+        success: false,
+        fallback_used: response.fallback_used,
+        cached: false,
+      });
+      throw err;
     }
 
     const finalResponse: AIResponse<T> = {

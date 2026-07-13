@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { AbstractLLMProvider, ProviderResponse } from './provider.interface';
+import { providerModels } from '../config/provider-models.config';
 import axios from 'axios';
 
 @Injectable()
@@ -13,21 +14,21 @@ export class GeminiProvider implements AbstractLLMProvider {
     systemInstruction?: string,
     jsonSchema?: any
   ): Promise<ProviderResponse> {
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+    const apiVersion = providerModels.gemini.api_version ?? 'v1';
+    const url = `https://generativelanguage.googleapis.com/${apiVersion}/models/${model}:generateContent?key=${apiKey}`;
     
     const contents: any[] = [{ parts: [{ text: prompt }] }];
     const body: any = { contents };
 
     if (systemInstruction) {
-      body.systemInstruction = {
+      body.system_instruction = {
         parts: [{ text: systemInstruction }],
       };
     }
 
-    body.generationConfig = {};
+    body.generation_config = {};
     if (jsonSchema) {
-      body.generationConfig.responseMimeType = 'application/json';
-      // Gemini can optionally take responseSchema: jsonSchema
+      body.generation_config.response_mime_type = 'application/json';
     }
 
     try {

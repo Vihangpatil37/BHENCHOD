@@ -32,6 +32,20 @@ export class RetryManagerService {
     this.providers['glm'] = glm;
   }
 
+  // ponytail: matches quota/billing errors that won't resolve with key rotation
+  private isQuotaError(error?: string): boolean {
+    if (!error) return false;
+    const lower = error.toLowerCase();
+    return (
+      lower.includes('insufficient_balance') ||
+      lower.includes('insufficient_quota') ||
+      lower.includes('quota exceeded') ||
+      lower.includes('rate limit') ||
+      lower.includes('429') ||
+      error.includes('402')
+    );
+  }
+
   async executeWithFallback(
     taskType: string,
     routes: RouteConfig[],
@@ -49,8 +63,8 @@ export class RetryManagerService {
     latency_ms: number;
   }> {
     const startTime = Date.now();
-    let primaryProviderUsed = true;
     let fallbackUsed = false;
+    const unhealthyReported = new Set<string>();
 
     // Loop through providers/models sequentially
     for (let r = 0; r < routes.length; r++) {
@@ -70,8 +84,6 @@ export class RetryManagerService {
 
       if (r > 0) {
         fallbackUsed = true;
-        primaryProviderUsed = false;
-        // Emit cross-module fallback event for future analytics (Phase 6)
         aiServiceEvents.emit('AI_PROVIDER_FALLBACK_TRIGGERED', {
           task_type: taskType,
           escalated_to_provider: route.provider,
@@ -80,8 +92,12 @@ export class RetryManagerService {
         });
       }
 
+      let quotaExhausted = false;
+
       // Try keys sequentially within the provider
       for (let k = 0; k < keys.length; k++) {
+        if (quotaExhausted) break; // ponytail: skip remaining keys on quota error
+
         const apiKey = keys[k];
         const attemptStartTime = Date.now();
 
@@ -110,10 +126,23 @@ export class RetryManagerService {
             fallback_used: fallbackUsed,
             latency_ms: Date.now() - startTime,
           };
-        } else {
-          this.logger.error(
-            `AI Call failed (provider=${route.provider}, model=${route.model}, key_index=${k}): ${response.error || 'Unknown error'}`
-          );
+        }
+
+        this.logger.error(
+          `AI Call failed (provider=${route.provider}, model=${route.model}, key_index=${k}): ${response.error || 'Unknown error'}`
+        );
+
+        if (this.isQuotaError(response.error)) {
+          quotaExhausted = true;
+          if (!unhealthyReported.has(route.provider)) {
+            unhealthyReported.add(route.provider);
+            aiServiceEvents.emit('AI_PROVIDER_UNHEALTHY_DETECTED', {
+              provider: route.provider,
+              model: route.model,
+              reason: response.error,
+              timestamp: new Date().toISOString(),
+            });
+          }
         }
       }
     }
