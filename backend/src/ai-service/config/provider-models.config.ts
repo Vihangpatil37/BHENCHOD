@@ -19,9 +19,6 @@ export const providerModels: ProviderModels = {
     model: 'glm-4-plus',
     api_base: 'https://open.bigmodel.cn/api/paas/v4/chat/completions',
   },
-  deepseek: {
-    model: 'deepseek-chat',
-  },
   groq: {
     model: 'llama-3.3-70b-versatile',
     fallback_model: 'mixtral-8x7b-32768',

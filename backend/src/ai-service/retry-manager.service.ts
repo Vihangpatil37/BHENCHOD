@@ -4,7 +4,6 @@ import { AbstractLLMProvider, ProviderResponse } from './providers/provider.inte
 import { GeminiProvider } from './providers/gemini.provider';
 import { GroqProvider } from './providers/groq.provider';
 import { MistralProvider } from './providers/mistral.provider';
-import { DeepSeekProvider } from './providers/deepseek.provider';
 import { GLMProvider } from './providers/glm.provider';
 import { RouteConfig } from './router.service';
 import { EventEmitter } from 'events';
@@ -22,13 +21,11 @@ export class RetryManagerService {
     gemini: GeminiProvider,
     groq: GroqProvider,
     mistral: MistralProvider,
-    deepseek: DeepSeekProvider,
     glm: GLMProvider,
   ) {
     this.providers['gemini'] = gemini;
     this.providers['groq'] = groq;
     this.providers['mistral'] = mistral;
-    this.providers['deepseek'] = deepseek;
     this.providers['glm'] = glm;
   }
 

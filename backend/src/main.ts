@@ -39,14 +39,6 @@ async function bootstrap() {
       console.warn(`\n⚠️  WARNING: ${provider}_API_KEYS is missing or empty. ${provider} is a primary provider in the routing table.\n`);
     }
   }
-  // Also warn for fallback-only providers (DeepSeek, GLM)
-  for (const provider of ['DEEPSEEK', 'GLM']) {
-    const keys = process.env[`${provider}_API_KEYS`];
-    if (!keys || keys.trim().length === 0) {
-      console.warn(`[Startup] ${provider}_API_KEYS not configured (fallback-only provider).`);
-    }
-  }
-
   const port = process.env.PORT ?? 3000;
   await app.listen(port);
   console.log(`Backend server is running on: http://localhost:${port}/api`);

@@ -85,12 +85,13 @@ export class ContextBuilderService {
 
     // 4. Format student profile summary
     const academic = profile.academic || {};
-    const subjects = academic.subjects || {};
+    const c10 = (academic.class10 || {}) as any;
+    const c10s = c10.subjects || {};
     const personal = profile.personal || {};
     
     const profileSummary = `
 - Personal: Name: ${personal.name || 'Student'}, Age: ${personal.age || 'N/A'}, Location: ${personal.city || 'N/A'}, ${personal.state || 'N/A'}
-- Academic: Class 10/12 Status: ${academic.status || 'N/A'}. subjects: Maths (${subjects.maths || 0}), Science (${subjects.science || 0}), Computer (${subjects.computer || 0})
+- Academic: Class 10 Status: ${c10.status || 'N/A'}. subjects: Maths (${c10s.maths || 0}), Science (${c10s.science || 0}), Computer (${c10s.computer || 0})
 - Top Interests: ${Object.entries(profile.interests || {})
       .filter(([_, val]) => val >= 70)
       .map(([key, val]) => `${key} (${val})`)

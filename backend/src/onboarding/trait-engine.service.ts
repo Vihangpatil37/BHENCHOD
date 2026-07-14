@@ -81,10 +81,10 @@ export class TraitEngineService {
 
       // 1. Compute Subject Component
       let subjectScore = 0;
-      if (config.subjects && profile.academic?.subjects) {
+      if (config.subjects && profile.academic?.class10?.subjects) {
         let weightSum = 0;
         for (const [sub, weight] of Object.entries(config.subjects)) {
-          const score = (profile.academic.subjects as any)[sub] || 0;
+          const score = (profile.academic.class10.subjects as any)[sub] || 0;
           subjectScore += score * weight;
           weightSum += weight;
         }
@@ -119,7 +119,7 @@ export class TraitEngineService {
 
       // Average the profile components that are configured
       const profileComponents: number[] = [];
-      if (config.subjects && profile.academic?.subjects) profileComponents.push(subjectScore);
+      if (config.subjects && profile.academic?.class10?.subjects) profileComponents.push(subjectScore);
       if (config.interests && profile.interests) profileComponents.push(interestScore);
       if (config.skills && profile.skills) profileComponents.push(skillScore);
 

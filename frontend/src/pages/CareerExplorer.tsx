@@ -17,11 +17,14 @@ import {
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { fadeUp } from '../lib/motion';
+import { CATALOGS, catalogFor } from '../lib/catalogs';
 
 interface Career {
   career_code: string;
   name: string;
   sector: string;
+  category_code: string;
+  source_catalog_parts: string[];
   description: string;
   growth_rate: string;
   average_salary: string;
@@ -40,7 +43,7 @@ export const CareerExplorer: React.FC = () => {
   
   // Search & filter
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedSector, setSelectedSector] = useState('All');
+  const [selectedCatalog, setSelectedCatalog] = useState('All');
   const [careersList, setCareersList] = useState<Career[]>([]);
   
   // Detail Modal
@@ -127,13 +130,11 @@ export const CareerExplorer: React.FC = () => {
     }
   };
 
-  const sectors = ['All', ...Array.from(new Set(careersList.map((c) => c.sector)))];
-
   const filteredCareers = careersList.filter((c) => {
     const matchesSearch = c.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
                           c.description.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesSector = selectedSector === 'All' || c.sector === selectedSector;
-    return matchesSearch && matchesSector;
+    const matchesCat = selectedCatalog === 'All' || c.category_code === selectedCatalog;
+    return matchesSearch && matchesCat;
   });
 
   if (loading) {
@@ -232,7 +233,7 @@ export const CareerExplorer: React.FC = () => {
                     </div>
 
                     <div className="flex justify-between items-center pt-4 border-t border-white/5/60 mt-4 text-xs font-semibold text-text-muted">
-                      <span className="capitalize">{career?.sector || 'General'} Sector</span>
+                      <span className="capitalize">{career ? catalogFor(career.category_code).label : 'General'} Catalog</span>
                       <span className="flex items-center space-x-1 text-accent group-hover:translate-x-1 transition-transform">
                         <span>Details</span>
                         <ChevronRight className="h-3.5 w-3.5" />
@@ -288,7 +289,7 @@ export const CareerExplorer: React.FC = () => {
         <section className="space-y-6 relative z-10">
           <h2 className="text-xl font-bold text-white flex items-center space-x-2">
             <Compass className="h-5 w-5 text-accent" />
-            <span>Search Full Careers Library</span>
+            <span>🎨 Career Gallery</span>
           </h2>
 
           <div className="flex flex-col md:flex-row gap-4">
@@ -296,27 +297,43 @@ export const CareerExplorer: React.FC = () => {
             <div className="relative flex-grow">
               <Search className="absolute left-4 top-3 h-4 w-4 text-text-muted/60" />
               <input
+                list="careers-list"
                 type="text"
                 placeholder="Search by career title, sector, keyword..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="w-full bg-white/[0.05] border border-white/10/80 rounded-2xl pl-11 pr-4 py-2.5 text-sm text-white focus:outline-none focus:border-accent placeholder-text-muted/60"
               />
+              <datalist id="careers-list">
+                {careersList.map(c => (
+                  <option key={c.career_code} value={c.name} />
+                ))}
+              </datalist>
             </div>
             
-            {/* Sector Tabs */}
+            {/* Catalog Tabs */}
             <div className="flex flex-wrap gap-2">
-              {sectors.map((sec) => (
+              <button
+                onClick={() => setSelectedCatalog('All')}
+                className={`px-4 py-2 rounded-xl text-xs font-semibold border transition-all ${
+                  selectedCatalog === 'All'
+                    ? 'bg-accent/15 border-accent text-accent'
+                    : 'bg-white/[0.05] border-white/10 text-text-muted hover:bg-white/10/60'
+                }`}
+              >
+                All
+              </button>
+              {CATALOGS.map(cat => (
                 <button
-                  key={sec}
-                  onClick={() => setSelectedSector(sec)}
+                  key={cat.code}
+                  onClick={() => setSelectedCatalog(cat.code)}
                   className={`px-4 py-2 rounded-xl text-xs font-semibold border transition-all ${
-                    selectedSector === sec
+                    selectedCatalog === cat.code
                       ? 'bg-accent/15 border-accent text-accent'
                       : 'bg-white/[0.05] border-white/10 text-text-muted hover:bg-white/10/60'
                   }`}
                 >
-                  {sec}
+                  {cat.label}
                 </button>
               ))}
             </div>
@@ -326,16 +343,17 @@ export const CareerExplorer: React.FC = () => {
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
             {filteredCareers.map((c) => {
               const isBookmarked = savedCodes.includes(c.career_code);
+              const cat = catalogFor(c.category_code);
               return (
                 <div
                   key={c.career_code}
                   onClick={() => handleViewDetails(c.career_code)}
-                  className="p-5 bg-white/[0.02] hover:bg-white/[0.03] border border-white/5 hover:border-white/10/80 rounded-2xl flex flex-col justify-between cursor-pointer transition-all hover:scale-[1.01]"
+                  className={`p-5 bg-white/[0.03] backdrop-blur-sm border border-white/[0.08] hover:border-accent/20 rounded-2xl border-t-2 ${cat.accent} flex flex-col justify-between cursor-pointer transition-all duration-300 hover:scale-[1.02] hover:shadow-xl hover:shadow-accent/5`}
                 >
                   <div className="space-y-3">
                     <div className="flex justify-between items-start">
-                      <span className="text-[10px] font-bold text-text-muted/60 uppercase tracking-widest bg-bg px-2.5 py-0.5 rounded-full border border-white/10/50">
-                        {c.sector}
+                      <span className={`text-[10px] font-bold uppercase tracking-widest px-2.5 py-0.5 rounded-full border ${cat.badge}`}>
+                        {cat.label}
                       </span>
                       <button
                         onClick={(e) => handleToggleBookmark(c.career_code, e)}
@@ -371,8 +389,8 @@ export const CareerExplorer: React.FC = () => {
                 {/* Header info */}
                 <div className="flex justify-between items-start border-b border-white/10 pb-5">
                   <div className="space-y-1">
-                    <span className="text-[10px] font-bold text-accent bg-accent/10 px-3 py-1 rounded-full uppercase tracking-wider">
-                      {selectedCareer.sector}
+                    <span className={`text-[10px] font-bold uppercase tracking-wider px-3 py-1 rounded-full ${catalogFor(selectedCareer.category_code).badge}`}>
+                      {catalogFor(selectedCareer.category_code).label}
                     </span>
                     <h2 className="text-2xl font-black text-white mt-2">{selectedCareer.name}</h2>
                   </div>
@@ -474,7 +492,7 @@ export const CareerExplorer: React.FC = () => {
                           className="p-3 bg-bg border border-white/[0.06] hover:border-white/20 text-left rounded-xl transition-all hover:scale-[1.01]"
                         >
                           <span className="block text-[11px] font-bold text-text/80 truncate">{rc.name}</span>
-                          <span className="text-[9px] text-text-muted/60 capitalize">{rc.sector}</span>
+                          <span className="text-[9px] text-text-muted/60 capitalize">{catalogFor(rc.category_code).label}</span>
                         </button>
                       ))}
                     </div>

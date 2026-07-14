@@ -15,7 +15,6 @@ import { AIServiceController } from './ai-service.controller';
 import { GeminiProvider } from './providers/gemini.provider';
 import { GroqProvider } from './providers/groq.provider';
 import { MistralProvider } from './providers/mistral.provider';
-import { DeepSeekProvider } from './providers/deepseek.provider';
 import { GLMProvider } from './providers/glm.provider';
 
 @Module({
@@ -35,7 +34,6 @@ import { GLMProvider } from './providers/glm.provider';
     GeminiProvider,
     GroqProvider,
     MistralProvider,
-    DeepSeekProvider,
     GLMProvider,
   ],
   exports: [

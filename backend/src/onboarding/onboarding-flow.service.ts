@@ -18,12 +18,9 @@ export class OnboardingFlowService {
   }
 
   getCompletionPercentage(stepKey: string): number {
+    if (stepKey.toLowerCase() === 'complete') return 100;
     const idx = this.getStepIndex(stepKey);
     if (idx === -1) return 0;
-    // Complete is marked after scenarios (index 7). If we're on scenarios step, we are 87.5% complete.
-    // If onboarding is complete, the step will be set to 'complete' which returns -1 and we can handle it.
-    if (stepKey.toLowerCase() === 'complete') return 100;
-    
     return Math.round(((idx + 1) / ONBOARDING_STEPS.length) * 100);
   }
 

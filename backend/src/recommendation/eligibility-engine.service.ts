@@ -15,14 +15,14 @@ export class EligibilityEngineService {
   async getEligibleCareers(student: StudentProfile): Promise<CareerDocument[]> {
     this.logger.log(`Running Eligibility Engine for student: ${student.user_id}`);
 
-    const mathsScore = student.academic?.subjects?.maths ?? 0;
-    const scienceScore = student.academic?.subjects?.science ?? 0;
+    const mathsScore = student.academic?.class10?.subjects?.maths ?? 0;
+    const scienceScore = student.academic?.class10?.subjects?.science ?? 0;
     const budgetTier = student.constraints?.budget_tier ?? 4;
     const studyDurationMax = student.constraints?.study_duration_max ?? 5;
     
     // Extra fields to check from eligibility schema
-    const biologyScore = student.academic?.subjects?.computer ?? 0; // fallback or biological check if needed
-    const englishScore = student.academic?.subjects?.english ?? 0;
+    const biologyScore = student.academic?.class10?.subjects?.computer ?? 0; // fallback or biological check if needed
+    const englishScore = student.academic?.class10?.subjects?.english ?? 0;
 
     // Rule-based filtering pushed into MongoDB query directly for maximum scalability
     const query = {
