@@ -90,10 +90,8 @@ export class RecommendationService implements OnModuleInit {
     const aiPayload = {
       student_profile: {
         academic: {
-          subjects: profile.academic?.subjects,
-          favorite_subjects: profile.academic?.favorite_subjects,
-          weak_subjects: profile.academic?.weak_subjects,
-          stream_interest: profile.academic?.stream_interest,
+          class10: profile.academic?.class10,
+          class12: profile.academic?.class12,
         },
         interests: profile.interests,
         skills: profile.skills,

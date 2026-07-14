@@ -14,6 +14,7 @@ import {
   Bot
 } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { ChatMarkdown } from '../components/ChatMarkdown';
 import { fadeUp } from '../lib/motion';
 
 interface Message {
@@ -101,8 +102,8 @@ export const CounselingChat: React.FC = () => {
   const fetchMessages = async (convId: string) => {
     try {
       const res: any = await client.get(`/counselor/conversations/${convId}`);
-      // The response is a Conversation object, which contains messages array
-      setMessages(res.messages || []);
+      // The response is a messages array directly
+      setMessages(Array.isArray(res) ? res : res.messages || []);
     } catch (err) {
       console.error('Failed to load messages:', err);
     }
@@ -144,7 +145,7 @@ export const CounselingChat: React.FC = () => {
       } else {
         // Thread already exists, fetch updated list to show counts/summary
         const resConv: any = await client.get(`/counselor/conversations/${activeConvId}`);
-        setMessages(resConv.messages || []);
+        setMessages(Array.isArray(resConv) ? resConv : resConv.messages || []);
       }
     } catch (err: any) {
       alert(err.message || 'Failed to send message.');
@@ -195,7 +196,7 @@ export const CounselingChat: React.FC = () => {
   };
 
   return (
-    <motion.div variants={fadeUp} initial="hidden" animate="visible" className="flex-grow flex flex-col md:flex-row min-w-0">
+    <motion.div variants={fadeUp} initial="hidden" animate="visible" className="flex-grow flex flex-col md:flex-row min-w-0 h-full">
         
         {/* Left Column: Conversations List */}
         <section className="w-full md:w-80 border-r border-white/5 p-6 flex flex-col justify-between shrink-0 space-y-6">
@@ -250,7 +251,7 @@ export const CounselingChat: React.FC = () => {
         </section>
 
         {/* Right Column: Chat Box */}
-        <section className="flex-grow flex flex-col h-[calc(100vh-120px)] md:h-screen relative overflow-hidden bg-bg p-6 md:p-8">
+        <section className="flex-grow flex flex-col h-[calc(100vh-120px)] md:h-full relative overflow-hidden bg-bg p-6 md:p-8">
           <div className="absolute top-0 right-0 w-96 h-96 bg-accent/5 rounded-full blur-3xl pointer-events-none" />
           
           {/* Active Thread Header */}
@@ -321,7 +322,7 @@ export const CounselingChat: React.FC = () => {
                             ? 'bg-accent text-white font-medium rounded-tr-none'
                             : 'bg-white/[0.05] border border-white/5 text-text/80 rounded-tl-none font-medium'
                         }`}>
-                          {m.content}
+                          {isUser ? m.content : <ChatMarkdown content={m.content} />}
                         </div>
 
                         {!isUser && (

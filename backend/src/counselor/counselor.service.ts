@@ -137,21 +137,36 @@ export class CounselorService {
     aiContext.candidate_careers = candidateCareersList.join('\n');
 
     // 5. Call AI Service Client (routed to Groq/Mistral)
+    let promptName = 'counselor_chat';
+    let fallbackObj: any = { reply: '', recommended_links: [''], suggested_questions: [''] };
+
+    if (intent === 'roadmap_question') {
+      promptName = 'roadmap_generation';
+      fallbackObj = {
+        career_code: '', career_name: '', estimated_total_duration: '', overview: '',
+        phases: [], salary_progression: [], higher_studies: [],
+        alternative_paths: [], common_mistakes: [], final_checklist: [],
+        mermaid: { nodes: [], edges: [] },
+      };
+    }
+
     const aiResponse = await this.aiServiceClient.run(
-      'counselor_chat',
+      promptName,
       aiContext,
-      {
-        reply: '',
-        recommended_links: [''],
-        suggested_questions: [''],
-      }
+      fallbackObj
     );
 
     if (!aiResponse.success || !aiResponse.data) {
       throw new BadRequestException('AI Counselor failed to respond.');
     }
 
-    let replyText = aiResponse.data.reply || JSON.stringify(aiResponse.data);
+    let replyText = '';
+
+    if (intent === 'roadmap_question') {
+      replyText = this.buildRoadmapReply(aiResponse.data);
+    } else {
+      replyText = aiResponse.data.reply || JSON.stringify(aiResponse.data);
+    }
     
     // 6. Post-process AI response with safety filter
     replyText = this.applySafetyFilter(replyText);
@@ -167,6 +182,121 @@ export class CounselorService {
     await counselorMessage.save();
 
     return counselorMessage;
+  }
+
+  private buildRoadmapReply(data: any): string {
+    if (!data.phases || data.phases.length === 0) {
+      return "I couldn't generate a structured roadmap at this time. Please try again.";
+    }
+
+    let md = `## 🗺️ Career Roadmap: ${data.career_name || data.career_code || ''}\n\n`;
+
+    if (data.estimated_total_duration) md += `**Total Duration:** ${data.estimated_total_duration}\n\n`;
+    if (data.overview) md += `${data.overview}\n\n`;
+
+    data.phases.forEach((phase: any, index: number) => {
+      md += `### Phase ${index + 1}: ${phase.phase} (${phase.duration})\n`;
+      if (phase.goal) md += `**Goal:** ${phase.goal}\n\n`;
+      if (phase.milestone) md += `**Milestone:** ${phase.milestone}\n\n`;
+
+      if (phase.action_items?.length) {
+        md += `**Action Items:**\n`;
+        phase.action_items.forEach((item: string) => md += `- ${item}\n`);
+        md += `\n`;
+      }
+      if (phase.skills_to_build?.length) {
+        md += `**Skills to Build:** ${phase.skills_to_build.join(', ')}\n\n`;
+      }
+      if (phase.entrance_exams?.length) {
+        md += `**Entrance Exams:** ${phase.entrance_exams.join(', ')}\n\n`;
+      }
+      if (phase.certifications?.length) {
+        md += `**Certifications:**\n`;
+        phase.certifications.forEach((c: string) => md += `- ${c}\n`);
+        md += `\n`;
+      }
+      if (phase.projects?.length) {
+        md += `**Projects:**\n`;
+        phase.projects.forEach((p: string) => md += `- ${p}\n`);
+        md += `\n`;
+      }
+      if (phase.internships?.length) {
+        md += `**Internships:**\n`;
+        phase.internships.forEach((i: string) => md += `- ${i}\n`);
+        md += `\n`;
+      }
+      if (phase.recommended_resources?.length) {
+        md += `**Resources:**\n`;
+        phase.recommended_resources.forEach((r: string) => md += `- ${r}\n`);
+        md += `\n`;
+      }
+      if (phase.checkpoints?.length) {
+        md += `**Checkpoints:**\n`;
+        phase.checkpoints.forEach((c: string) => md += `- ${c}\n`);
+        md += `\n`;
+      }
+      md += `---\n\n`;
+    });
+
+    if (data.salary_progression?.length) {
+      md += `### 💰 Salary Progression\n\n`;
+      md += `| Stage | Product Company | MNC / Service | Remote / Startup | FAANG Equivalent |\n`;
+      md += `|------|----------------|--------------|-----------------|-----------------|\n`;
+      data.salary_progression.forEach((s: any) => {
+        const prod = s.product_company || '-';
+        const mnc = s.mnc_service || '-';
+        const remote = s.remote_startup || '-';
+        const faang = s.faang_equivalent || '-';
+        md += `| ${s.stage} | ${prod} | ${mnc} | ${remote} | ${faang} |\n`;
+      });
+      md += `\n`;
+    }
+
+    if (data.higher_studies?.length) {
+      md += `### 🎓 Higher Studies\n\n`;
+      data.higher_studies.forEach((h: string) => md += `- ${h}\n`);
+      md += `\n`;
+    }
+
+    if (data.alternative_paths?.length) {
+      md += `### 🔀 Alternative Career Paths\n\n`;
+      data.alternative_paths.forEach((a: string) => md += `- ${a}\n`);
+      md += `\n`;
+    }
+
+    if (data.common_mistakes?.length) {
+      md += `### ⚠️ Common Mistakes to Avoid\n\n`;
+      data.common_mistakes.forEach((m: string) => md += `- ${m}\n`);
+      md += `\n`;
+    }
+
+    if (data.final_checklist?.length) {
+      md += `### ✅ Final Checklist\n\n`;
+      data.final_checklist.forEach((c: string) => md += `- [ ] ${c}\n`);
+      md += `\n`;
+    }
+
+    const mermaidSyntax = this.buildMermaidSyntax(data.mermaid?.nodes, data.mermaid?.edges);
+    if (mermaidSyntax) {
+      md += `### 🧭 Roadmap Flow\n\n\`\`\`mermaid\n${mermaidSyntax}\n\`\`\`\n`;
+    }
+
+    return md;
+  }
+
+  private buildMermaidSyntax(nodes: { id: string; label: string }[] | undefined, edges: { from: string; to: string }[] | undefined): string {
+    if (!nodes || nodes.length === 0) return '';
+    const nodeMap = new Map(nodes.map(n => [n.id, n]));
+    const lines = ['graph TD'];
+    for (const node of nodes) {
+      lines.push(`  ${node.id}["${node.label}"]`);
+    }
+    for (const edge of edges || []) {
+      if (nodeMap.has(edge.from) && nodeMap.has(edge.to)) {
+        lines.push(`  ${edge.from} --> ${edge.to}`);
+      }
+    }
+    return lines.join('\n');
   }
 
   private classifyIntent(text: string): string {

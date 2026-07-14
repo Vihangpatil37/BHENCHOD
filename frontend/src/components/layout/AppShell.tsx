@@ -2,7 +2,7 @@ import { type ReactNode } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuthStore } from '../../store/authStore';
 import { client } from '../../api/client';
-import { Home, BookOpen, Compass, MessageSquare, History, LogOut, Sparkles } from 'lucide-react';
+import { Home, BookOpen, Compass, Grid3X3, MessageSquare, History, LogOut, Sparkles } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { twMerge } from 'tailwind-merge';
 
@@ -10,6 +10,7 @@ const NAV = [
   { icon: Home, label: 'Dashboard', path: '/' },
   { icon: BookOpen, label: 'Onboarding', path: '/onboarding' },
   { icon: Compass, label: 'Careers', path: '/careers' },
+  { icon: Grid3X3, label: 'Career Gallery', path: '/gallery' },
   { icon: MessageSquare, label: 'Counselor Chat', path: '/chat' },
   { icon: History, label: 'Activity Log', path: '/history' },
 ];
@@ -30,9 +31,9 @@ export const AppShell = ({ children }: AppShellProps) => {
   };
 
   return (
-    <div className="min-h-screen bg-bg text-text flex flex-col md:flex-row">
+    <div className={twMerge("bg-bg text-text flex flex-col md:flex-row", location.pathname.startsWith('/chat') ? "md:h-screen md:overflow-hidden min-h-screen" : "min-h-screen")}>
       {/* Sidebar */}
-      <aside className="w-full md:w-64 bg-bg/95 border-r border-white/5 p-6 flex flex-col justify-between shrink-0 z-10">
+      <aside className={twMerge("w-full md:w-64 bg-bg/95 border-r border-white/5 p-6 flex flex-col justify-between shrink-0 z-10", location.pathname.startsWith('/chat') ? "md:h-screen md:overflow-y-auto" : "")}>
         <div className="space-y-8">
           <div className="flex items-center space-x-3">
             <div className="h-9 w-9 rounded-2xl bg-accent/15 border border-accent/30 flex items-center justify-center">
@@ -75,15 +76,16 @@ export const AppShell = ({ children }: AppShellProps) => {
       </aside>
 
       {/* Main content */}
-      <main className="flex-grow min-w-0 relative overflow-y-auto">
+      <main className={twMerge("flex-grow min-w-0 relative", location.pathname.startsWith('/chat') ? "md:overflow-hidden" : "overflow-y-auto")}>
         <div className="absolute top-0 right-0 w-96 h-96 bg-accent/5 rounded-full blur-3xl pointer-events-none" />
-        <div className="relative z-10 p-6 md:p-12 space-y-10">
+        <div className={twMerge("relative z-10", location.pathname.startsWith('/chat') ? "h-full" : "p-6 md:p-12 space-y-10")}>
           {children}
         </div>
       </main>
 
-      {/* Floating AI button */}
-      <div className="hidden md:flex fixed bottom-[32px] right-[32px] z-50">
+      {/* Floating AI button - Hide when already on the chat page */}
+      {!location.pathname.startsWith('/chat') && (
+        <div className="hidden md:flex fixed bottom-[32px] right-[32px] z-50">
         <motion.button
           onClick={() => navigate('/chat')}
           whileHover={{ scale: 1.1 }}
@@ -94,6 +96,7 @@ export const AppShell = ({ children }: AppShellProps) => {
           <Sparkles className="h-[22px] w-[22px] text-accent" />
         </motion.button>
       </div>
+      )}
     </div>
   );
 };

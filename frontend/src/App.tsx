@@ -13,6 +13,7 @@ const CareerExplorer = lazy(() => import('./pages/CareerExplorer').then(m => ({ 
 const CounselingChat = lazy(() => import('./pages/CounselingChat').then(m => ({ default: m.CounselingChat })));
 const HistoryLog = lazy(() => import('./pages/HistoryLog').then(m => ({ default: m.HistoryLog })));
 const AdminCareers = lazy(() => import('./pages/AdminCareers').then(m => ({ default: m.AdminCareers })));
+const CareerGallery = lazy(() => import('./pages/CareerGallery').then(m => ({ default: m.CareerGallery })));
 const Landing = lazy(() => import('./pages/Landing').then(m => ({ default: m.Landing })));
 
 const queryClient = new QueryClient({
@@ -66,6 +67,7 @@ const App: React.FC = () => {
               <Route path="/chat" element={<ProtectedRoute><AppShell><CounselingChat /></AppShell></ProtectedRoute>} />
               <Route path="/history" element={<ProtectedRoute><AppShell><HistoryLog /></AppShell></ProtectedRoute>} />
               <Route path="/admin/careers" element={<ProtectedRoute><AppShell><AdminCareers /></AppShell></ProtectedRoute>} />
+              <Route path="/gallery" element={<ProtectedRoute><AppShell><CareerGallery /></AppShell></ProtectedRoute>} />
               <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
           </Suspense>

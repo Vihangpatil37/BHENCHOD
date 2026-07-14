@@ -5,6 +5,7 @@ import { StudentProfile, StudentProfileDocument, StudentDNA } from './schemas/st
 import { StudentDNAHistory, StudentDNAHistoryDocument } from './schemas/student-dna-history.schema';
 import { OnboardingFlowService } from './onboarding-flow.service';
 import { TraitEngineService } from './trait-engine.service';
+import { AIServiceClient } from '../ai-service/ai-service.client';
 import { EventEmitter } from 'events';
 
 // Create event emitter for recommendation wiring in Phase 4
@@ -21,6 +22,7 @@ export class OnboardingService {
     private readonly dnaHistoryModel: Model<StudentDNAHistoryDocument>,
     private readonly flowService: OnboardingFlowService,
     private readonly traitEngine: TraitEngineService,
+    private readonly aiClient: AIServiceClient,
   ) {}
 
   async startOnboarding(userId: string) {
@@ -153,6 +155,30 @@ export class OnboardingService {
     });
 
     return dna;
+  }
+
+  async generateScenarios(userId: string): Promise<any> {
+    const profile = await this.profileModel.findOne({ user_id: userId }).exec();
+    if (!profile) {
+      throw new NotFoundException('Onboarding profile not found.');
+    }
+
+    const context = {
+      student_profile: {
+        personal: profile.personal,
+        academic: profile.academic,
+        interests: profile.interests,
+        skills: profile.skills,
+        goals: profile.goals,
+        work_preferences: profile.work_preferences,
+        constraints: profile.constraints,
+      },
+    };
+
+    const response = await this.aiClient.run('scenario_generation', context);
+    profile.pending_scenarios = response.data?.scenarios || [];
+    await profile.save();
+    return response.data;
   }
 
   async getDNA(userId: string): Promise<StudentDNA> {

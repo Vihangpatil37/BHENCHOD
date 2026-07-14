@@ -21,7 +21,6 @@ export class AIServiceController {
     gemini:    { url: `https://generativelanguage.googleapis.com/${providerModels.gemini.api_version ?? 'v1'}/models`, auth: 'query' },
     groq:      { url: 'https://api.groq.com/openai/v1/models', auth: 'header' },
     mistral:   { url: 'https://api.mistral.ai/v1/models', auth: 'header' },
-    deepseek:  { url: 'https://api.deepseek.com/models', auth: 'header' },
     glm:       { url: 'https://open.bigmodel.cn/api/paas/v4/models', auth: 'header' },
   };
 

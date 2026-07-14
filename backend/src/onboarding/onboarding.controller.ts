@@ -99,6 +99,11 @@ export class OnboardingController {
     return this.onboardingService.completeOnboarding(req.user.user_id);
   }
 
+  @Get('scenarios')
+  async getScenarios(@Request() req: any) {
+    return this.onboardingService.generateScenarios(req.user.user_id);
+  }
+
   @Get('student-dna')
   async getStudentDNA(@Request() req: any) {
     return this.onboardingService.getDNA(req.user.user_id);

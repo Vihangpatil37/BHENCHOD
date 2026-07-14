@@ -43,68 +43,34 @@ export class SavePersonalStepDto {
   board: string;
 }
 
-export class AcademicSubjectsDto {
-  @IsNumber()
-  @Min(0)
-  @Max(100)
-  maths: number;
+export class Class10SubjectsDto {
+  @IsNumber() @Min(0) @Max(100) maths: number;
+  @IsNumber() @Min(0) @Max(100) science: number;
+  @IsNumber() @Min(0) @Max(100) english: number;
+  @IsNumber() @Min(0) @Max(100) sst: number;
+  @IsNumber() @Min(0) @Max(100) computer: number;
+}
 
-  @IsNumber()
-  @Min(0)
-  @Max(100)
-  science: number;
+export class Class10DetailsDto {
+  @IsString() @IsOptional() status?: string;
+  @IsNumber() @IsOptional() @Min(0) @Max(100) percentage?: number;
+  @ValidateNested() @IsOptional() @Type(() => Class10SubjectsDto) subjects?: Class10SubjectsDto;
+  @IsArray() @IsString({ each: true }) @IsOptional() favorite_subjects?: string[];
+  @IsArray() @IsString({ each: true }) @IsOptional() weak_subjects?: string[];
+}
 
-  @IsNumber()
-  @Min(0)
-  @Max(100)
-  english: number;
-
-  @IsNumber()
-  @Min(0)
-  @Max(100)
-  sst: number;
-
-  @IsNumber()
-  @Min(0)
-  @Max(100)
-  computer: number;
+export class Class12DetailsDto {
+  @IsString() @IsOptional() status?: string;
+  @IsString() @IsOptional() stream?: string;
+  @IsNumber() @IsOptional() @Min(0) @Max(100) percentage?: number;
+  @IsObject() @IsOptional() subjects?: Record<string, number>;
+  @IsArray() @IsString({ each: true }) @IsOptional() favorite_subjects?: string[];
+  @IsArray() @IsString({ each: true }) @IsOptional() weak_subjects?: string[];
 }
 
 export class SaveAcademicStepDto {
-  @IsString()
-  @IsOptional()
-  status?: string;
-
-  @IsNumber()
-  @Min(0)
-  @Max(100)
-  @IsOptional()
-  class10_percent?: number;
-
-  @IsNumber()
-  @Min(0)
-  @Max(100)
-  @IsOptional()
-  class12_percent?: number;
-
-  @ValidateNested()
-  @Type(() => AcademicSubjectsDto)
-  @IsNotEmpty()
-  subjects: AcademicSubjectsDto;
-
-  @IsArray()
-  @IsString({ each: true })
-  @IsNotEmpty()
-  favorite_subjects: string[];
-
-  @IsArray()
-  @IsString({ each: true })
-  @IsNotEmpty()
-  weak_subjects: string[];
-
-  @IsString()
-  @IsOptional()
-  stream_interest?: string;
+  @ValidateNested() @IsOptional() @Type(() => Class10DetailsDto) class10?: Class10DetailsDto;
+  @ValidateNested() @IsOptional() @Type(() => Class12DetailsDto) class12?: Class12DetailsDto;
 }
 
 export class SaveInterestsStepDto {

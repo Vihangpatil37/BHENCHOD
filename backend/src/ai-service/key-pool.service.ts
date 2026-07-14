@@ -11,7 +11,7 @@ export class KeyPoolService {
   }
 
   private loadKeysFromEnv() {
-    const providers = ['gemini', 'groq', 'mistral', 'deepseek', 'glm'];
+    const providers = ['gemini', 'groq', 'mistral', 'glm'];
     for (const provider of providers) {
       const envVarName = `${provider.toUpperCase()}_API_KEYS`;
       const envVal = process.env[envVarName];

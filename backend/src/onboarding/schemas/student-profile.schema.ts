@@ -69,7 +69,7 @@ export class PersonalInfo {
 }
 
 @Schema({ _id: false })
-export class AcademicSubjects {
+export class Class10Subjects {
   @Prop({ required: true, default: 0, min: 0, max: 100 })
   maths: number;
 
@@ -80,34 +80,58 @@ export class AcademicSubjects {
   english: number;
 
   @Prop({ required: true, default: 0, min: 0, max: 100 })
-  sst: number; // Social Studies
+  sst: number;
 
   @Prop({ required: true, default: 0, min: 0, max: 100 })
   computer: number;
 }
 
 @Schema({ _id: false })
-export class AcademicInfo {
+export class Class10Details {
   @Prop({ required: false, default: 'pursuing' })
-  status?: string; // "pursuing" | "completed"
+  status?: string;
 
   @Prop({ required: false, default: 0 })
-  class10_percent?: number;
+  percentage?: number;
 
-  @Prop({ required: false, default: 0 })
-  class12_percent?: number;
+  @Prop({ type: Class10Subjects, required: false })
+  subjects?: Class10Subjects;
 
-  @Prop({ type: AcademicSubjects, required: true, default: () => ({}) })
-  subjects: AcademicSubjects;
-
-  @Prop({ type: [String], required: true, default: [] })
+  @Prop({ type: [String], default: [] })
   favorite_subjects: string[];
 
-  @Prop({ type: [String], required: true, default: [] })
+  @Prop({ type: [String], default: [] })
   weak_subjects: string[];
+}
+
+@Schema({ _id: false })
+export class Class12Details {
+  @Prop({ required: false })
+  status?: string;
 
   @Prop({ required: false })
-  stream_interest?: string; // e.g. "science_maths" | "commerce" | "humanities"
+  stream?: string;
+
+  @Prop({ required: false, default: 0 })
+  percentage?: number;
+
+  @Prop({ type: MongooseSchema.Types.Mixed, required: false })
+  subjects?: Record<string, number>;
+
+  @Prop({ type: [String], default: [] })
+  favorite_subjects: string[];
+
+  @Prop({ type: [String], default: [] })
+  weak_subjects: string[];
+}
+
+@Schema({ _id: false })
+export class AcademicInfo {
+  @Prop({ type: Class10Details, required: false })
+  class10?: Class10Details;
+
+  @Prop({ type: Class12Details, required: false })
+  class12?: Class12Details;
 }
 
 @Schema({ _id: false })
@@ -252,6 +276,9 @@ export class StudentProfile {
 
   @Prop({ type: [SchemaFactory.createForClass(ScenarioResponse)], required: true, default: [] })
   scenario_responses: ScenarioResponse[];
+
+  @Prop({ type: [MongooseSchema.Types.Mixed], required: false })
+  pending_scenarios?: any[];
 
   @Prop({ type: StudentDNASchema, required: false })
   current_dna?: StudentDNA;

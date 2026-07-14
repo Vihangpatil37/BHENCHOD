@@ -18,6 +18,8 @@ import {
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { fadeUp } from '../lib/motion';
+import { OnboardingProgress } from '../components/OnboardingProgress';
+import confetti from 'canvas-confetti';
 
 const STEPS = [
   { key: 'personal', label: 'Personal', icon: User },
@@ -57,48 +59,7 @@ const SKILL_FIELDS = [
   'logical_thinking', 'coding', 'drawing', 'math', 'observation', 'patience'
 ];
 
-const SCENARIO_QUESTIONS = [
-  {
-    id: 'q1',
-    question: 'A critical software bug is discovered right before product launch. What is your immediate reaction?',
-    options: [
-      { key: 'A', text: 'Dive deep into the codebase immediately to find and patch the root cause.', traits: { logical_thinking: 10, technical_curiosity: 5 } },
-      { key: 'B', text: 'Gather the development team for an emergency brainstorming session.', traits: { communication: 10, leadership: 5 } },
-      { key: 'C', text: 'Formulate a mitigation plan to present to management and request a short launch extension.', traits: { business_acumen: 10, patience: 5 } },
-      { key: 'D', text: 'Support the team by handling external customer alerts and communications.', traits: { empathy: 10, patience: 5 } },
-    ]
-  },
-  {
-    id: 'q2',
-    question: 'You are selected to lead a new group project. Which style of execution do you prefer?',
-    options: [
-      { key: 'A', text: 'Define the roadmap, assign precise deliverables to members, and coordinate tasks.', traits: { leadership: 12, business_acumen: 4 } },
-      { key: 'B', text: 'Conduct an open-floor discussion to collaboratively define ideas and responsibilities.', traits: { communication: 10, empathy: 6 } },
-      { key: 'C', text: 'Take on the most challenging research parts myself while checking in periodically.', traits: { research: 12, technical_curiosity: 4 } },
-      { key: 'D', text: 'Ensure every team member feels comfortable and supported, checking on workload stress.', traits: { empathy: 12, patience: 6 } },
-    ]
-  },
-  {
-    id: 'q3',
-    question: 'You are offered a choice between a high-risk innovative startup or a highly stable government role. Which do you pick?',
-    options: [
-      { key: 'A', text: 'The startup, because it offers rapid learning, equity upside, and zero constraints.', traits: { risk_tolerance: 15, business_acumen: 5 } },
-      { key: 'B', text: 'The government role, because it ensures predictable hours, social impact, and job security.', traits: { risk_tolerance: -10, patience: 8 } },
-      { key: 'C', text: 'A research role in a major lab or university that blends stability with active discovery.', traits: { research: 12, logical_thinking: 5 } },
-      { key: 'D', text: 'Neither; I prefer direct consulting or freelancing across multiple industries.', traits: { creativity: 12, risk_tolerance: 8 } },
-    ]
-  },
-  {
-    id: 'q4',
-    question: 'A teammate presents an idea that is highly creative but extremely difficult to implement. You...',
-    options: [
-      { key: 'A', text: 'Embrace it fully, and brainstorm alternative simplified methods to build it.', traits: { creativity: 12, problem_solving: 5 } },
-      { key: 'B', text: 'Draft a cost-benefit analysis evaluating resource constraints and timeline risks.', traits: { business_acumen: 12, logical_thinking: 5 } },
-      { key: 'C', text: 'Politely direct focus back to simpler, reliable approaches that meet the current goals.', traits: { patience: 10, risk_tolerance: -5 } },
-      { key: 'D', text: 'Propose a quick hack to build a small prototype and see if it is viable.', traits: { technical_curiosity: 12, creativity: 5 } },
-    ]
-  }
-];
+const OPTION_SCORES: Record<string, number> = { A: 15, B: 5, C: -5, D: -10 };
 
 export const Onboarding: React.FC = () => {
   const navigate = useNavigate();
@@ -113,14 +74,36 @@ export const Onboarding: React.FC = () => {
   const [personal, setPersonal] = useState({
     name: '', dob: '', age: 17, gender: 'Male', city: '', state: '', board: 'CBSE'
   });
+  const STREAM_SUBJECTS: Record<string, string[]> = {
+    pcm: ['Physics', 'Chemistry', 'Mathematics', 'English', 'Computer/Optional'],
+    pcb: ['Physics', 'Chemistry', 'Biology', 'English', 'Optional'],
+    commerce: ['Accountancy', 'Business Studies', 'Economics', 'English', 'Mathematics/IP'],
+    arts: ['History', 'Geography', 'Political Science', 'English', 'Optional'],
+  };
+  const SUBJECT_KEY: Record<string, string> = {
+    'Physics': 'physics', 'Chemistry': 'chemistry', 'Mathematics': 'mathematics',
+    'English': 'english', 'Computer/Optional': 'computer_optional', 'Optional': 'optional',
+    'Biology': 'biology', 'Accountancy': 'accountancy', 'Business Studies': 'business_studies',
+    'Economics': 'economics', 'Mathematics/IP': 'mathematics_ip', 'History': 'history',
+    'Geography': 'geography', 'Political Science': 'political_science',
+  };
+
   const [academic, setAcademic] = useState({
-    status: 'pursuing',
-    class10_percent: 80,
-    class12_percent: 80,
-    subjects: { maths: 75, science: 75, english: 75, sst: 75, computer: 75 },
-    favorite_subjects: [] as string[],
-    weak_subjects: [] as string[],
-    stream_interest: 'science_maths',
+    class10: {
+      status: 'pursuing',
+      percentage: 80,
+      subjects: { maths: 75, science: 75, english: 75, sst: 75, computer: 75 },
+      favorite_subjects: [] as string[],
+      weak_subjects: [] as string[],
+    },
+    class12: {
+      status: '',
+      stream: '',
+      percentage: 80,
+      subjects: {} as Record<string, number>,
+      favorite_subjects: [] as string[],
+      weak_subjects: [] as string[],
+    },
   });
   const [interests, setInterests] = useState<Record<string, number>>(
     INTEREST_FIELDS.reduce((acc, f) => ({ ...acc, [f]: 50 }), {})
@@ -139,10 +122,18 @@ export const Onboarding: React.FC = () => {
     preferred_location: '',
   });
   const [scenarioResponses, setScenarioResponses] = useState<Record<string, string>>({});
+  const [scenarios, setScenarios] = useState<any[]>([]);
+  const [scenariosLoading, setScenariosLoading] = useState(false);
 
   useEffect(() => {
     resumeOnboarding();
   }, []);
+
+  useEffect(() => {
+    if (STEPS[currentStepIndex]?.key === 'scenarios' && scenarios.length === 0 && !scenariosLoading) {
+      loadScenarios();
+    }
+  }, [currentStepIndex]);
 
   const resumeOnboarding = async () => {
     setLoading(true);
@@ -154,11 +145,15 @@ export const Onboarding: React.FC = () => {
       // Populate fields from resume response
       if (res.personal) setPersonal({ ...personal, ...res.personal });
       if (res.academic) {
-        setAcademic({
-          ...academic,
-          ...res.academic,
-          subjects: { ...academic.subjects, ...res.academic.subjects }
-        });
+        const hasNew = res.academic.class10 || res.academic.class12;
+        if (hasNew) {
+          setAcademic({
+            ...academic,
+            ...res.academic,
+            class10: { ...academic.class10, ...res.academic.class10 },
+            class12: { ...academic.class12, ...res.academic.class12 },
+          });
+        }
       }
       if (res.interests) {
         setInterests({ ...interests, ...res.interests });
@@ -169,9 +164,12 @@ export const Onboarding: React.FC = () => {
       if (res.goals) setGoals(res.goals);
       if (res.work_preferences) setWorkPreferences(res.work_preferences);
       if (res.constraints) setConstraints({ ...constraints, ...res.constraints });
-      if (res.scenarios?.scenario_responses) {
+      if (res.pending_scenarios?.length > 0) {
+        setScenarios(res.pending_scenarios);
+      }
+      if (res.scenario_responses?.length > 0) {
         const responses: Record<string, string> = {};
-        res.scenarios.scenario_responses.forEach((sr: any) => {
+        res.scenario_responses.forEach((sr: any) => {
           responses[sr.question_id] = sr.selected_option;
         });
         setScenarioResponses(responses);
@@ -195,6 +193,18 @@ export const Onboarding: React.FC = () => {
     }
   };
 
+  const loadScenarios = async () => {
+    setScenariosLoading(true);
+    try {
+      const res: any = await client.get('/onboarding/scenarios');
+      setScenarios(res.scenarios || []);
+    } catch (err: any) {
+      setErrorMessage(err.message || 'Failed to generate scenarios.');
+    } finally {
+      setScenariosLoading(false);
+    }
+  };
+
   const getStepData = (stepKey: string) => {
     switch (stepKey) {
       case 'personal': return personal;
@@ -207,12 +217,12 @@ export const Onboarding: React.FC = () => {
       case 'scenarios':
         return {
           scenario_responses: Object.entries(scenarioResponses).map(([qId, opt]) => {
-            const q = SCENARIO_QUESTIONS.find((sq) => sq.id === qId);
-            const selectedOpt = q?.options.find((o) => o.key === opt);
+            const q = scenarios.find((s: any) => String(s.id) === qId);
+            const sTrait = (q?.trait || '').toLowerCase().replace(/\s+/g, '_');
             return {
               question_id: qId,
               selected_option: opt,
-              trait_weights: selectedOpt?.traits || {}
+              trait_weights: sTrait ? { [sTrait]: OPTION_SCORES[opt] || 0 } : {},
             };
           })
         };
@@ -228,6 +238,9 @@ export const Onboarding: React.FC = () => {
 
     try {
       await client.put(`/onboarding/step/${stepKey}`, data);
+      confetti({ particleCount: 120, spread: 100, origin: { y: 0.6 } });
+      confetti({ particleCount: 80, spread: 80, origin: { y: 0.5, x: 0.3 } });
+      confetti({ particleCount: 80, spread: 80, origin: { y: 0.5, x: 0.7 } });
       
       if (moveNext) {
         if (currentStepIndex < STEPS.length - 1) {
@@ -249,6 +262,10 @@ export const Onboarding: React.FC = () => {
     setErrorMessage('');
     try {
       await client.post('/onboarding/complete');
+      confetti({ particleCount: 200, spread: 120, origin: { y: 0.5 } });
+      confetti({ particleCount: 150, spread: 90, origin: { y: 0.4, x: 0.2 } });
+      confetti({ particleCount: 150, spread: 90, origin: { y: 0.4, x: 0.8 } });
+      setTimeout(() => confetti({ particleCount: 100, spread: 100, origin: { y: 0.3 } }), 200);
       navigate('/');
     } catch (err: any) {
       setErrorMessage(err.message || 'Failed to complete onboarding. Please verify all questions.');
@@ -307,31 +324,12 @@ export const Onboarding: React.FC = () => {
               <p className="text-text-muted text-sm mt-1">Complete your questionnaire to analyze your career preferences and traits.</p>
             </div>
 
-            {/* Stepper bar */}
-            <div className="flex flex-wrap gap-2 pb-4 border-b border-white/5">
-              {STEPS.map((s, idx) => {
-                const Icon = s.icon;
-                const isActive = idx === currentStepIndex;
-                const isCompleted = profile?.completed || idx < currentStepIndex;
-                return (
-                  <button
-                    key={s.key}
-                    onClick={() => handleStepClick(idx)}
-                    disabled={!profile?.completed && idx > currentStepIndex}
-                    className={`flex items-center space-x-2 px-3 py-1.5 rounded-full text-xs font-semibold border transition-all ${
-                      isActive
-                        ? 'bg-accent/10 border-accent text-accent'
-                        : isCompleted
-                        ? 'bg-white/[0.05] border-white/10 text-text/80 hover:bg-white/10'
-                        : 'bg-transparent border-transparent text-text-muted/40 cursor-not-allowed'
-                    }`}
-                  >
-                    <Icon className="h-3.5 w-3.5" />
-                    <span>{s.label}</span>
-                  </button>
-                );
-              })}
-            </div>
+            <OnboardingProgress
+              steps={STEPS}
+              currentStepIndex={currentStepIndex}
+              completed={profile?.completed}
+              onStepClick={handleStepClick}
+            />
           </div>
 
           {/* Form Box */}
@@ -429,113 +427,208 @@ export const Onboarding: React.FC = () => {
               <div className="space-y-6">
                 <h2 className="text-xl font-bold text-white flex items-center space-x-2">
                   <BookOpen className="h-5 w-5 text-accent" />
-                  <span>Academic Standing</span>
+                  <span>Academic Background</span>
                 </h2>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2 col-span-2">
+
+                {/* Section 1: Class 10 */}
+                <div className="bg-bg/40 border border-white/5 rounded-2xl p-5 space-y-4">
+                  <h3 className="text-sm font-bold text-text-muted uppercase tracking-wider">Class 10 Academic Details</h3>
+
+                  <div className="space-y-2">
                     <label className="text-xs font-bold text-text-muted">Status</label>
                     <div className="flex gap-4">
-                      {['pursuing', 'completed'].map((statusOption) => (
-                        <label key={statusOption} className="flex items-center space-x-2 text-sm text-text/80 cursor-pointer">
-                          <input
-                            type="radio"
-                            name="academicStatus"
-                            value={statusOption}
-                            checked={academic.status === statusOption}
-                            onChange={(e) => setAcademic({ ...academic, status: e.target.value })}
-                            className="text-accent focus:ring-0"
-                          />
-                          <span className="capitalize">{statusOption} Class 12</span>
+                      {['pursuing', 'completed'].map((opt) => (
+                        <label key={opt} className="flex items-center space-x-2 text-sm text-text/80 cursor-pointer">
+                          <input type="radio" name="c10status" value={opt}
+                            checked={academic.class10.status === opt}
+                            onChange={(e) => setAcademic({ ...academic, class10: { ...academic.class10, status: e.target.value } })}
+                            className="text-accent focus:ring-0" />
+                          <span className="capitalize">{opt} Class 10</span>
                         </label>
                       ))}
                     </div>
                   </div>
-                  <div className="space-y-2">
-                    <label className="text-xs font-bold text-text-muted">Class 10 Score (%)</label>
-                    <input
-                      type="number"
-                      value={academic.class10_percent}
-                      onChange={(e) => setAcademic({ ...academic, class10_percent: parseFloat(e.target.value) || 80 })}
-                      className="w-full bg-bg border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-xs font-bold text-text-muted">Class 12 Score (%)</label>
-                    <input
-                      type="number"
-                      value={academic.class12_percent}
-                      onChange={(e) => setAcademic({ ...academic, class12_percent: parseFloat(e.target.value) || 80 })}
-                      className="w-full bg-bg border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none"
-                    />
-                  </div>
-                </div>
 
-                {/* Subjects Grid */}
-                <div className="space-y-3">
-                  <span className="text-xs font-bold text-text-muted block border-b border-white/10/60 pb-2">Subject Performance (0 - 100)</span>
-                  <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
-                    {Object.entries(academic.subjects).map(([subj, score]) => (
-                      <div key={subj} className="bg-bg border border-white/10/80 p-3 rounded-2xl flex flex-col space-y-1 items-center">
-                        <span className="text-xs font-bold text-text-muted uppercase">{subj}</span>
-                        <input
-                          type="number"
-                          value={score}
-                          onChange={(e) => {
-                            const newScores = { ...academic.subjects, [subj]: parseInt(e.target.value, 10) || 75 };
-                            setAcademic({ ...academic, subjects: newScores });
-                          }}
-                          className="w-full bg-transparent text-center text-sm font-semibold text-white focus:outline-none border-b border-transparent focus:border-accent"
-                        />
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Additional multi selects */}
-                <div className="space-y-4">
                   <div className="space-y-2">
-                    <label className="text-xs font-bold text-text-muted">Academic Stream of Interest</label>
-                    <select
-                      value={academic.stream_interest}
-                      onChange={(e) => setAcademic({ ...academic, stream_interest: e.target.value })}
-                      className="w-full bg-bg border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-accent"
-                    >
-                      <option value="science_maths">Science (PCM)</option>
-                      <option value="science_biology">Science (PCB)</option>
-                      <option value="commerce">Commerce</option>
-                      <option value="humanities">Humanities / Arts</option>
-                      <option value="vocational">Vocational / Applied</option>
-                    </select>
+                    <label className="text-xs font-bold text-text-muted">Class 10 Overall Percentage</label>
+                    <input type="number" min="0" max="100"
+                      value={academic.class10.percentage}
+                      onChange={(e) => setAcademic({ ...academic, class10: { ...academic.class10, percentage: parseFloat(e.target.value) || 0 } })}
+                      className="w-full bg-bg border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-accent" />
+                    <span className="text-[10px] text-text-muted/60">Enter a value between 0 and 100</span>
+                  </div>
+
+                  <div className="space-y-3">
+                    <span className="text-xs font-bold text-text-muted block border-b border-white/10/60 pb-2">Subject Performance (0 - 100)</span>
+                    <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+                      {Object.entries(academic.class10.subjects).map(([subj, score]) => (
+                        <div key={subj} className="bg-bg border border-white/10/80 p-3 rounded-2xl flex flex-col space-y-1 items-center">
+                          <span className="text-xs font-bold text-text-muted uppercase text-center leading-tight">{subj === 'maths' ? 'Mathematics' : subj === 'sst' ? 'SST' : subj}</span>
+                          <input type="number" min="0" max="100"
+                            value={score}
+                            onChange={(e) => setAcademic({
+                              ...academic,
+                              class10: { ...academic.class10, subjects: { ...academic.class10.subjects, [subj]: parseInt(e.target.value) || 0 } }
+                            })}
+                            className="w-full bg-transparent text-center text-sm font-semibold text-white focus:outline-none border-b border-transparent focus:border-accent" />
+                        </div>
+                      ))}
+                    </div>
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <label className="text-xs font-bold text-text-muted">Favorite Subjects (comma separated)</label>
-                      <input
-                        type="text"
-                        value={academic.favorite_subjects.join(', ')}
-                        onChange={(e) => setAcademic({
-                          ...academic,
-                          favorite_subjects: e.target.value.split(',').map(s => s.trim().toLowerCase()).filter(Boolean)
-                        })}
+                      <label className="text-xs font-bold text-text-muted">Favorite Subjects</label>
+                      <input type="text"
+                        value={academic.class10.favorite_subjects.join(', ')}
+                        onChange={(e) => setAcademic({ ...academic, class10: { ...academic.class10, favorite_subjects: e.target.value.split(',').map(s => s.trim().toLowerCase()).filter(Boolean) } })}
                         placeholder="e.g. maths, computer"
-                        className="w-full bg-bg border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none"
-                      />
+                        className="w-full bg-bg border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none" />
                     </div>
                     <div className="space-y-2">
-                      <label className="text-xs font-bold text-text-muted">Weak Subjects (comma separated)</label>
-                      <input
-                        type="text"
-                        value={academic.weak_subjects.join(', ')}
-                        onChange={(e) => setAcademic({
-                          ...academic,
-                          weak_subjects: e.target.value.split(',').map(s => s.trim().toLowerCase()).filter(Boolean)
-                        })}
+                      <label className="text-xs font-bold text-text-muted">Weak Subjects</label>
+                      <input type="text"
+                        value={academic.class10.weak_subjects.join(', ')}
+                        onChange={(e) => setAcademic({ ...academic, class10: { ...academic.class10, weak_subjects: e.target.value.split(',').map(s => s.trim().toLowerCase()).filter(Boolean) } })}
                         placeholder="e.g. sst, english"
-                        className="w-full bg-bg border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none"
-                      />
+                        className="w-full bg-bg border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none" />
                     </div>
                   </div>
+                </div>
+
+                {/* Section 2: Class 12 */}
+                <div className="bg-bg/40 border border-white/5 rounded-2xl p-5 space-y-4">
+                  <h3 className="text-sm font-bold text-text-muted uppercase tracking-wider">Class 12 Academic Details</h3>
+
+                  <label className="flex items-center space-x-3 text-sm text-text/80 cursor-pointer">
+                    <input type="checkbox"
+                      checked={!!academic.class12.status}
+                      onChange={(e) => setAcademic({ ...academic, class12: { ...academic.class12, status: e.target.checked ? 'pursuing' : '', stream: '', subjects: {} } })}
+                      className="rounded text-accent focus:ring-0" />
+                    <span>I am studying / have completed Class 12</span>
+                  </label>
+
+                  {academic.class12.status && (
+                    <>
+                      <div className="space-y-2">
+                        <label className="text-xs font-bold text-text-muted">Status</label>
+                        <div className="flex gap-4">
+                          {['pursuing', 'completed'].map((opt) => (
+                            <label key={opt} className="flex items-center space-x-2 text-sm text-text/80 cursor-pointer">
+                              <input type="radio" name="c12status" value={opt}
+                                checked={academic.class12.status === opt}
+                                onChange={(e) => setAcademic({ ...academic, class12: { ...academic.class12, status: e.target.value } })}
+                                className="text-accent focus:ring-0" />
+                              <span className="capitalize">{opt} Class 12</span>
+                            </label>
+                          ))}
+                        </div>
+                      </div>
+
+                      <div className="space-y-2">
+                        <label className="text-xs font-bold text-text-muted">Academic Stream</label>
+                        <select
+                          value={academic.class12.stream}
+                          onChange={(e) => setAcademic({ ...academic, class12: { ...academic.class12, stream: e.target.value, subjects: {} } })}
+                          className="w-full bg-bg border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-accent">
+                          <option value="">Select stream</option>
+                          <option value="pcm">Science (PCM)</option>
+                          <option value="pcb">Science (PCB)</option>
+                          <option value="commerce">Commerce</option>
+                          <option value="arts">Arts</option>
+                          <option value="diploma">Diploma</option>
+                          <option value="other">Other</option>
+                        </select>
+                      </div>
+
+                      <div className="space-y-2">
+                        <label className="text-xs font-bold text-text-muted">Class 12 Overall Percentage</label>
+                        <input type="number" min="0" max="100"
+                          value={academic.class12.percentage}
+                          onChange={(e) => setAcademic({ ...academic, class12: { ...academic.class12, percentage: parseFloat(e.target.value) || 0 } })}
+                          className="w-full bg-bg border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-accent" />
+                        <span className="text-[10px] text-text-muted/60">Enter a value between 0 and 100</span>
+                      </div>
+
+                      {academic.class12.stream && !['diploma', 'other'].includes(academic.class12.stream) && (
+                        <div className="space-y-3">
+                          <span className="text-xs font-bold text-text-muted block border-b border-white/10/60 pb-2">Subject Performance (0 - 100)</span>
+                          <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+                            {STREAM_SUBJECTS[academic.class12.stream].map((subj) => {
+                              const key = SUBJECT_KEY[subj];
+                              return (
+                                <div key={key} className="bg-bg border border-white/10/80 p-3 rounded-2xl flex flex-col space-y-1 items-center">
+                                  <span className="text-xs font-bold text-text-muted uppercase text-center leading-tight">{subj}</span>
+                                  <input type="number" min="0" max="100"
+                                    value={academic.class12.subjects[key] || 0}
+                                    onChange={(e) => setAcademic({
+                                      ...academic,
+                                      class12: { ...academic.class12, subjects: { ...academic.class12.subjects, [key]: parseInt(e.target.value) || 0 } }
+                                    })}
+                                    className="w-full bg-transparent text-center text-sm font-semibold text-white focus:outline-none border-b border-transparent focus:border-accent" />
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      )}
+
+                      {['diploma', 'other'].includes(academic.class12.stream) && (
+                        <div className="space-y-3">
+                          <span className="text-xs font-bold text-text-muted block border-b border-white/10/60 pb-2">Subject Performance (0 - 100)</span>
+                          <div className="space-y-2">
+                            {Object.entries(academic.class12.subjects).map(([subj, score], idx) => (
+                              <div key={idx} className="flex gap-2 items-center">
+                                <input type="text" value={subj}
+                                  onChange={(e) => {
+                                    const entries = Object.entries(academic.class12.subjects);
+                                    entries[idx] = [e.target.value, entries[idx][1]];
+                                    setAcademic({ ...academic, class12: { ...academic.class12, subjects: Object.fromEntries(entries) } });
+                                  }}
+                                  placeholder="Subject name"
+                                  className="flex-1 bg-bg border border-white/10 rounded-xl px-3 py-2 text-sm text-white focus:outline-none" />
+                                <input type="number" min="0" max="100" value={score}
+                                  onChange={(e) => setAcademic({
+                                    ...academic,
+                                    class12: { ...academic.class12, subjects: { ...academic.class12.subjects, [subj]: parseInt(e.target.value) || 0 } }
+                                  })}
+                                  className="w-20 bg-bg border border-white/10 rounded-xl px-3 py-2 text-sm text-white focus:outline-none" />
+                                <button onClick={() => {
+                                  const entries = Object.entries(academic.class12.subjects).filter(([k]) => k !== subj);
+                                  setAcademic({ ...academic, class12: { ...academic.class12, subjects: Object.fromEntries(entries) } });
+                                }}
+                                  className="text-text-muted/60 hover:text-red-400 text-lg leading-none px-1">&times;</button>
+                              </div>
+                            ))}
+                            <button onClick={() => setAcademic({
+                              ...academic,
+                              class12: { ...academic.class12, subjects: { ...academic.class12.subjects, '': 0 } }
+                            })}
+                              className="text-xs text-accent font-semibold">+ Add Subject</button>
+                          </div>
+                        </div>
+                      )}
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <label className="text-xs font-bold text-text-muted">Favorite Subjects</label>
+                          <input type="text"
+                            value={academic.class12.favorite_subjects.join(', ')}
+                            onChange={(e) => setAcademic({ ...academic, class12: { ...academic.class12, favorite_subjects: e.target.value.split(',').map(s => s.trim().toLowerCase()).filter(Boolean) } })}
+                            placeholder="e.g. physics, maths"
+                            className="w-full bg-bg border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none" />
+                        </div>
+                        <div className="space-y-2">
+                          <label className="text-xs font-bold text-text-muted">Weak Subjects</label>
+                          <input type="text"
+                            value={academic.class12.weak_subjects.join(', ')}
+                            onChange={(e) => setAcademic({ ...academic, class12: { ...academic.class12, weak_subjects: e.target.value.split(',').map(s => s.trim().toLowerCase()).filter(Boolean) } })}
+                            placeholder="e.g. chemistry, english"
+                            className="w-full bg-bg border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none" />
+                        </div>
+                      </div>
+                    </>
+                  )}
                 </div>
               </div>
             )}
@@ -752,36 +845,61 @@ export const Onboarding: React.FC = () => {
                   <HelpCircle className="h-5 w-5 text-accent" />
                   <span>Real-world Scenarios</span>
                 </h2>
-                
-                <div className="space-y-8">
-                  {SCENARIO_QUESTIONS.map((sq, sIdx) => {
-                    const selected = scenarioResponses[sq.id];
-                    return (
-                      <div key={sq.id} className="space-y-3 border-b border-white/10/60 pb-6 last:border-b-0 last:pb-0">
-                        <span className="text-xs font-bold text-accent">Scenario {sIdx + 1} of {SCENARIO_QUESTIONS.length}</span>
-                        <p className="text-sm font-semibold text-text/80">{sq.question}</p>
-                        <div className="grid grid-cols-1 gap-2 mt-2">
-                          {sq.options.map((opt) => {
-                            const isChosen = selected === opt.key;
-                            return (
-                              <button
-                                key={opt.key}
-                                onClick={() => setScenarioResponses({ ...scenarioResponses, [sq.id]: opt.key })}
-                                className={`p-4 rounded-xl border text-left transition-all text-xs font-medium ${
-                                  isChosen
-                                    ? 'bg-accent/10 border-accent text-accent/80'
-                                    : 'bg-bg/60 border-white/10 text-text-muted hover:border-white/20'
-                                }`}
-                              >
-                                <span className="font-bold mr-2 text-accent">{opt.key}.</span> {opt.text}
-                              </button>
-                            );
-                          })}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
+
+                {scenariosLoading && (
+                  <div className="flex items-center justify-center py-16">
+                    <Loader2 className="h-8 w-8 text-accent animate-spin" />
+                    <span className="ml-3 text-sm text-text-muted">Generating personalized scenarios...</span>
+                  </div>
+                )}
+
+                {!scenariosLoading && scenarios.length === 0 && (
+                  <div className="text-center py-16 text-text-muted text-sm">
+                    Unable to load scenarios. Please try again.
+                  </div>
+                )}
+
+                {!scenariosLoading && scenarios.length > 0 && (
+                  <>
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-bold text-accent bg-accent/10 px-3 py-1 rounded-full">
+                        {Object.keys(scenarioResponses).length} of {scenarios.length} answered
+                      </span>
+                    </div>
+
+                    <div className="space-y-8">
+                      {scenarios.map((sq: any, sIdx: number) => {
+                        const qId = String(sq.id);
+                        const selected = scenarioResponses[qId];
+                        return (
+                          <div key={qId} className="space-y-3 border-b border-white/10/60 pb-6 last:border-b-0 last:pb-0">
+                            <span className="text-xs font-bold text-accent">Scenario {sIdx + 1} of {scenarios.length}</span>
+                            <p className="text-sm font-semibold text-text/80">{sq.question}</p>
+                            <div className="grid grid-cols-1 gap-2 mt-2">
+                              {sq.options.map((optText: string, oIdx: number) => {
+                                const optKey = String.fromCharCode(65 + oIdx);
+                                const isChosen = selected === optKey;
+                                return (
+                                  <button
+                                    key={optKey}
+                                    onClick={() => setScenarioResponses({ ...scenarioResponses, [qId]: optKey })}
+                                    className={`p-4 rounded-xl border text-left transition-all text-xs font-medium ${
+                                      isChosen
+                                        ? 'bg-accent/10 border-accent text-accent/80'
+                                        : 'bg-bg/60 border-white/10 text-text-muted hover:border-white/20'
+                                    }`}
+                                  >
+                                    <span className="font-bold mr-2 text-accent">{optKey}.</span> {optText}
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </>
+                )}
               </div>
             )}
 
@@ -800,7 +918,7 @@ export const Onboarding: React.FC = () => {
 
               <button
                 onClick={() => saveCurrentStep(true)}
-                disabled={saving}
+                disabled={saving || (currentStep.key === 'scenarios' && scenarios.length > 0 && Object.keys(scenarioResponses).length < scenarios.length)}
                 className="flex items-center space-x-2 px-6 py-2.5 bg-gradient-to-r from-accent to-accent-2 hover:brightness-110 text-white font-bold rounded-xl text-sm transition-all shadow-lg shadow-accent/20 disabled:opacity-50"
               >
                 {saving ? (
