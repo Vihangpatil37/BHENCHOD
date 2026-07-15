@@ -16,7 +16,7 @@ export const providerModels: ProviderModels = {
     api_version: 'v1',
   },
   glm: {
-    model: 'glm-4-plus',
+    model: 'glm-4.7-flash',
     api_base: 'https://open.bigmodel.cn/api/paas/v4/chat/completions',
   },
   groq: {

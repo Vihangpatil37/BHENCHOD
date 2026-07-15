@@ -38,7 +38,7 @@ const PROVIDERS: Record<string, ProviderConfig> = {
     test: async (key) => {
       const res = await axios.post(
         'https://open.bigmodel.cn/api/paas/v4/chat/completions',
-        { model: 'glm-4-flash', messages: [{ role: 'user', content: 'hi' }], max_tokens: 1 },
+        { model: 'glm-4.7-flash', messages: [{ role: 'user', content: 'hi' }], max_tokens: 1 },
         { headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' }, timeout: 10000 },
       );
       return res.status === 200;

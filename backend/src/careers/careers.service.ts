@@ -28,6 +28,14 @@ export class CareersService implements OnModuleInit {
       await this.careerModel.deleteMany({}).exec();
     }
 
+    // Check if careers use old category codes that don't match the frontend catalog
+    const oldCategoryCodes = ['technology', 'business_and_finance', 'healthcare', 'science_and_research', 'creative_and_design', 'education_and_social', 'engineering', 'communication_and_media'];
+    const oldCategoryCount = await this.careerModel.countDocuments({ category_code: { $in: oldCategoryCodes } }).exec();
+    if (oldCategoryCount > 0) {
+      this.logger.log('Detected old seed. Re-seeding...');
+      await this.careerModel.deleteMany({}).exec();
+    }
+
     const count = await this.careerModel.countDocuments().exec();
     if (count > 0) {
       this.logger.log('Careers catalog already seeded with weights.');
@@ -446,14 +454,14 @@ export class CareersService implements OnModuleInit {
 
   private getCareersSeedData(): Partial<Career>[] {
     const categories = {
-      tech: 'technology',
-      biz: 'business_and_finance',
-      health: 'healthcare',
-      sci: 'science_and_research',
-      design: 'creative_and_design',
-      edu: 'education_and_social',
-      eng: 'engineering',
-      media: 'communication_and_media',
+      tech: 'emerging_future',
+      biz: 'commerce',
+      health: 'science',
+      sci: 'science',
+      design: 'arts_humanities',
+      edu: 'arts_humanities',
+      eng: 'science',
+      media: 'arts_humanities',
     };
 
     const makeWeights = (w: Partial<Career['trait_weights']> = {}) => ({

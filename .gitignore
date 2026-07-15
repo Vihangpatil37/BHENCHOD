@@ -9,8 +9,19 @@ build/
 
 # Environment files
 .env
+.env.example
 .env.local
 .env.*.local
+
+# Docker
+.dockerignore
+
+# AI agent local config
+.agents/
+.claude/
+.mimocode/
+.opencode/
+skills-lock.json
 
 # Logs
 logs/
