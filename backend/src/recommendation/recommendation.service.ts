@@ -10,6 +10,14 @@ import { StudentProfile, StudentProfileDocument } from '../onboarding/schemas/st
 import { onboardingEvents } from '../onboarding/onboarding.service';
 import { FeedbackDto } from './dto/recommendation.dto';
 import { RECOMMENDATION_ENGINE_VERSION } from './config/recommendation.constants';
+import { AcademicEngine } from './engines/academic.engine';
+import { InterestEngine } from './engines/interest.engine';
+import { SkillEngine } from './engines/skill.engine';
+import { PersonalityEngine } from './engines/personality.engine';
+import { ConstraintEngine } from './engines/constraint.engine';
+import { OpportunityEngine } from './engines/opportunity.engine';
+import { HybridRankingEngine } from './engines/hybrid-ranking.engine';
+import { DiversityEngine } from './engines/diversity.engine';
 
 @Injectable()
 export class RecommendationService implements OnModuleInit {
@@ -25,6 +33,14 @@ export class RecommendationService implements OnModuleInit {
     private readonly eligibilityEngine: EligibilityEngineService,
     private readonly traitMatchingEngine: TraitMatchingEngineService,
     private readonly aiServiceClient: AIServiceClient,
+    private readonly academicEngine: AcademicEngine,
+    private readonly interestEngine: InterestEngine,
+    private readonly skillEngine: SkillEngine,
+    private readonly personalityEngine: PersonalityEngine,
+    private readonly constraintEngine: ConstraintEngine,
+    private readonly opportunityEngine: OpportunityEngine,
+    private readonly hybridRankingEngine: HybridRankingEngine,
+    private readonly diversityEngine: DiversityEngine,
   ) {}
 
   onModuleInit() {
@@ -51,6 +67,156 @@ export class RecommendationService implements OnModuleInit {
 
   async generateRecommendation(userId: string): Promise<Recommendation> {
     this.logger.log(`Generating recommendation pipeline for user: ${userId} (Engine Version: ${RECOMMENDATION_ENGINE_VERSION})`);
+
+    if (RECOMMENDATION_ENGINE_VERSION === 'v2') {
+      this.logger.log(`Running V2 recommendation pipeline for user: ${userId}`);
+
+      // 1. Get completed student profile
+      const profile = await this.profileModel.findOne({ user_id: userId }).exec();
+      if (!profile || !profile.current_dna) {
+        throw new BadRequestException('Student profile or computed DNA not found. Onboarding must be completed first.');
+      }
+
+      // 2. Eligibility Engine
+      const eligibleCareers = await this.eligibilityEngine.getEligibleCareers(profile);
+      const eligibleCount = eligibleCareers.length;
+
+      if (eligibleCount === 0) {
+        throw new BadRequestException('No eligible careers found based on your academic subject grades and budget constraints.');
+      }
+
+      // 3. Score all eligible careers in parallel
+      const scoredResults = await Promise.all(
+        eligibleCareers.map(async (career) => {
+          const academicScore = this.academicEngine.calculate(profile, career);
+          const interestScore = this.interestEngine.calculate(profile, career);
+          const skillScore = this.skillEngine.calculate(profile, career);
+          const personalityScore = this.personalityEngine.calculate(profile, career);
+          const constraintScore = this.constraintEngine.calculate(profile, career);
+          const opportunityScore = this.opportunityEngine.calculate(profile, career);
+
+          const hybridInput = {
+            academic: academicScore,
+            interest: interestScore,
+            skill: skillScore,
+            personality: personalityScore,
+            constraint: constraintScore,
+            opportunity: opportunityScore,
+          };
+
+          const hybridResult = this.hybridRankingEngine.calculate(career.career_code, career.name, hybridInput);
+
+          return {
+            career_code: career.career_code,
+            name: career.name,
+            score: hybridResult.score,
+            breakdown: hybridInput,
+            career,
+          };
+        })
+      );
+
+      // 4. Rank candidates using the Hybrid Ranking Engine
+      const rankedResults = this.hybridRankingEngine.rank(scoredResults);
+
+      // 5. Apply the Diversity Engine
+      const diversityInput = (rankedResults as any[]).map((r) => ({
+        career: r.career,
+        score: r.score,
+        originalResult: r,
+      }));
+      const diversifiedResults = this.diversityEngine.diversify(
+        diversityInput,
+        (profile.constraints as any)?.diversityMode ?? 'balanced',
+        8
+      );
+
+      // Map back to standard shortlist array for Mongoose persistence (top 20)
+      const shortlist = rankedResults.slice(0, 20).map((item) => ({
+        career_code: item.career_code,
+        match_score: item.score,
+      }));
+
+      // Top 8 diversified candidates mapped for AI payload
+      const aiCandidateCareers = diversifiedResults.map((item) => ({
+        career_code: item.career.career_code,
+        name: item.career.name,
+        description: item.career.description,
+        required_skills: item.career.required_skills,
+        match_score: item.score,
+      }));
+
+      const aiPayload = {
+        student_profile: {
+          academic: {
+            class10: profile.academic?.class10,
+            class12: profile.academic?.class12,
+          },
+          interests: profile.interests,
+          skills: profile.skills,
+          goals: profile.goals,
+          work_preferences: profile.work_preferences,
+          constraints: profile.constraints,
+        },
+        student_dna: {
+          analytical_thinking: profile.current_dna.analytical_thinking,
+          creativity: profile.current_dna.creativity,
+          communication: profile.current_dna.communication,
+          leadership: profile.current_dna.leadership,
+          research: profile.current_dna.research,
+          business_acumen: profile.current_dna.business_acumen,
+          technical_curiosity: profile.current_dna.technical_curiosity,
+          empathy: profile.current_dna.empathy,
+          patience: profile.current_dna.patience,
+          risk_tolerance: profile.current_dna.risk_tolerance,
+        },
+        candidate_careers: aiCandidateCareers,
+      };
+
+      // 6. Call AI Service Client (exactly 1 routed call)
+      const aiResponse = await this.aiServiceClient.run(
+        'career_recommendation',
+        aiPayload,
+        {
+          final_recommendations: [
+            {
+              career_code: '',
+              rank: 1,
+              ai_score: 90,
+              explanation: '',
+              roadmap: '',
+              suggested_colleges: [''],
+              suggested_certifications: [''],
+            },
+          ],
+        }
+      );
+
+      if (!aiResponse.success || !aiResponse.data || !aiResponse.data.final_recommendations) {
+        throw new BadRequestException('AI Personalization failed to produce valid recommendations.');
+      }
+
+      // Slice and save top 5 recommendations
+      const finalRecs = aiResponse.data.final_recommendations.slice(0, 5);
+
+      await this.recommendationModel.updateMany({ user_id: userId }, { stale: true }).exec();
+
+      const recommendation = new this.recommendationModel({
+        user_id: userId,
+        onboarding_session_ref: profile.onboarding_step,
+        pipeline_version: 'v2',
+        eligible_count: eligibleCount,
+        shortlist,
+        final_recommendations: finalRecs,
+        ai_provider_used: aiResponse.provider,
+        ai_model_used: aiResponse.model,
+        fallback_used: aiResponse.fallback_used,
+        stale: false,
+      });
+
+      await recommendation.save();
+      return recommendation;
+    }
 
     // 1. Get completed student profile
     const profile = await this.profileModel.findOne({ user_id: userId }).exec();

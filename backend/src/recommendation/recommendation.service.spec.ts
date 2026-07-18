@@ -8,6 +8,21 @@ import { AIServiceClient } from '../ai-service/ai-service.client';
 import { StudentProfile } from '../onboarding/schemas/student-profile.schema';
 import { onboardingEvents } from '../onboarding/onboarding.service';
 
+import { AcademicEngine } from './engines/academic.engine';
+import { InterestEngine } from './engines/interest.engine';
+import { SkillEngine } from './engines/skill.engine';
+import { PersonalityEngine } from './engines/personality.engine';
+import { ConstraintEngine } from './engines/constraint.engine';
+import { OpportunityEngine } from './engines/opportunity.engine';
+import { HybridRankingEngine } from './engines/hybrid-ranking.engine';
+import { DiversityEngine } from './engines/diversity.engine';
+
+jest.mock('./config/recommendation.constants', () => ({
+  get RECOMMENDATION_ENGINE_VERSION() {
+    return process.env.RECOMMENDATION_ENGINE_VERSION ?? 'v1';
+  },
+}));
+
 const execMock = jest.fn();
 
 const makeModel = () => {
@@ -62,6 +77,20 @@ describe('RecommendationService', () => {
     traitMatchingEngine = { matchCareers: jest.fn() };
     aiClient = { run: jest.fn() };
 
+    const mockAcademicEngine = { calculate: jest.fn().mockReturnValue({ score: 80, weight: 0.25, weightedScore: 20, bonuses: 0, penalties: 0 }) };
+    const mockInterestEngine = { calculate: jest.fn().mockReturnValue({ score: 80, weight: 0.2, weightedScore: 16, bonuses: 0, penalties: 0 }) };
+    const mockSkillEngine = { calculate: jest.fn().mockReturnValue({ score: 80, weight: 0.2, weightedScore: 16, bonuses: 0, penalties: 0 }) };
+    const mockPersonalityEngine = { calculate: jest.fn().mockReturnValue({ score: 80, weight: 0.15, weightedScore: 12, bonuses: 0, penalties: 0 }) };
+    const mockConstraintEngine = { calculate: jest.fn().mockReturnValue({ score: 80, weight: 0.1, weightedScore: 8, bonuses: 0, penalties: 0 }) };
+    const mockOpportunityEngine = { calculate: jest.fn().mockReturnValue({ score: 80, weight: 0.1, weightedScore: 8, bonuses: 0, penalties: 0 }) };
+    const mockHybridRankingEngine = {
+      calculate: jest.fn().mockReturnValue({ score: 80, totalBonuses: 0, totalPenalties: 0 }),
+      rank: jest.fn().mockImplementation((x) => x),
+    };
+    const mockDiversityEngine = {
+      diversify: jest.fn().mockImplementation((x) => x),
+    };
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         RecommendationService,
@@ -71,6 +100,14 @@ describe('RecommendationService', () => {
         { provide: EligibilityEngineService, useValue: eligibilityEngine },
         { provide: TraitMatchingEngineService, useValue: traitMatchingEngine },
         { provide: AIServiceClient, useValue: aiClient },
+        { provide: AcademicEngine, useValue: mockAcademicEngine },
+        { provide: InterestEngine, useValue: mockInterestEngine },
+        { provide: SkillEngine, useValue: mockSkillEngine },
+        { provide: PersonalityEngine, useValue: mockPersonalityEngine },
+        { provide: ConstraintEngine, useValue: mockConstraintEngine },
+        { provide: OpportunityEngine, useValue: mockOpportunityEngine },
+        { provide: HybridRankingEngine, useValue: mockHybridRankingEngine },
+        { provide: DiversityEngine, useValue: mockDiversityEngine },
       ],
     }).compile();
 
@@ -109,6 +146,26 @@ describe('RecommendationService', () => {
 
       await service.generateRecommendation('user-1');
       expect(recModel.updateMany).toHaveBeenCalledWith({ user_id: 'user-1' }, { stale: true });
+    });
+
+    it('saves V2 recommendation on success with engine version v2', async () => {
+      process.env.RECOMMENDATION_ENGINE_VERSION = 'v2';
+      try {
+        execMock.mockResolvedValue(mockProfile);
+        eligibilityEngine.getEligibleCareers.mockResolvedValue(eligible);
+        aiClient.run.mockResolvedValue({
+          success: true,
+          data: { final_recommendations: [{ career_code: 'se', rank: 1, ai_score: 95, explanation: 'G', roadmap: 'R', suggested_colleges: [], suggested_certifications: [] }] },
+          provider: 'gemini', model: 'g', fallback_used: false,
+        });
+
+        // We wrap the returned recommendation mock behavior since our makeModel mock Assigns data to `this`
+        // mock Model will be instantiated inside service. We want to check what arguments it was constructed with.
+        const result = await service.generateRecommendation('user-1');
+        expect(result.pipeline_version).toBe('v2');
+      } finally {
+        process.env.RECOMMENDATION_ENGINE_VERSION = 'v1';
+      }
     });
   });
 
