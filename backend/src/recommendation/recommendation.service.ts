@@ -18,6 +18,8 @@ import { ConstraintEngine } from './engines/constraint.engine';
 import { OpportunityEngine } from './engines/opportunity.engine';
 import { HybridRankingEngine } from './engines/hybrid-ranking.engine';
 import { DiversityEngine } from './engines/diversity.engine';
+import { ConfidenceEngine } from './engines/confidence.engine';
+import { ExplainabilityEngine } from './engines/explainability.engine';
 
 @Injectable()
 export class RecommendationService implements OnModuleInit {
@@ -41,6 +43,8 @@ export class RecommendationService implements OnModuleInit {
     private readonly opportunityEngine: OpportunityEngine,
     private readonly hybridRankingEngine: HybridRankingEngine,
     private readonly diversityEngine: DiversityEngine,
+    private readonly confidenceEngine: ConfidenceEngine,
+    private readonly explainabilityEngine: ExplainabilityEngine,
   ) {}
 
   onModuleInit() {
@@ -66,6 +70,7 @@ export class RecommendationService implements OnModuleInit {
   }
 
   async generateRecommendation(userId: string): Promise<Recommendation> {
+    const startTime = Date.now();
     this.logger.log(`Generating recommendation pipeline for user: ${userId} (Engine Version: ${RECOMMENDATION_ENGINE_VERSION})`);
 
     if (RECOMMENDATION_ENGINE_VERSION === 'v2') {
@@ -196,8 +201,37 @@ export class RecommendationService implements OnModuleInit {
         throw new BadRequestException('AI Personalization failed to produce valid recommendations.');
       }
 
-      // Slice and save top 5 recommendations
-      const finalRecs = aiResponse.data.final_recommendations.slice(0, 5);
+      // Calculate overall confidence using ConfidenceEngine
+      const confidenceScore = this.confidenceEngine.calculate(profile, rankedResults);
+
+      // Slice and save top 5 recommendations with explainability reasons and breakdown
+      const finalRecs = diversifiedResults.slice(0, 5).map((item, index) => {
+        const matchingRankedResult = rankedResults.find(r => r.career_code === item.career.career_code)!;
+        const nextRankedResult = rankedResults.find(r => r.career_code === diversifiedResults[index + 1]?.career.career_code);
+
+        const reason = this.explainabilityEngine.explain(
+          matchingRankedResult,
+          index + 1,
+          confidenceScore,
+          nextRankedResult
+        );
+
+        const matchingAiRec = aiResponse.data.final_recommendations.find(
+          (ai: any) => ai.career_code === item.career.career_code
+        ) || { explanation: '', roadmap: '', suggested_colleges: [], suggested_certifications: [] };
+
+        return {
+          career_code: item.career.career_code,
+          rank: index + 1,
+          ai_score: item.score,
+          explanation: matchingAiRec.explanation || reason.comparisonSummary,
+          roadmap: matchingAiRec.roadmap || 'Follow the typical career path.',
+          suggested_colleges: matchingAiRec.suggested_colleges || [],
+          suggested_certifications: matchingAiRec.suggested_certifications || [],
+          score_breakdown: matchingRankedResult.breakdown,
+          reason: reason,
+        };
+      });
 
       await this.recommendationModel.updateMany({ user_id: userId }, { stale: true }).exec();
 
@@ -212,6 +246,11 @@ export class RecommendationService implements OnModuleInit {
         ai_model_used: aiResponse.model,
         fallback_used: aiResponse.fallback_used,
         stale: false,
+        recommendation_version: 'v2',
+        engine_version: 'v2',
+        weight_version: 'recommendation-weights.v1',
+        processing_time_ms: Date.now() - startTime,
+        confidence_score: confidenceScore,
       });
 
       await recommendation.save();

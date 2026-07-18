@@ -16,6 +16,8 @@ import { ConstraintEngine } from './engines/constraint.engine';
 import { OpportunityEngine } from './engines/opportunity.engine';
 import { HybridRankingEngine } from './engines/hybrid-ranking.engine';
 import { DiversityEngine } from './engines/diversity.engine';
+import { ConfidenceEngine } from './engines/confidence.engine';
+import { ExplainabilityEngine } from './engines/explainability.engine';
 
 jest.mock('./config/recommendation.constants', () => ({
   get RECOMMENDATION_ENGINE_VERSION() {
@@ -90,6 +92,25 @@ describe('RecommendationService', () => {
     const mockDiversityEngine = {
       diversify: jest.fn().mockImplementation((x) => x),
     };
+    const mockConfidenceEngine = {
+      calculate: jest.fn().mockReturnValue(85),
+    };
+    const mockExplainabilityEngine = {
+      explain: jest.fn().mockReturnValue({
+        careerId: 'se',
+        careerName: 'Software Engineer',
+        rank: 1,
+        finalScore: 80,
+        confidence: 85,
+        primaryReasons: ['Interest aligns'],
+        secondaryReasons: [],
+        bonuses: [],
+        penalties: [],
+        studentStrengths: [],
+        improvementAreas: [],
+        comparisonSummary: '',
+      }),
+    };
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -108,6 +129,8 @@ describe('RecommendationService', () => {
         { provide: OpportunityEngine, useValue: mockOpportunityEngine },
         { provide: HybridRankingEngine, useValue: mockHybridRankingEngine },
         { provide: DiversityEngine, useValue: mockDiversityEngine },
+        { provide: ConfidenceEngine, useValue: mockConfidenceEngine },
+        { provide: ExplainabilityEngine, useValue: mockExplainabilityEngine },
       ],
     }).compile();
 

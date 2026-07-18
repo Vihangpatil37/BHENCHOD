@@ -34,6 +34,12 @@ export class FinalRecommendation {
 
   @Prop({ type: [String], required: true, default: [] })
   suggested_certifications: string[];
+
+  @Prop({ type: MongooseSchema.Types.Mixed, required: false })
+  score_breakdown?: any;
+
+  @Prop({ type: MongooseSchema.Types.Mixed, required: false })
+  reason?: any;
 }
 
 @Schema({
@@ -70,6 +76,21 @@ export class Recommendation {
 
   @Prop({ required: true, default: false })
   stale: boolean;
+
+  @Prop({ required: false })
+  recommendation_version?: string;
+
+  @Prop({ required: false })
+  engine_version?: string;
+
+  @Prop({ required: false })
+  weight_version?: string;
+
+  @Prop({ required: false })
+  processing_time_ms?: number;
+
+  @Prop({ required: false })
+  confidence_score?: number;
 
   generated_at?: Date;
 }

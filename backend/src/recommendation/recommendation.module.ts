@@ -19,6 +19,8 @@ import { EligibilityEngine } from './engines/eligibility.engine';
 import { HybridRankingEngine } from './engines/hybrid-ranking.engine';
 import { DiversityEngine } from './engines/diversity.engine';
 import { OpportunityEngine } from './engines/opportunity.engine';
+import { ConfidenceEngine } from './engines/confidence.engine';
+import { ExplainabilityEngine } from './engines/explainability.engine';
 
 @Module({
   imports: [
@@ -44,6 +46,8 @@ import { OpportunityEngine } from './engines/opportunity.engine';
     HybridRankingEngine,
     DiversityEngine,
     OpportunityEngine,
+    ConfidenceEngine,
+    ExplainabilityEngine,
     {
       provide: 'RECOMMENDATION_ENGINE_VERSION',
       useValue: RECOMMENDATION_ENGINE_VERSION,
@@ -62,6 +66,8 @@ import { OpportunityEngine } from './engines/opportunity.engine';
     HybridRankingEngine,
     DiversityEngine,
     OpportunityEngine,
+    ConfidenceEngine,
+    ExplainabilityEngine,
   ],
 })
 export class RecommendationModule {}
