@@ -10,6 +10,12 @@ import { CareersModule } from '../careers/careers.module';
 import { OnboardingModule } from '../onboarding/onboarding.module';
 import { AIServiceModule } from '../ai-service/ai-service.module';
 import { RECOMMENDATION_ENGINE_VERSION } from './config/recommendation.constants';
+import { AcademicEngine } from './engines/academic.engine';
+import { InterestEngine } from './engines/interest.engine';
+import { SkillEngine } from './engines/skill.engine';
+import { PersonalityEngine } from './engines/personality.engine';
+import { ConstraintEngine } from './engines/constraint.engine';
+import { EligibilityEngine } from './engines/eligibility.engine';
 
 @Module({
   imports: [
@@ -26,11 +32,27 @@ import { RECOMMENDATION_ENGINE_VERSION } from './config/recommendation.constants
     RecommendationService,
     EligibilityEngineService,
     TraitMatchingEngineService,
+    AcademicEngine,
+    InterestEngine,
+    SkillEngine,
+    PersonalityEngine,
+    ConstraintEngine,
+    EligibilityEngine,
     {
       provide: 'RECOMMENDATION_ENGINE_VERSION',
       useValue: RECOMMENDATION_ENGINE_VERSION,
     },
   ],
-  exports: [RecommendationService, MongooseModule, 'RECOMMENDATION_ENGINE_VERSION'],
+  exports: [
+    RecommendationService,
+    MongooseModule,
+    'RECOMMENDATION_ENGINE_VERSION',
+    AcademicEngine,
+    InterestEngine,
+    SkillEngine,
+    PersonalityEngine,
+    ConstraintEngine,
+    EligibilityEngine,
+  ],
 })
 export class RecommendationModule {}
