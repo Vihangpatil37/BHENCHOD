@@ -33,9 +33,9 @@ const fixtures = {
     wrongType:   { summary_text: 42 },
   },
   roadmap_generation: {
-    valid:      { career_code: 'cs', steps: [{ phase: 'School', duration: '2y', action_items: ['Study'] }] },
+    valid:      { career_code: 'cs', career_name: 'Computer Science', phases: [{ phase: 'School', duration: '2y', action_items: ['Study'] }] },
     missingField: { career_code: 'cs' },
-    wrongType:   { career_code: 'cs', steps: 'not-an-array' },
+    wrongType:   { career_code: 'cs', career_name: 'Computer Science', phases: 'not-an-array' },
   },
 } as const;
 

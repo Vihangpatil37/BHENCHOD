@@ -9,6 +9,7 @@ import { RecommendationController } from './recommendation.controller';
 import { CareersModule } from '../careers/careers.module';
 import { OnboardingModule } from '../onboarding/onboarding.module';
 import { AIServiceModule } from '../ai-service/ai-service.module';
+import { RECOMMENDATION_ENGINE_VERSION } from './config/recommendation.constants';
 
 @Module({
   imports: [
@@ -25,7 +26,11 @@ import { AIServiceModule } from '../ai-service/ai-service.module';
     RecommendationService,
     EligibilityEngineService,
     TraitMatchingEngineService,
+    {
+      provide: 'RECOMMENDATION_ENGINE_VERSION',
+      useValue: RECOMMENDATION_ENGINE_VERSION,
+    },
   ],
-  exports: [RecommendationService, MongooseModule],
+  exports: [RecommendationService, MongooseModule, 'RECOMMENDATION_ENGINE_VERSION'],
 })
 export class RecommendationModule {}

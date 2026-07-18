@@ -9,6 +9,7 @@ import { AIServiceClient } from '../ai-service/ai-service.client';
 import { StudentProfile, StudentProfileDocument } from '../onboarding/schemas/student-profile.schema';
 import { onboardingEvents } from '../onboarding/onboarding.service';
 import { FeedbackDto } from './dto/recommendation.dto';
+import { RECOMMENDATION_ENGINE_VERSION } from './config/recommendation.constants';
 
 @Injectable()
 export class RecommendationService implements OnModuleInit {
@@ -49,7 +50,7 @@ export class RecommendationService implements OnModuleInit {
   }
 
   async generateRecommendation(userId: string): Promise<Recommendation> {
-    this.logger.log(`Generating recommendation pipeline for user: ${userId}`);
+    this.logger.log(`Generating recommendation pipeline for user: ${userId} (Engine Version: ${RECOMMENDATION_ENGINE_VERSION})`);
 
     // 1. Get completed student profile
     const profile = await this.profileModel.findOne({ user_id: userId }).exec();
