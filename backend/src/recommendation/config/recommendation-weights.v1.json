@@ -1,0 +1,8 @@
+{
+  "academic": 0.25,
+  "interest": 0.20,
+  "skill": 0.20,
+  "personality": 0.15,
+  "constraint": 0.10,
+  "opportunity": 0.10
+}
