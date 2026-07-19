@@ -10,6 +10,7 @@ import {
 } from '@nestjs/common';
 import { CounselorService } from './counselor.service';
 import { ChatDto, FeedbackDto, RegenerateDto } from './dto/chat.dto';
+import { ChatResponseDto } from './dto/chat-response.dto';
 
 @Controller('counselor')
 export class CounselorController {
@@ -17,7 +18,7 @@ export class CounselorController {
 
   @Post('chat')
   @HttpCode(HttpStatus.OK)
-  async chat(@Request() req: any, @Body() dto: ChatDto) {
+  async chat(@Request() req: any, @Body() dto: ChatDto): Promise<ChatResponseDto> {
     const userId = req.user.user_id;
     let conversationId = dto.conversation_id;
 
