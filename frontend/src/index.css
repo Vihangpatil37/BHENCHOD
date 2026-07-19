@@ -69,6 +69,17 @@
   --color-cta: var(--color-brand);
   --color-cta-text: var(--color-bg-primary);
   --color-destructive: var(--color-error);
+
+  --animate-shimmer: shimmer 1.8s infinite;
+
+  @keyframes shimmer {
+    from {
+      transform: translateX(-100%);
+    }
+    to {
+      transform: translateX(100%);
+    }
+  }
 }
 
 @layer base {
