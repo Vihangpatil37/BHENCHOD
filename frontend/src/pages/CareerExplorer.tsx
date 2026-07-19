@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
 import { client } from '../api/client';
 import {
-  Search,
   Bookmark,
   BookmarkCheck,
   Award,
@@ -15,7 +14,7 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { fadeUp } from '../lib/motion';
-import { CATALOGS, catalogFor } from '../lib/catalogs';
+import { catalogFor } from '../lib/catalogs';
 import { GlassCard } from '../components/ui/GlassCard';
 import { Button } from '../components/ui/Button';
 import { Skeleton } from '../components/ui/Skeleton';
@@ -42,9 +41,7 @@ export const CareerExplorer: React.FC = () => {
   const [latestRec, setLatestRec] = useState<any>(null);
   const [savedCodes, setSavedCodes] = useState<string[]>([]);
   
-  // Search & filter
-  const [searchQuery, setSearchQuery] = useState('');
-  const [selectedCatalog, setSelectedCatalog] = useState('All');
+  // Data
   const [careersList, setCareersList] = useState<Career[]>([]);
   
   // Detail Modal
@@ -124,12 +121,7 @@ export const CareerExplorer: React.FC = () => {
     }
   };
 
-  const filteredCareers = careersList.filter((c) => {
-    const matchesSearch = c.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                          c.description.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesCat = selectedCatalog === 'All' || c.category_code === selectedCatalog;
-    return matchesSearch && matchesCat;
-  });
+
 
   if (loading) {
     return (
@@ -170,8 +162,36 @@ export const CareerExplorer: React.FC = () => {
         )}
       </div>
 
+      {/* Empty State — no recommendations yet */}
+      {!latestRec && (
+        <section className="relative z-10 flex flex-col items-center justify-center text-center py-24 px-6">
+          <div className="absolute inset-0 bg-gradient-to-b from-brand/5 via-transparent to-transparent blur-[80px] rounded-full pointer-events-none" />
+          <div className="relative z-10 max-w-md space-y-4">
+            <div className="mx-auto w-16 h-16 rounded-full bg-white/[0.03] border border-white/[0.08] flex items-center justify-center">
+              <Award className="h-7 w-7 text-text-muted" />
+            </div>
+            <h2 className="text-xl font-bold text-text-primary">No Recommendations Yet</h2>
+            <p className="text-sm text-text-secondary leading-relaxed">
+              Your AI-powered career matches haven't been generated yet. This could be because
+              the generation process is still running or encountered a temporary issue.
+            </p>
+            <Button
+              onClick={handleRegenerate}
+              disabled={regenerating}
+              loading={regenerating}
+              variant="primary"
+              size="md"
+              className="mt-4"
+            >
+              <RefreshCw className="h-4 w-4" />
+              <span>Generate AI Matches</span>
+            </Button>
+          </div>
+        </section>
+      )}
+
       {/* AI Recommendations Section */}
-      {latestRec && (
+      {latestRec ? (
         <section className="space-y-6 relative z-10">
           <div className="flex items-center justify-between">
             <h2 className="text-lg font-bold text-text-primary flex items-center space-x-2">
@@ -257,115 +277,30 @@ export const CareerExplorer: React.FC = () => {
             })}
           </div>
         </section>
+      ) : (
+        <section className="space-y-6 relative z-10 flex flex-col items-center justify-center text-center py-16 px-4 bg-white/[0.02] border border-solid border-white/[0.06] rounded-[24px]">
+          <div className="h-12 w-12 rounded-[18px] bg-brand/10 flex items-center justify-center text-brand border border-solid border-brand/20">
+            <Award className="h-6 w-6" />
+          </div>
+          <div className="max-w-md space-y-2">
+            <h3 className="text-base font-bold text-text-primary">No Recommendations Found</h3>
+            <p className="text-xs text-text-secondary leading-relaxed">
+              Your onboarding is complete, but your career recommendations haven't been generated yet or failed. Generate them now to unlock your matches.
+            </p>
+          </div>
+          <Button
+            onClick={handleRegenerate}
+            disabled={regenerating}
+            loading={regenerating}
+            className="mt-4"
+          >
+            <RefreshCw className="h-4 w-4" />
+            <span>Generate Career Recommendations</span>
+          </Button>
+        </section>
       )}
 
-      {/* Career Explorer Search & Catalogs */}
-      <section className="space-y-6 relative z-10 border-t border-white/[0.06] pt-8">
-        <div>
-          <h2 className="text-xl font-bold text-text-primary">Explore All Paths</h2>
-          <p className="text-xs text-text-secondary mt-1">Filter by academic stream or search specific tags.</p>
-        </div>
 
-        <div className="flex flex-col md:flex-row gap-4 justify-between items-stretch md:items-center">
-          {/* Search Input */}
-          <div className="relative flex-grow max-w-md">
-            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-text-secondary h-4 w-4" />
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search careers, skills, description..."
-              className="w-full pl-10 pr-4 py-2.5 bg-white/[0.05] border border-solid border-white/[0.08] rounded-[18px] text-text-primary placeholder-white/30 focus:outline-none focus:border-ai-cyan/50 focus:ring-1 focus:ring-ai-cyan/50 transition-all text-sm"
-            />
-          </div>
-
-          {/* Floating Horizontal Filter Chips */}
-          <div className="flex gap-2 overflow-x-auto hide-scrollbar pb-1 max-w-full">
-            <button
-              onClick={() => setSelectedCatalog('All')}
-              className={`px-4 py-2 rounded-full border border-solid text-xs font-semibold whitespace-nowrap transition-all duration-180 cursor-pointer focus:outline-none ${
-                selectedCatalog === 'All'
-                  ? 'bg-brand/10 border-brand text-brand'
-                  : 'bg-white/[0.02] border-white/[0.06] text-text-secondary hover:border-white/[0.12] hover:bg-white/[0.05]'
-              }`}
-            >
-              All Categories
-            </button>
-            {CATALOGS.map(cat => (
-              <button
-                key={cat.code}
-                onClick={() => setSelectedCatalog(cat.code)}
-                className={`px-4 py-2 rounded-full border border-solid text-xs font-semibold whitespace-nowrap transition-all duration-180 cursor-pointer focus:outline-none ${
-                  selectedCatalog === cat.code
-                    ? 'bg-brand/10 border-brand text-brand'
-                    : 'bg-white/[0.02] border-white/[0.06] text-text-secondary hover:border-white/[0.12] hover:bg-white/[0.05]'
-                }`}
-              >
-                {cat.label}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Asymmetric Grid list */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
-          {filteredCareers.map((c, index) => {
-            const isBookmarked = savedCodes.includes(c.career_code);
-            const cat = catalogFor(c.category_code);
-            const isSpecial = index % 5 === 0; // Asymmetric card size distribution
-
-            return (
-              <GlassCard
-                key={c.career_code}
-                elevation={2}
-                onClick={() => handleViewDetails(c.career_code)}
-                className={`p-5 border border-solid border-white/[0.08] hover:border-brand/40 hover:-translate-y-0.5 rounded-[24px] cursor-pointer transition-all duration-180 flex flex-col justify-between group ${
-                  isSpecial ? 'sm:col-span-2 md:col-span-2' : ''
-                }`}
-              >
-                <div className="space-y-3">
-                  <div className="flex justify-between items-start">
-                    <span className={`text-[10px] font-bold uppercase tracking-widest px-2.5 py-0.5 rounded-full border border-solid ${cat.badge}`}>
-                      {cat.label}
-                    </span>
-                    <button
-                      onClick={(e) => handleToggleBookmark(c.career_code, e)}
-                      className="p-1.5 rounded-full bg-white/[0.03] border border-white/[0.08] text-text-secondary hover:text-brand cursor-pointer focus:outline-none"
-                    >
-                      {isBookmarked ? (
-                        <BookmarkCheck className="h-4 w-4 text-brand" />
-                      ) : (
-                        <Bookmark className="h-4 w-4" />
-                      )}
-                    </button>
-                  </div>
-                  <h3 className="text-base font-bold text-text-primary group-hover:text-brand transition-colors">{c.name}</h3>
-                  <p className="text-xs text-text-secondary line-clamp-2 leading-relaxed">{c.description}</p>
-                  
-                  {/* Hover stats reveal */}
-                  <div className="max-h-0 opacity-0 group-hover:max-h-32 group-hover:opacity-100 transition-all duration-350 overflow-hidden mt-3 pt-3 border-t border-white/[0.06]">
-                    <div className="grid grid-cols-2 gap-3 text-xs">
-                      <div>
-                        <span className="text-text-muted">Salary</span>
-                        <p className="font-semibold text-text-primary">{c.average_salary}</p>
-                      </div>
-                      <div>
-                        <span className="text-text-muted">Growth</span>
-                        <p className="font-semibold text-brand">{c.growth_rate}</p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="flex items-center space-x-1.5 text-xs text-brand font-semibold pt-3 mt-3 border-t border-white/[0.06]">
-                  <span>Explore requirements</span>
-                  <ChevronRight className="h-3.5 w-3.5 group-hover:translate-x-1 transition-transform" />
-                </div>
-              </GlassCard>
-            );
-          })}
-        </div>
-      </section>
 
       {/* Detailed Modal (GlassCard Elevation 4) */}
       <AnimatePresence>
