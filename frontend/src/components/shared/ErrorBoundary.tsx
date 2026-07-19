@@ -19,10 +19,27 @@ export class ErrorBoundary extends Component<Props, State> {
 
   public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
     console.error('ErrorBoundary caught:', error, errorInfo);
+    // If a dynamically imported module chunk fails (e.g. following a rebuild deployment)
+    // we reload the page automatically to fetch the latest index.html and chunk mappings.
+    const isChunkError = error && error.message && (
+      error.message.includes('Failed to fetch dynamically imported module') ||
+      error.message.includes('dynamically imported module')
+    );
+    if (isChunkError) {
+      const lastReload = sessionStorage.getItem('chunk_error_reload');
+      const now = Date.now();
+      // Only reload if we haven't reloaded in the last 15 seconds to prevent infinite reload loops
+      if (!lastReload || now - parseInt(lastReload, 10) > 15000) {
+        sessionStorage.setItem('chunk_error_reload', now.toString());
+        console.log('Chunk load failure detected. Hard reloading layout to pull down new deployment...');
+        window.location.reload();
+      }
+    }
   }
 
   private handleReset = () => {
-    this.setState({ hasError: false, error: null });
+    // Hard reload the browser window when resetting from the error screen
+    window.location.reload();
   };
 
   public render() {
