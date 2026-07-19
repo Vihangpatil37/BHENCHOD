@@ -5,6 +5,7 @@ import { GeminiProvider } from './providers/gemini.provider';
 import { GroqProvider } from './providers/groq.provider';
 import { MistralProvider } from './providers/mistral.provider';
 import { GLMProvider } from './providers/glm.provider';
+import { OpenRouterProvider } from './providers/openrouter.provider';
 import { RouteConfig } from './router.service';
 import { EventEmitter } from 'events';
 
@@ -22,11 +23,13 @@ export class RetryManagerService {
     groq: GroqProvider,
     mistral: MistralProvider,
     glm: GLMProvider,
+    openrouter: OpenRouterProvider,
   ) {
     this.providers['gemini'] = gemini;
     this.providers['groq'] = groq;
     this.providers['mistral'] = mistral;
     this.providers['glm'] = glm;
+    this.providers['openrouter'] = openrouter;
   }
 
   // ponytail: matches quota/billing errors that won't resolve with key rotation
