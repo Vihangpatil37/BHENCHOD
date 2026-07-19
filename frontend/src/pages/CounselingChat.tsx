@@ -5,17 +5,20 @@ import { client } from '../api/client';
 import {
   MessageSquare,
   Send,
-  Loader2,
   RefreshCw,
   ThumbsUp,
   Plus,
   Sparkles,
   User,
-  Bot
+  Bot,
+  X,
 } from 'lucide-react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { ChatMarkdown } from '../components/ChatMarkdown';
 import { fadeUp } from '../lib/motion';
+import { GlassCard } from '../components/ui/GlassCard';
+import { Button } from '../components/ui/Button';
+import { Skeleton } from '../components/ui/Skeleton';
 
 interface Message {
   role: 'user' | 'assistant';
@@ -102,7 +105,6 @@ export const CounselingChat: React.FC = () => {
   const fetchMessages = async (convId: string) => {
     try {
       const res: any = await client.get(`/counselor/conversations/${convId}`);
-      // The response is a messages array directly
       setMessages(Array.isArray(res) ? res : res.messages || []);
     } catch (err) {
       console.error('Failed to load messages:', err);
@@ -122,7 +124,6 @@ export const CounselingChat: React.FC = () => {
     if (!textToSend) setInputText('');
     setSending(true);
 
-    // Optimistic local add
     const tempUserMsg: Message = {
       role: 'user',
       content: text,
@@ -139,11 +140,9 @@ export const CounselingChat: React.FC = () => {
       const res: any = await client.post('/counselor/chat', payload);
       
       if (!activeConvId && res.conversation_id) {
-        // First message in a new thread
         setActiveConvId(res.conversation_id);
-        fetchConversations(); // refresh sidebar list
+        fetchConversations();
       } else {
-        // Thread already exists, fetch updated list to show counts/summary
         const resConv: any = await client.get(`/counselor/conversations/${activeConvId}`);
         setMessages(Array.isArray(resConv) ? resConv : resConv.messages || []);
       }
@@ -159,7 +158,6 @@ export const CounselingChat: React.FC = () => {
     setRegenerating(true);
     try {
       await client.post('/counselor/regenerate', { conversation_id: activeConvId });
-      // Reload messages
       await fetchMessages(activeConvId);
     } catch (err: any) {
       alert(err.message || 'Regeneration failed');
@@ -185,7 +183,6 @@ export const CounselingChat: React.FC = () => {
         explanation: feedbackComment
       });
 
-      // Reload messages to update local UI feedback indicators
       await fetchMessages(activeConvId);
       setFeedbackMsgIndex(null);
     } catch (err: any) {
@@ -196,273 +193,291 @@ export const CounselingChat: React.FC = () => {
   };
 
   return (
-    <motion.div variants={fadeUp} initial="hidden" animate="visible" className="flex-grow flex flex-col md:flex-row min-w-0 h-full">
-        
-        {/* Left Column: Conversations List */}
-        <section className="w-full md:w-80 border-r border-white/5 p-6 flex flex-col justify-between shrink-0 space-y-6">
-          <div className="space-y-4 flex-grow flex flex-col overflow-hidden">
-            <div className="flex justify-between items-center shrink-0">
-              <h2 className="text-sm font-bold text-text-muted uppercase tracking-widest">Conversations</h2>
-              <button
-                onClick={handleStartNewChat}
-                className="p-1.5 rounded-xl bg-accent hover:brightness-110 text-white shadow-md shadow-accent/20 transition-all"
-              >
-                <Plus className="h-4 w-4" />
-              </button>
-            </div>
-
-            {loadingList ? (
-              <div className="flex-grow flex items-center justify-center">
-                <Loader2 className="h-6 w-6 text-text-muted/40 animate-spin" />
-              </div>
-            ) : (
-              <div className="flex-grow overflow-y-auto space-y-2 pr-2">
-                {conversations.length === 0 ? (
-                  <p className="text-xs text-text-muted/60 text-center py-8">No previous chats. Start a new thread!</p>
-                ) : (
-                  conversations.map((c) => {
-                    const isActive = c._id === activeConvId;
-                    return (
-                      <button
-                        key={c._id}
-                        onClick={() => setActiveConvId(c._id)}
-                        className={`w-full p-4 rounded-2xl border text-left transition-all ${
-                          isActive
-                            ? 'bg-accent/10 border-accent text-accent/80'
-                            : 'bg-white/[0.02] border-white/5 text-text-muted hover:border-white/20'
-                        }`}
-                      >
-                        <div className="space-y-1">
-                          <p className="text-xs font-bold text-text/80 line-clamp-1">
-                            {c.summary || 'AI Career Counseling'}
-                          </p>
-                          <div className="flex justify-between items-center text-[10px] text-text-muted/60">
-                            <span>{c.messages_count} messages</span>
-                            <span>{new Date(c.updated_at).toLocaleDateString()}</span>
-                          </div>
-                        </div>
-                      </button>
-                    );
-                  })
-                )}
-              </div>
-            )}
-          </div>
-        </section>
-
-        {/* Right Column: Chat Box */}
-        <section className="flex-grow flex flex-col h-[calc(100vh-120px)] md:h-full relative overflow-hidden bg-bg p-6 md:p-8">
-          <div className="absolute top-0 right-0 w-96 h-96 bg-accent/5 rounded-full blur-3xl pointer-events-none" />
-          
-          {/* Active Thread Header */}
-          <div className="shrink-0 flex justify-between items-center border-b border-white/5 pb-4 relative z-10">
-            <div className="flex items-center space-x-3">
-              <div className="h-8 w-8 rounded-xl bg-gradient-to-tr from-accent to-accent-2 flex items-center justify-center">
-                <Sparkles className="h-4 w-4 text-white" />
-              </div>
-              <div>
-                <h3 className="text-sm font-bold text-white">AI Career Counselor</h3>
-                <span className="text-[10px] text-text-muted/60">Trained on your top recommendation matches</span>
-              </div>
-            </div>
-
-            {activeConvId && messages.length > 0 && (
-              <button
-                onClick={handleRegenerate}
-                disabled={regenerating}
-                className="flex items-center space-x-1.5 px-3 py-1.5 bg-white/[0.03] border border-white/10 text-text-muted hover:text-white rounded-lg text-xs font-semibold transition-all disabled:opacity-50"
-              >
-                {regenerating ? (
-                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                ) : (
-                  <RefreshCw className="h-3.5 w-3.5" />
-                )}
-                <span>Regenerate Last</span>
-              </button>
-            )}
+    <motion.div variants={fadeUp} initial="hidden" animate="visible" className="flex-grow flex flex-col md:flex-row min-w-0 h-full p-4 md:p-8">
+      {/* Left Column: Conversations List */}
+      <section className="w-full md:w-80 border-b md:border-b-0 md:border-r border-solid border-white/[0.08] p-4 flex flex-col justify-between shrink-0 space-y-6">
+        <div className="space-y-4 flex-grow flex flex-col overflow-hidden">
+          <div className="flex justify-between items-center shrink-0">
+            <h2 className="text-xs font-bold text-text-secondary uppercase tracking-widest">Conversations</h2>
+            <button
+              onClick={handleStartNewChat}
+              className="p-1.5 rounded-xl bg-brand hover:bg-brand/90 text-white shadow-md shadow-brand/10 transition-all cursor-pointer focus:outline-none"
+            >
+              <Plus className="h-4 w-4" />
+            </button>
           </div>
 
-          {/* Messages Flow */}
-          <div className="flex-grow overflow-y-auto py-6 space-y-4 pr-2 relative z-10">
-            {messages.length === 0 ? (
-              <div className="h-full flex flex-col items-center justify-center space-y-4 max-w-md mx-auto text-center">
-                <div className="h-12 w-12 rounded-2xl bg-accent/10 flex items-center justify-center text-accent border border-accent/20">
-                  <MessageSquare className="h-6 w-6" />
-                </div>
-                <h3 className="text-sm font-bold text-white">Ask your AI Counselor anything</h3>
-                <p className="text-xs text-text-muted/60 leading-relaxed">
-                  Discuss colleges, certifications, exam preparation, or ask why a specific career matches your traits list.
-                </p>
-                <div className="w-full space-y-2 pt-4">
-                  {SUGGESTED_QUESTIONS.map((q) => (
+          {loadingList ? (
+            <div className="space-y-3 pt-2">
+              <Skeleton className="h-16 w-full" />
+              <Skeleton className="h-16 w-full" />
+              <Skeleton className="h-16 w-full" />
+            </div>
+          ) : (
+            <div className="flex-grow overflow-y-auto space-y-2 pr-2">
+              {conversations.length === 0 ? (
+                <p className="text-xs text-text-secondary/60 text-center py-8">No previous chats. Start a new thread!</p>
+              ) : (
+                conversations.map((c) => {
+                  const isActive = c._id === activeConvId;
+                  return (
                     <button
-                      key={q}
-                      onClick={() => handleSendMessage(q)}
-                      className="w-full p-3 bg-white/[0.03] hover:bg-white/[0.05] border border-white/5 hover:border-white/20 rounded-xl text-left text-[11px] text-text-muted hover:text-accent/80 transition-all"
+                      key={c._id}
+                      onClick={() => setActiveConvId(c._id)}
+                      className={`w-full p-4 rounded-[18px] border border-solid text-left transition-all cursor-pointer focus:outline-none ${
+                        isActive
+                          ? 'bg-brand/10 border-brand text-brand shadow-[0_4px_12px_rgba(91,124,250,0.15)]'
+                          : 'bg-white/[0.02] border-white/[0.06] text-text-secondary hover:border-white/[0.12] hover:bg-white/[0.04]'
+                      }`}
                     >
-                      {q}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            ) : (
-              messages.map((m, idx) => {
-                const isUser = m.role === 'user';
-                return (
-                  <div key={idx} className={`flex ${isUser ? 'justify-end' : 'justify-start'}`}>
-                    <div className="flex items-start space-x-2.5 max-w-[85%]">
-                      {!isUser && (
-                        <div className="h-7 w-7 rounded-lg bg-accent/10 flex items-center justify-center border border-accent/20 text-accent shrink-0 mt-1">
-                          <Bot className="h-4 w-4" />
+                      <div className="space-y-1">
+                        <p className="text-xs font-bold text-text-primary line-clamp-1">
+                          {c.summary || 'AI Career Counseling'}
+                        </p>
+                        <div className="flex justify-between items-center text-[10px] text-text-secondary">
+                          <span>{c.messages_count} messages</span>
+                          <span>{new Date(c.updated_at).toLocaleDateString()}</span>
                         </div>
-                      )}
-                      <div className="space-y-1.5">
-                        <div className={`p-4 rounded-2xl text-xs leading-relaxed ${
-                          isUser
-                            ? 'bg-accent text-white font-medium rounded-tr-none'
-                            : 'bg-white/[0.05] border border-white/5 text-text/80 rounded-tl-none font-medium'
-                        }`}>
-                          {isUser ? m.content : <ChatMarkdown content={m.content} />}
-                        </div>
-
-                        {!isUser && (
-                          <div className="flex items-center space-x-3 text-[10px] text-text-muted/60 px-1.5">
-                            <span>{new Date(m.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
-                            
-                            {/* Feedback Rating view */}
-                            {m.feedback ? (
-                              <span className="text-accent font-bold bg-accent/10 px-1.5 py-0.5 rounded">
-                                Rated {m.feedback.rating}★
-                              </span>
-                            ) : (
-                              <button
-                                onClick={() => handleOpenFeedback(idx)}
-                                className="flex items-center space-x-1 hover:text-white transition-colors"
-                              >
-                                <ThumbsUp className="h-3 w-3" />
-                                <span>Feedback</span>
-                              </button>
-                            )}
-                          </div>
-                        )}
                       </div>
-                      {isUser && (
-                        <div className="h-7 w-7 rounded-lg bg-accent flex items-center justify-center text-white shrink-0 mt-1">
-                          <User className="h-4 w-4" />
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                );
-              })
-            )}
-
-            {sending && (
-              <div className="flex justify-start">
-                <div className="flex items-start space-x-2.5">
-                  <div className="h-7 w-7 rounded-lg bg-accent/10 flex items-center justify-center border border-accent/20 text-accent shrink-0 mt-1 animate-pulse">
-                    <Bot className="h-4 w-4" />
-                  </div>
-                  <div className="p-4 bg-white/[0.05] border border-white/5 rounded-2xl rounded-tl-none flex items-center space-x-1.5">
-                    <div className="h-1.5 w-1.5 bg-text-muted/30 rounded-full animate-bounce" />
-                    <div className="h-1.5 w-1.5 bg-text-muted/30 rounded-full animate-bounce [animation-delay:0.2s]" />
-                    <div className="h-1.5 w-1.5 bg-text-muted/30 rounded-full animate-bounce [animation-delay:0.4s]" />
-                  </div>
-                </div>
-              </div>
-            )}
-            
-            <div ref={messagesEndRef} />
-          </div>
-
-          {/* Action Input bar */}
-          {messages.length > 0 && (
-            <div className="shrink-0 flex gap-2 overflow-x-auto pb-3 border-b border-white/5 relative z-10 select-none">
-              {SUGGESTED_QUESTIONS.map((q) => (
-                <button
-                  key={q}
-                  onClick={() => handleSendMessage(q)}
-                  className="shrink-0 px-3 py-1.5 bg-white/[0.03] hover:bg-white/[0.03]/80 border border-white/5 rounded-lg text-[10px] text-text-muted hover:text-accent transition-all font-semibold"
-                >
-                  {q}
-                </button>
-              ))}
+                    </button>
+                  );
+                })
+              )}
             </div>
           )}
+        </div>
+      </section>
 
-          <div className="shrink-0 pt-4 relative z-10">
-            <div className="relative">
-              <input
-                type="text"
-                placeholder="Type your question about colleges, roadmaps, or matching scores..."
-                value={inputText}
-                onChange={(e) => setInputText(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && handleSendMessage()}
-                disabled={sending}
-                className="w-full bg-white/[0.05] border border-white/10/80 rounded-2xl pl-4 pr-12 py-3 text-xs text-white focus:outline-none focus:border-accent placeholder-text-muted/60"
-              />
-              <button
-                onClick={() => handleSendMessage()}
-                disabled={sending}
-                className="absolute right-3 top-2.5 p-1.5 bg-accent hover:brightness-110 text-white rounded-xl shadow-md shadow-accent/20 transition-all"
-              >
-                <Send className="h-3.5 w-3.5" />
-              </button>
+      {/* Right Column: Chat Box */}
+      <section className="flex-grow flex flex-col h-[calc(100vh-160px)] md:h-[650px] relative overflow-hidden p-4 md:p-6 lg:p-8">
+        <div className="absolute top-0 right-0 w-96 h-96 bg-brand/5 rounded-full blur-3xl pointer-events-none" />
+        
+        {/* Active Thread Header */}
+        <div className="shrink-0 flex justify-between items-center border-b border-solid border-white/[0.08] pb-4 relative z-10">
+          <div className="flex items-center space-x-3">
+            <div className="h-8 w-8 rounded-xl bg-gradient-to-tr from-brand to-[#70E1FF] flex items-center justify-center">
+              <Sparkles className="h-4 w-4 text-white" />
+            </div>
+            <div>
+              <h3 className="text-sm font-bold text-text-primary">AI Career Counselor</h3>
+              <span className="text-[10px] text-text-secondary">Trained on your top recommendation matches</span>
             </div>
           </div>
-        </section>
 
-      {/* Feedback Modal Overlay */}
-      {feedbackMsgIndex !== null && (
-        <div className="fixed inset-0 bg-bg/80 backdrop-blur-sm flex items-center justify-center z-50">
-          <div className="w-full max-w-sm bg-white/[0.03] border border-white/[0.06] p-6 rounded-3xl space-y-4">
-            <h3 className="text-sm font-bold text-white">Share your feedback</h3>
-            
-            <div className="space-y-2">
-              <label className="text-xs text-text-muted font-bold block">Rating (1 to 5 Stars)</label>
-              <div className="flex space-x-2 justify-center py-2 bg-bg rounded-xl border border-white/[0.06]">
-                {[1, 2, 3, 4, 5].map((star) => (
+          {activeConvId && messages.length > 0 && (
+            <Button
+              onClick={handleRegenerate}
+              disabled={regenerating}
+              loading={regenerating}
+              variant="secondary"
+              size="sm"
+            >
+              <RefreshCw className="h-3.5 w-3.5" />
+              <span>Regenerate Last</span>
+            </Button>
+          )}
+        </div>
+
+        {/* Messages Flow */}
+        <div className="flex-grow overflow-y-auto py-6 space-y-4 pr-2 relative z-10">
+          {messages.length === 0 ? (
+            <div className="h-full flex flex-col items-center justify-center space-y-4 max-w-md mx-auto text-center">
+              <div className="h-12 w-12 rounded-[18px] bg-brand/10 flex items-center justify-center text-brand border border-solid border-brand/20">
+                <MessageSquare className="h-6 w-6" />
+              </div>
+              <h3 className="text-sm font-bold text-text-primary">Ask your AI Counselor anything</h3>
+              <p className="text-xs text-text-secondary leading-relaxed">
+                Discuss colleges, certifications, exam preparation, or ask why a specific career matches your traits list.
+              </p>
+              <div className="w-full space-y-2 pt-4">
+                {SUGGESTED_QUESTIONS.map((q) => (
                   <button
-                    key={star}
-                    onClick={() => setFeedbackRating(star)}
-                    className="p-1 hover:scale-110 transition-transform"
+                    key={q}
+                    onClick={() => handleSendMessage(q)}
+                    className="w-full p-3.5 bg-white/[0.02] hover:bg-white/[0.05] border border-solid border-white/[0.06] hover:border-brand/35 rounded-[18px] text-left text-[11px] text-text-secondary hover:text-brand transition-all cursor-pointer focus:outline-none"
                   >
-                    <Sparkles className={`h-6 w-6 ${star <= feedbackRating ? 'fill-accent text-accent' : 'text-text-muted/30'}`} />
+                    {q}
                   </button>
                 ))}
               </div>
             </div>
+          ) : (
+            messages.map((m, idx) => {
+              const isUser = m.role === 'user';
+              return (
+                <div key={idx} className={`flex ${isUser ? 'justify-end' : 'justify-start'}`}>
+                  <div className="flex items-start space-x-2.5 max-w-[85%]">
+                    {!isUser && (
+                      <div className="h-7 w-7 rounded-lg bg-brand/10 flex items-center justify-center border border-solid border-brand/20 text-brand shrink-0 mt-1">
+                        <Bot className="h-4 w-4" />
+                      </div>
+                    )}
+                    <div className="space-y-1.5">
+                      <div className={`p-4 rounded-[18px] text-xs leading-relaxed ${
+                        isUser
+                          ? 'bg-brand text-white font-semibold rounded-tr-none'
+                          : 'bg-white/[0.03] border border-solid border-white/[0.06] text-text-primary rounded-tl-none font-medium'
+                      }`}>
+                        {isUser ? m.content : <ChatMarkdown content={m.content} />}
+                      </div>
 
-            <div className="space-y-2">
-              <label className="text-xs text-text-muted font-bold block">Comments (Optional)</label>
-              <textarea
-                value={feedbackComment}
-                onChange={(e) => setFeedbackComment(e.target.value)}
-                placeholder="e.g. This is very helpful, details matched my expectations."
-                rows={3}
-                className="w-full bg-bg border border-white/[0.06] rounded-xl p-3 text-xs text-white focus:outline-none focus:border-accent placeholder-text-muted/40"
-              />
-            </div>
+                      {!isUser && (
+                        <div className="flex items-center space-x-3 text-[10px] text-text-secondary px-1.5">
+                          <span>{new Date(m.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                          
+                          {/* Feedback Rating view */}
+                          {m.feedback ? (
+                            <span className="text-brand font-bold bg-brand/10 border border-brand/20 px-1.5 py-0.5 rounded">
+                              Rated {m.feedback.rating}★
+                            </span>
+                          ) : (
+                            <button
+                              onClick={() => handleOpenFeedback(idx)}
+                              className="flex items-center space-x-1 hover:text-brand transition-colors cursor-pointer focus:outline-none"
+                            >
+                              <ThumbsUp className="h-3 w-3" />
+                              <span>Feedback</span>
+                            </button>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                    {isUser && (
+                      <div className="h-7 w-7 rounded-lg bg-brand flex items-center justify-center text-white shrink-0 mt-1">
+                        <User className="h-4 w-4" />
+                      </div>
+                    )}
+                  </div>
+                </div>
+              );
+            })
+          )}
 
-            <div className="flex justify-end space-x-3 pt-2">
-              <button
-                onClick={() => setFeedbackMsgIndex(null)}
-                className="px-4 py-2.5 bg-bg border border-white/[0.06] text-text-muted hover:text-white rounded-xl text-xs font-semibold"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleSubmitFeedback}
-                disabled={submittingFeedback}
-                className="px-5 py-2.5 bg-accent hover:brightness-110 text-white rounded-xl text-xs font-bold shadow-md shadow-accent/20 disabled:opacity-50"
-              >
-                {submittingFeedback ? 'Submitting...' : 'Submit Feedback'}
-              </button>
+          {sending && (
+            <div className="flex justify-start">
+              <div className="flex items-start space-x-2.5">
+                <div className="h-7 w-7 rounded-lg bg-brand/10 flex items-center justify-center border border-solid border-brand/20 text-brand shrink-0 mt-1 animate-pulse">
+                  <Bot className="h-4 w-4" />
+                </div>
+                <div className="p-4 bg-white/[0.03] border border-solid border-white/[0.06] rounded-[18px] rounded-tl-none flex items-center space-x-1.5">
+                  <div className="h-1.5 w-1.5 bg-white/20 rounded-full animate-bounce" />
+                  <div className="h-1.5 w-1.5 bg-white/20 rounded-full animate-bounce [animation-delay:0.2s]" />
+                  <div className="h-1.5 w-1.5 bg-white/20 rounded-full animate-bounce [animation-delay:0.4s]" />
+                </div>
+              </div>
             </div>
+          )}
+          
+          <div ref={messagesEndRef} />
+        </div>
+
+        {/* Suggestion Chips */}
+        {messages.length > 0 && (
+          <div className="shrink-0 flex gap-2 overflow-x-auto pb-3 border-b border-solid border-white/[0.08] relative z-10 select-none">
+            {SUGGESTED_QUESTIONS.map((q) => (
+              <button
+                key={q}
+                onClick={() => handleSendMessage(q)}
+                className="shrink-0 px-3 py-1.5 bg-white/[0.03] hover:bg-white/[0.06] border border-solid border-white/[0.06] rounded-full text-[10px] text-text-secondary hover:text-brand transition-all font-semibold cursor-pointer focus:outline-none"
+              >
+                {q}
+              </button>
+            ))}
+          </div>
+        )}
+
+        {/* Solid Glass Border Input Box */}
+        <div className="shrink-0 pt-4 relative z-10">
+          <div className="relative">
+            <input
+              type="text"
+              placeholder="Type your question about colleges, roadmaps, or matching scores..."
+              value={inputText}
+              onChange={(e) => setInputText(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && handleSendMessage()}
+              disabled={sending}
+              className="w-full bg-white/[0.03] border border-solid border-white/[0.08] rounded-[18px] pl-4 pr-12 py-3.5 text-xs text-text-primary focus:outline-none focus:border-ai-cyan/50 focus:ring-1 focus:ring-ai-cyan/50 placeholder-white/30 transition-all duration-180"
+            />
+            <button
+              onClick={() => handleSendMessage()}
+              disabled={sending}
+              className="absolute right-2.5 top-1/2 -translate-y-1/2 p-2 bg-brand hover:bg-brand/90 text-white rounded-[12px] transition-all cursor-pointer focus:outline-none"
+            >
+              <Send className="h-3.5 w-3.5" />
+            </button>
           </div>
         </div>
-      )}
+      </section>
 
+      {/* Feedback Modal Overlay (GlassCard Elevation 4) */}
+      <AnimatePresence>
+        {feedbackMsgIndex !== null && (
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-[20px] flex items-center justify-center z-50">
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              className="w-full max-w-sm outline-none"
+            >
+              <GlassCard elevation={4} className="p-6 border border-solid border-white/[0.08] rounded-[28px] space-y-4">
+                <div className="flex justify-between items-center">
+                  <h3 className="text-sm font-bold text-text-primary">Share your feedback</h3>
+                  <button
+                    onClick={() => setFeedbackMsgIndex(null)}
+                    className="p-1.5 rounded-full bg-white/[0.03] border border-white/[0.08] text-text-secondary hover:text-text-primary cursor-pointer focus:outline-none"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                </div>
+                
+                <div className="space-y-2">
+                  <label className="text-xs text-text-secondary font-bold block">Rating (1 to 5 Stars)</label>
+                  <div className="flex space-x-2 justify-center py-2.5 bg-white/[0.02] rounded-[18px] border border-solid border-white/[0.06]">
+                    {[1, 2, 3, 4, 5].map((star) => (
+                      <button
+                        key={star}
+                        onClick={() => setFeedbackRating(star)}
+                        className="p-1 hover:scale-110 transition-transform cursor-pointer focus:outline-none"
+                      >
+                        <Sparkles className={`h-6 w-6 ${star <= feedbackRating ? 'fill-brand text-brand' : 'text-text-disabled'}`} />
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-xs text-text-secondary font-bold block">Comments (Optional)</label>
+                  <textarea
+                    value={feedbackComment}
+                    onChange={(e) => setFeedbackComment(e.target.value)}
+                    placeholder="e.g. This is very helpful, details matched my expectations."
+                    rows={3}
+                    className="w-full bg-white/[0.05] border border-solid border-white/[0.08] rounded-[18px] p-3 text-xs text-text-primary focus:outline-none focus:border-ai-cyan/50 focus:ring-1 focus:ring-ai-cyan/50 placeholder-white/30 transition-all"
+                  />
+                </div>
+
+                <div className="flex justify-end space-x-3 pt-2">
+                  <Button
+                    onClick={() => setFeedbackMsgIndex(null)}
+                    variant="secondary"
+                    className="text-xs px-4"
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    onClick={handleSubmitFeedback}
+                    loading={submittingFeedback}
+                    className="text-xs px-5"
+                  >
+                    Submit Feedback
+                  </Button>
+                </div>
+              </GlassCard>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </motion.div>
   );
 };
