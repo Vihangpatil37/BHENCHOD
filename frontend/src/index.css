@@ -1,28 +1,88 @@
 @import "tailwindcss";
 
-@theme {
-  --color-bg: #150E22;
-  --color-surface: #201735;
-  --color-text: #FFFFFF;
-  --color-text-muted: #C3B8D9;
-  --color-accent: #B583F0;
-  --color-accent-2: #4FE0B0;
-  --color-muted: #9686B5;
-  --color-cta: #F0A83E;
-  --color-cta-text: #1A1330;
-  --color-destructive: #EF4444;
+/* 
+  Derived from frontend/src/design/tokens/ - modifications should be made in TS files and synced here 
+*/
 
-  --font-jakarta: "Plus Jakarta Sans", sans-serif;
-  --font-anton: "Anton", sans-serif;
+@theme {
+  --color-bg-primary: #05070D;
+  --color-bg-secondary: #0A0A0F;
+  --color-bg-tertiary: #10131A;
+
+  --color-brand: #5B7CFA;
+  --color-brand-hover: #4F6FF0;
+  --color-brand-pressed: #4565DA;
+
+  --color-ai-cyan: #70E1FF;
+  --color-recommendation-purple: #8B5CF6;
+
+  /* Semantic status */
+  --color-success: #22C55E;
+  --color-warning: #F59E0B;
+  --color-error: #EF4444;
+  --color-error-hover: #DC2626;
+  --color-info: #3B82F6;
+
+  /* Glass surfaces */
+  --color-glass-surface: rgba(255, 255, 255, 0.05);
+  --color-glass-elevated: rgba(255, 255, 255, 0.08);
+  --color-glass-modal: rgba(255, 255, 255, 0.10);
+  --color-glass-hover: rgba(255, 255, 255, 0.12);
+  --color-glass-pressed: rgba(255, 255, 255, 0.16);
+
+  /* Glass borders */
+  --color-border-default: rgba(255, 255, 255, 0.08);
+  --color-border-hover: rgba(255, 255, 255, 0.12);
+  --color-border-focus: rgba(112, 225, 255, 0.30);
+  --color-border-selected: rgba(91, 124, 250, 0.35);
+
+  /* Text hierarchy */
+  --color-text-primary: #FFFFFF;
+  --color-text-secondary: rgba(255, 255, 255, 0.72);
+  --color-text-muted: rgba(255, 255, 255, 0.45);
+  --color-text-disabled: rgba(255, 255, 255, 0.25);
+
+  /* Career category accents */
+  --color-cat-engineering: #3B82F6;
+  --color-cat-medical: #22C55E;
+  --color-cat-business: #F59E0B;
+  --color-cat-arts: #EC4899;
+  --color-cat-law: #64748B;
+  --color-cat-defence: #DC2626;
+  --color-cat-agriculture: #84CC16;
+  --color-cat-research: #8B5CF6;
+  --color-cat-teaching: #14B8A6;
+  --color-cat-design: #F97316;
+
+  --font-geist: "Geist", "Inter", sans-serif;
+  --font-inter: "Inter", sans-serif;
+  --font-mono: "JetBrains Mono", monospace;
+
+  /* Backward Compatibility Aliases for migration phase */
+  --color-bg: var(--color-bg-primary);
+  --color-surface: var(--color-glass-surface);
+  --color-text: var(--color-text-primary);
+  --color-text-muted: var(--color-text-secondary);
+  --color-accent: var(--color-brand);
+  --color-accent-2: var(--color-ai-cyan);
+  --color-muted: var(--color-text-muted);
+  --color-cta: var(--color-brand);
+  --color-cta-text: var(--color-bg-primary);
+  --color-destructive: var(--color-error);
 }
 
 @layer base {
   body {
-    @apply bg-bg text-text font-jakarta antialiased;
+    background-color: var(--color-bg-primary);
+    color: var(--color-text-primary);
+    font-family: var(--font-geist);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
     overflow-x: hidden;
   }
   *:focus-visible {
-    @apply outline-2 outline-accent outline-offset-2;
+    outline: 2px solid var(--color-border-focus);
+    outline-offset: 2px;
   }
 }
 
@@ -36,22 +96,29 @@
 
 @layer utilities {
   .glass-card {
-    @apply backdrop-blur-[20px] bg-white/[0.06] border border-white/[0.08];
+    backdrop-filter: blur(30px);
+    background-color: var(--color-glass-surface);
+    border: 1px solid var(--color-border-default);
   }
   .glass-orb {
-    @apply blur-[120px] opacity-[0.18];
+    filter: blur(120px);
+    opacity: 0.18;
   }
   .focus-ring {
-    @apply focus:outline-none focus-visible:outline-2 focus-visible:outline-accent focus-visible:outline-offset-2;
+    outline: none;
+  }
+  .focus-ring:focus-visible {
+    outline: 2px solid var(--color-border-focus);
+    outline-offset: 2px;
   }
 }
 
 /* Global Scrollbar Styling */
 ::-webkit-scrollbar { width: 8px; height: 8px; }
-::-webkit-scrollbar-track { background: var(--color-bg); }
-::-webkit-scrollbar-thumb { background: var(--color-surface); border-radius: 10px; border: 2px solid var(--color-bg); }
-::-webkit-scrollbar-thumb:hover { background: var(--color-accent); }
-* { scrollbar-width: thin; scrollbar-color: var(--color-surface) var(--color-bg); }
+::-webkit-scrollbar-track { background: var(--color-bg-primary); }
+::-webkit-scrollbar-thumb { background: var(--color-glass-elevated); border-radius: 10px; border: 2px solid var(--color-bg-primary); }
+::-webkit-scrollbar-thumb:hover { background: var(--color-brand); }
+* { scrollbar-width: thin; scrollbar-color: var(--color-glass-elevated) var(--color-bg-primary); }
 
 @keyframes orbit {
   from { transform: rotate(0deg); }

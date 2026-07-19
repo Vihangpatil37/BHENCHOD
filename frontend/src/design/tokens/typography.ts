@@ -1,0 +1,43 @@
+export const typography = {
+  fonts: {
+    primary: '"Geist", "Inter", sans-serif',
+    fallback: '"Inter", sans-serif',
+    mono: '"JetBrains Mono", monospace',
+  },
+  sizes: {
+    display: {
+      desktop: 64,
+      tablet: 52,
+      mobile: 40,
+    },
+    h1: 40,
+    h2: 32,
+    h3: 24,
+    h4: 20,
+    h5: 18,
+    h6: 16,
+    bodyLarge: 18,
+    bodyNormal: 16,
+    bodySmall: 14,
+    bodyTiny: 12,
+  },
+  weights: {
+    display: 800,
+    h1: 700,
+    h2: 700,
+    h3: 600,
+    h4: 600,
+    h5: 600,
+    h6: 600,
+    bodyLarge: 400,
+    bodyNormal: 400,
+    bodySmall: 500,
+    bodyTiny: 500,
+  },
+  lineHeights: {
+    headings: 1.15,
+    body: 1.6,
+    articles: 1.8,
+    cards: 1.4,
+  },
+} as const;
