@@ -7,12 +7,15 @@ import {
   Bookmark,
   FileText,
   Download,
-  Loader2,
   CheckCircle,
-  ArrowRight
+  ArrowRight,
+  User,
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { fadeUp } from '../lib/motion';
+import { GlassCard } from '../components/ui/GlassCard';
+import { Button } from '../components/ui/Button';
+import { Skeleton } from '../components/ui/Skeleton';
 
 export const Dashboard: React.FC = () => {
   const navigate = useNavigate();
@@ -41,9 +44,7 @@ export const Dashboard: React.FC = () => {
       const res: any = await client.get('/dashboard');
       setDashboardData(res);
 
-      // Check if there is an active PDF report in generating status
       if (res.recommendation?.available) {
-        // Fetch report history list to see if user has a generated report
         const reports: any = await client.get('/reports/history').catch(() => []);
         if (reports && reports.length > 0) {
           const latestReport = reports[0];
@@ -73,7 +74,6 @@ export const Dashboard: React.FC = () => {
         status: res.status,
         loading: false
       });
-      // Start polling status
       pollReportStatus(res._id);
     } catch (err: any) {
       alert(err.message || 'Failed to start PDF report generation');
@@ -99,15 +99,6 @@ export const Dashboard: React.FC = () => {
 
   const handleDownloadReport = () => {
     if (!reportState.id) return;
-    
-    // Trigger download stream using window.open or an invisible link
-    // Because auth token is required, wait! The reports controller uses JwtAuthGuard for download.
-    // If the endpoint is protected by JWT, standard a-href download might throw 401 unless we fetch it as blob or open window with query param token.
-    // Wait! Let's check how the reports download is protected:
-    // It has @Public() or is it guarded? Let's check reports.controller.ts using view_file or verify.
-    // In reports.controller.ts, download endpoint GET /reports/download/:reportId is NOT public (unless explicitly @Public()).
-    // Let's verify by opening reports.controller.ts to check if JwtAuthGuard applies. Yes, JwtAuthGuard is global!
-    // So we can download it by fetching as a blob via axios, then building an object URL! This is 100% secure, standard, and works perfectly!
     downloadReportViaBlob();
   };
 
@@ -134,14 +125,29 @@ export const Dashboard: React.FC = () => {
     }
   };
 
+  const getGreeting = () => {
+    const hour = new Date().getHours();
+    if (hour < 12) return 'Good Morning';
+    if (hour < 17) return 'Good Afternoon';
+    return 'Good Evening';
+  };
+
   if (!user) return null;
 
   if (loadingData) {
     return (
-      <motion.div variants={fadeUp} initial="hidden" animate="visible" className="min-h-screen bg-bg flex flex-col items-center justify-center space-y-4">
-        <div className="w-8 h-8 border-2 border-accent border-t-transparent rounded-full animate-spin" />
-        <span className="text-text-muted font-medium">Assembling student workspace...</span>
-      </motion.div>
+      <div className="space-y-8 p-4 md:p-8">
+        <Skeleton className="h-[180px] w-full" />
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <Skeleton className="h-[180px] w-full" />
+          <Skeleton className="h-[180px] w-full" />
+          <Skeleton className="h-[180px] w-full" />
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <Skeleton className="h-[160px] w-full" />
+          <Skeleton className="h-[160px] w-full" />
+        </div>
+      </div>
     );
   }
 
@@ -152,200 +158,203 @@ export const Dashboard: React.FC = () => {
   const aiInsight = dashboardData?.ai_insight || 'Once onboarding completes, your trait profile and matched sectors will appear here.';
 
   return (
-    <motion.div variants={fadeUp} initial="hidden" animate="visible" className="space-y-10">
+    <motion.div variants={fadeUp} initial="hidden" animate="visible" className="space-y-8 p-4 md:p-8">
 
-        {/* Top welcome card */}
-        <section className="bg-gradient-to-r from-white/[0.03] via-white/[0.03] to-accent/5 border border-white/[0.06] p-8 rounded-3xl relative overflow-hidden">
-          <div className="absolute top-0 right-0 w-96 h-96 bg-accent/5 rounded-full blur-3xl pointer-events-none" />
-          <div className="relative z-10 space-y-4">
-            <span className="text-xs font-bold tracking-widest text-accent uppercase">
-              Student Workspace
+      {/* Top Welcome Card */}
+      <GlassCard elevation={2} className="relative overflow-hidden p-8 border border-solid border-white/[0.08] rounded-[24px]">
+        <div className="absolute top-0 right-0 w-96 h-96 bg-brand/5 rounded-full blur-3xl pointer-events-none" />
+        <div className="relative z-10 space-y-3">
+          <div className="flex items-center gap-2 text-xs font-semibold tracking-wider text-brand uppercase">
+            <User size={14} />
+            <span>Student Workspace</span>
+          </div>
+          <h1 className="text-3xl md:text-4xl font-anton tracking-wide text-text-primary leading-tight">
+            {getGreeting()},{' '}
+            <span className="text-brand">
+              {user.full_name}
             </span>
-            <h1 className="text-4xl md:text-5xl font-black text-white leading-tight">
-              Hello,{' '}
-              <span className="bg-gradient-to-r from-accent via-accent-2 to-accent bg-clip-text text-transparent">
-                {user.full_name}
-              </span>
-            </h1>
-            <p className="text-text-muted max-w-2xl text-base leading-relaxed">
-              Welcome to the Smart Career Path Recommendation System. Explore your personalized AI roadmaps, traits metrics, and counseling channels.
-            </p>
-          </div>
-        </section>
+          </h1>
+          <p className="text-text-secondary max-w-2xl text-sm md:text-base leading-relaxed">
+            Welcome to the Smart Career Path Recommendation System. Explore your personalized AI roadmaps, traits metrics, and counseling channels.
+          </p>
+        </div>
+      </GlassCard>
 
-        {/* Dashboard grid metrics */}
-        <section className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          
-          {/* Onboarding progress */}
-          <div className="p-6 bg-white/[0.03] border border-white/[0.06] rounded-2xl flex flex-col justify-between backdrop-blur-sm">
-            <div className="space-y-3">
-              <div className="flex justify-between items-center">
-                <span className="text-xs text-text-muted/60 font-bold uppercase tracking-wider">Questionnaire Progress</span>
-                <span className="text-xs text-accent font-bold bg-accent/10 px-2 py-0.5 rounded-full">{journey.onboarding_percentage}%</span>
-              </div>
-              <h3 className="text-lg font-bold text-white capitalize">{journey.current_state} Step</h3>
-              {/* Progress bar container */}
-              <div className="w-full bg-bg h-2 rounded-full overflow-hidden border border-white/5">
-                <div
-                  className="bg-gradient-to-r from-accent to-accent-2 h-full rounded-full transition-all duration-500"
-                  style={{ width: `${journey.onboarding_percentage}%` }}
-                />
-              </div>
+      {/* Dashboard Grid Widgets */}
+      <section className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        
+        {/* Onboarding progress */}
+        <GlassCard elevation={2} className="p-6 border border-solid border-white/[0.08] rounded-[24px] flex flex-col justify-between">
+          <div className="space-y-4">
+            <div className="flex justify-between items-center">
+              <span className="text-xs text-text-muted font-semibold uppercase tracking-wider">Questionnaire Progress</span>
+              <span className="text-xs text-brand font-bold bg-brand/10 border border-brand/20 px-2.5 py-0.5 rounded-full">{journey.onboarding_percentage}%</span>
             </div>
-            <button
-              onClick={() => navigate('/onboarding')}
-              className="mt-6 flex items-center justify-between text-xs text-accent hover:text-white font-bold group select-none"
-            >
-              <span>{journey.onboarding_percentage === 100 ? 'Review Answers' : 'Continue Questionnaire'}</span>
-              <ArrowRight className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
-            </button>
+            <h3 className="text-base font-bold text-text-primary capitalize">{journey.current_state} Step</h3>
+            
+            {/* Progress track */}
+            <div className="w-full bg-white/[0.05] h-2 rounded-[999px] overflow-hidden border border-white/[0.06]">
+              <div
+                className="bg-gradient-to-r from-brand to-[#70E1FF] h-full rounded-[999px] transition-all duration-500"
+                style={{ width: `${journey.onboarding_percentage}%` }}
+              />
+            </div>
           </div>
+          <button
+            onClick={() => navigate('/onboarding')}
+            className="mt-6 flex items-center justify-between text-xs text-brand hover:text-text-primary font-bold group select-none cursor-pointer focus:outline-none"
+          >
+            <span>{journey.onboarding_percentage === 100 ? 'Review Answers' : 'Continue Questionnaire'}</span>
+            <ArrowRight className="h-4 w-4 group-hover:translate-x-1 transition-transform duration-180" />
+          </button>
+        </GlassCard>
 
-          {/* AI Matches */}
-          <div className="p-6 bg-white/[0.03] border border-white/[0.06] rounded-2xl flex flex-col justify-between backdrop-blur-sm">
-            <div className="space-y-3">
-              <div className="flex justify-between items-center">
-                <span className="text-xs text-text-muted/60 font-bold uppercase tracking-wider">AI Recommendations</span>
-                <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                  recommendations.available
-                    ? recommendations.stale
-                      ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
-                      : 'bg-emerald-500/10 text-emerald-400'
-                    : 'bg-bg text-text-muted/40'
-                }`}>
-                  {recommendations.available
-                    ? recommendations.stale
-                      ? 'Stale'
-                      : 'Ready'
-                    : 'Pending'}
-                </span>
-              </div>
-              <h3 className="text-lg font-bold text-white">
-                {recommendations.available ? `${recommendations.count} Matched Paths` : 'No Matched Paths'}
-              </h3>
-              <p className="text-xs text-text-muted leading-relaxed">
+        {/* AI Matches */}
+        <GlassCard elevation={2} className="p-6 border border-solid border-white/[0.08] rounded-[24px] flex flex-col justify-between">
+          <div className="space-y-4">
+            <div className="flex justify-between items-center">
+              <span className="text-xs text-text-muted font-semibold uppercase tracking-wider">AI Recommendations</span>
+              <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border border-solid ${
+                recommendations.available
+                  ? recommendations.stale
+                    ? 'bg-warning/10 text-warning border-warning/20'
+                    : 'bg-success/10 text-success border-success/20'
+                  : 'bg-white/[0.02] border-white/[0.06] text-text-disabled'
+              }`}>
                 {recommendations.available
-                  ? 'AI has successfully mapped 20 unique matching vectors across sectors.'
-                  : 'Complete all steps to generate matching similarity calculations.'}
-              </p>
+                  ? recommendations.stale
+                    ? 'Stale'
+                    : 'Ready'
+                  : 'Pending'}
+              </span>
             </div>
-            <button
-              onClick={() => navigate('/careers')}
-              className="mt-6 flex items-center justify-between text-xs text-accent hover:text-white font-bold group select-none"
-            >
-              <span>{recommendations.available ? 'Explore Matches' : 'Configure Profile'}</span>
-              <ArrowRight className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
-            </button>
-          </div>
-
-          {/* Bookmarks */}
-          <div className="p-6 bg-white/[0.03] border border-white/[0.06] rounded-2xl flex flex-col justify-between backdrop-blur-sm">
-            <div className="space-y-3">
-              <div className="flex justify-between items-center">
-                <span className="text-xs text-text-muted/60 font-bold uppercase tracking-wider">Bookmarks</span>
-                <Bookmark className="h-4 w-4 text-pink-500" />
-              </div>
-              <h3 className="text-lg font-bold text-white">{savedCareers.count} Bookmarked Paths</h3>
-              <p className="text-xs text-text-muted leading-relaxed">
-                Tracked paths appear dynamically in matching indices and Counselor references.
-              </p>
-            </div>
-            <button
-              onClick={() => navigate('/careers')}
-              className="mt-6 flex items-center justify-between text-xs text-accent hover:text-white font-bold group select-none"
-            >
-              <span>View Bookmarks</span>
-              <ArrowRight className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
-            </button>
-          </div>
-
-        </section>
-
-        {/* Server side insights box */}
-        <section className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          
-          {/* Action Suggested */}
-          <div className="p-6 bg-white/[0.03] border border-white/[0.06] rounded-2xl space-y-4 backdrop-blur-sm">
-            <h3 className="text-xs font-bold text-text-muted/60 uppercase tracking-wider flex items-center space-x-1.5">
-              <CheckCircle className="h-4 w-4 text-accent" />
-              <span>Recommended Next Action</span>
+            <h3 className="text-base font-bold text-text-primary">
+              {recommendations.available ? `${recommendations.count} Matched Paths` : 'No Matched Paths'}
             </h3>
-            <p className="text-sm font-semibold text-text/80">{nextAction}</p>
-            <div className="flex space-x-3 pt-2">
-              <button
-                onClick={() => {
-                  if (journey.onboarding_percentage < 100) {
-                    navigate('/onboarding');
-                  } else {
-                    navigate('/careers');
-                  }
-                }}
-                className="px-4 py-2 bg-accent hover:brightness-110 text-white text-xs font-bold rounded-xl shadow-md shadow-accent/20 transition-all"
-              >
-                Go to Step
-              </button>
-              <button
-                onClick={() => navigate('/chat')}
-                className="px-4 py-2 bg-bg border border-white/[0.06] hover:bg-white/10 text-text/80 text-xs font-bold rounded-xl transition-all"
-              >
-                Chat Counselor
-              </button>
-            </div>
+            <p className="text-xs text-text-secondary leading-relaxed">
+              {recommendations.available
+                ? 'AI has successfully mapped unique matching vectors across sectors.'
+                : 'Complete all steps to generate matching similarity calculations.'}
+            </p>
           </div>
+          <button
+            onClick={() => navigate('/careers')}
+            className="mt-6 flex items-center justify-between text-xs text-brand hover:text-text-primary font-bold group select-none cursor-pointer focus:outline-none"
+          >
+            <span>{recommendations.available ? 'Explore Matches' : 'Configure Profile'}</span>
+            <ArrowRight className="h-4 w-4 group-hover:translate-x-1 transition-transform duration-180" />
+          </button>
+        </GlassCard>
 
-          {/* AI DNA insight */}
-          <div className="p-6 bg-white/[0.03] border border-white/[0.06] rounded-2xl space-y-4 backdrop-blur-sm">
-            <h3 className="text-xs font-bold text-text-muted/60 uppercase tracking-wider flex items-center space-x-1.5">
-              <Sparkles className="h-4 w-4 text-accent" />
-              <span>AI Personality Insight</span>
+        {/* Bookmarks / Recent Activity */}
+        <GlassCard elevation={2} className="p-6 border border-solid border-white/[0.08] rounded-[24px] flex flex-col justify-between">
+          <div className="space-y-4">
+            <div className="flex justify-between items-center">
+              <span className="text-xs text-text-muted font-semibold uppercase tracking-wider">Bookmarks</span>
+              <Bookmark className="h-4 w-4 text-brand" />
+            </div>
+            <h3 className="text-base font-bold text-text-primary">{savedCareers.count} Bookmarked Paths</h3>
+            <p className="text-xs text-text-secondary leading-relaxed">
+              Tracked paths appear dynamically in matching indices and Counselor references.
+            </p>
+          </div>
+          <button
+            onClick={() => navigate('/careers')}
+            className="mt-6 flex items-center justify-between text-xs text-brand hover:text-text-primary font-bold group select-none cursor-pointer focus:outline-none"
+          >
+            <span>View Bookmarks</span>
+            <ArrowRight className="h-4 w-4 group-hover:translate-x-1 transition-transform duration-180" />
+          </button>
+        </GlassCard>
+
+      </section>
+
+      {/* Suggested Roadmaps & Insights */}
+      <section className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        
+        {/* Action Suggested / Continue Roadmap */}
+        <GlassCard elevation={2} className="p-6 border border-solid border-white/[0.08] rounded-[24px] space-y-4">
+          <h3 className="text-xs font-bold text-text-secondary uppercase tracking-wider flex items-center space-x-1.5">
+            <CheckCircle className="h-4 w-4 text-brand" />
+            <span>Recommended Next Action</span>
+          </h3>
+          <p className="text-sm font-semibold text-text-primary leading-relaxed">{nextAction}</p>
+          <div className="flex gap-3 pt-2">
+            <Button
+              size="sm"
+              onClick={() => {
+                if (journey.onboarding_percentage < 100) {
+                  navigate('/onboarding');
+                } else {
+                  navigate('/careers');
+                }
+              }}
+            >
+              Go to Step
+            </Button>
+            <Button
+              size="sm"
+              variant="secondary"
+              onClick={() => navigate('/chat')}
+            >
+              Chat Counselor
+            </Button>
+          </div>
+        </GlassCard>
+
+        {/* AI Insight widget */}
+        <GlassCard elevation={2} className="p-6 border border-solid border-white/[0.08] rounded-[24px] space-y-4">
+          <h3 className="text-xs font-bold text-text-secondary uppercase tracking-wider flex items-center space-x-1.5">
+            <Sparkles className="h-4 w-4 text-brand" />
+            <span>AI Personality Insight</span>
+          </h3>
+          <p className="text-xs text-text-secondary leading-relaxed font-medium">
+            {aiInsight}
+          </p>
+        </GlassCard>
+
+      </section>
+
+      {/* PDF Generation section */}
+      {recommendations.available && (
+        <GlassCard elevation={2} className="p-8 border border-solid border-white/[0.08] rounded-[24px] flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6">
+          <div className="space-y-2">
+            <h3 className="text-base font-bold text-text-primary flex items-center space-x-2">
+              <FileText className="h-5 w-5 text-brand" />
+              <span>Export Career Recommendation Report</span>
             </h3>
-            <p className="text-xs text-text/80 leading-relaxed font-medium">
-              {aiInsight}
+            <p className="text-xs text-text-secondary max-w-xl leading-relaxed">
+              Generate and download an official SCPR PDF report document mapping your 10-dimensional DNA breakdown, complete roadmap breakdowns, college suggestions, and target certification guides.
             </p>
           </div>
 
-        </section>
-
-        {/* PDF Generation section */}
-        {recommendations.available && (
-          <section className="bg-white/[0.03] border border-white/[0.06] p-8 rounded-3xl flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6 backdrop-blur-sm">
-            <div className="space-y-2">
-              <h3 className="text-lg font-bold text-white flex items-center space-x-2">
-                <FileText className="h-5 w-5 text-accent" />
-                <span>Export Career Recommendation Report</span>
-              </h3>
-              <p className="text-xs text-text-muted max-w-xl leading-relaxed">
-                Generate and download an official SCPR PDF report document mapping your 10-dimensional DNA breakdown, complete roadmap breakdowns, college suggestions, and target certification guides.
-              </p>
-            </div>
-
-            <div className="shrink-0 flex items-center gap-3">
-              {reportState.status === 'READY' || reportState.status === 'DOWNLOADED' ? (
-                <button
-                  onClick={handleDownloadReport}
-                  className="flex items-center space-x-2 px-5 py-3 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white font-bold rounded-xl text-xs uppercase tracking-wider transition-all shadow-lg shadow-emerald-500/20"
-                >
-                  <Download className="h-4 w-4" />
-                  <span>Download PDF Report</span>
-                </button>
-              ) : reportState.status === 'QUEUED' || reportState.status === 'GENERATING' ? (
-                <div className="flex items-center space-x-2.5 px-5 py-3 bg-bg border border-white/[0.06] rounded-xl text-xs text-text-muted font-semibold select-none">
-                  <Loader2 className="h-4 w-4 text-accent animate-spin" />
-                  <span>Generating Report ({reportState.status})...</span>
-                </div>
-              ) : (
-                <button
-                  onClick={handleStartReportGen}
-                  disabled={reportState.loading}
-                  className="flex items-center space-x-2 px-5 py-3 bg-accent hover:brightness-110 text-white font-bold rounded-xl text-xs uppercase tracking-wider transition-all shadow-lg shadow-accent/20 disabled:opacity-50"
-                >
-                  <Sparkles className="h-4 w-4" />
-                  <span>Generate Report PDF</span>
-                </button>
-              )}
-            </div>
-          </section>
-        )}
+          <div className="shrink-0 flex items-center gap-3">
+            {reportState.status === 'READY' || reportState.status === 'DOWNLOADED' ? (
+              <Button
+                onClick={handleDownloadReport}
+                className="bg-gradient-to-r from-success to-brand border-transparent"
+                loading={reportState.loading}
+              >
+                <Download className="h-4 w-4" />
+                <span>Download PDF Report</span>
+              </Button>
+            ) : reportState.status === 'QUEUED' || reportState.status === 'GENERATING' ? (
+              <div className="flex items-center space-x-2.5 px-5 py-3 bg-white/[0.02] border border-solid border-white/[0.06] rounded-[18px] text-xs text-text-secondary font-semibold select-none animate-pulse">
+                <Sparkles className="h-4 w-4 text-ai-cyan" />
+                <span>Generating Report ({reportState.status})...</span>
+              </div>
+            ) : (
+              <Button
+                onClick={handleStartReportGen}
+                loading={reportState.loading}
+              >
+                <Sparkles className="h-4 w-4" />
+                <span>Generate Report PDF</span>
+              </Button>
+            )}
+          </div>
+        </GlassCard>
+      )}
     </motion.div>
   );
 };
