@@ -37,6 +37,11 @@ services:
     environment:
       - MONGODB_URI=mongodb://mongo:27017/scpr
       - PORT=3000
+    volumes:
+      - type: bind
+        source: .
+        target: /app/catalogs
+        read_only: true
 
   frontend:
     build:

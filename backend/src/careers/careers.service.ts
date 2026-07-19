@@ -5,6 +5,9 @@ import { Career, CareerDocument } from './schemas/career.schema';
 import { SavedCareer, SavedCareerDocument } from './schemas/saved-career.schema';
 import { CreateCareerDto, UpdateCareerDto } from './dto/career.dto';
 import { AIServiceClient } from '../ai-service/ai-service.client';
+import { CareerSeedService } from './import/seed.service';
+import * as path from 'path';
+import * as fs from 'fs';
 
 @Injectable()
 export class CareersService implements OnModuleInit {
@@ -14,6 +17,7 @@ export class CareersService implements OnModuleInit {
     @InjectModel(Career.name) private readonly careerModel: Model<CareerDocument>,
     @InjectModel(SavedCareer.name) private readonly savedCareerModel: Model<SavedCareerDocument>,
     private readonly aiServiceClient: AIServiceClient,
+    private readonly careerSeedService: CareerSeedService,
   ) {}
 
   async onModuleInit() {
@@ -21,14 +25,12 @@ export class CareersService implements OnModuleInit {
   }
 
   private async seedCareers() {
-    // Check if seeded with zeroes previously
     const sample = await this.careerModel.findOne().exec();
     if (sample && sample.trait_weights?.analytical_thinking === 0) {
-      this.logger.log('Detected placeholder seed. Re-seeding with realistic weights...');
+      this.logger.log('Detected placeholder seed. Re-seeding...');
       await this.careerModel.deleteMany({}).exec();
     }
 
-    // Check if careers use old category codes that don't match the frontend catalog
     const oldCategoryCodes = ['technology', 'business_and_finance', 'healthcare', 'science_and_research', 'creative_and_design', 'education_and_social', 'engineering', 'communication_and_media'];
     const oldCategoryCount = await this.careerModel.countDocuments({ category_code: { $in: oldCategoryCodes } }).exec();
     if (oldCategoryCount > 0) {
@@ -38,18 +40,54 @@ export class CareersService implements OnModuleInit {
 
     const count = await this.careerModel.countDocuments().exec();
     if (count > 0) {
-      this.logger.log('Careers catalog already seeded with weights.');
+      this.logger.log('Careers catalog already seeded.');
       return;
     }
 
-    this.logger.log('Seeding 40 careers into database with realistic weights...');
-    const careersSeed = this.getCareersSeedData();
+    const catalogRoot = fs.existsSync('/app/catalogs/SCPR_Master_Career_Catalog_Part_1_Science_v2.md')
+      ? '/app/catalogs'
+      : path.resolve(__dirname, '../../../../');
 
-    try {
-      await this.careerModel.insertMany(careersSeed);
-      this.logger.log('Seeding completed successfully!');
-    } catch (e: any) {
-      this.logger.error(`Seeding failed: ${e.message}`);
+    const catalogFiles = [
+      { part: 'part_1_science',          file: 'SCPR_Master_Career_Catalog_Part_1_Science_v2.md',               label: 'Science' },
+      { part: 'part_2_commerce',          file: 'SCPR_Master_Career_Catalog_Part_2_Commerce.md',                  label: 'Commerce' },
+      { part: 'part_3_arts_humanities',   file: 'SCPR_Master_Career_Catalog_Part_3_Arts_Humanities.md',           label: 'Arts & Humanities' },
+      { part: 'part_4_diploma',           file: 'SCPR_Master_Career_Catalog_Part_4_Diploma.md',                   label: 'Diploma' },
+      { part: 'part_5_iti_polytechnic',   file: 'SCPR_Master_Career_Catalog_Part_5_ITI_Polytechnic.md',           label: 'ITI & Polytechnic' },
+      { part: 'part_6_vocational',        file: 'SCPR_Master_Career_Catalog_Part_6_Vocational_Skill_Development.md', label: 'Vocational' },
+      { part: 'part_7_government_defence',file: 'SCPR_Master_Career_Catalog_Part_7_Government_Defence.md',          label: 'Government & Defence' },
+      { part: 'part_8_emerging_future',   file: 'SCPR_Master_Career_Catalog_Part_8_Emerging_Future_Careers.md',    label: 'Emerging & Future' },
+    ];
+
+    let anyCatalogFailed = false;
+    for (const cat of catalogFiles) {
+      const filePath = path.join(catalogRoot, cat.file);
+      if (!fs.existsSync(filePath)) {
+        this.logger.warn(`Catalog file not found: ${filePath}`);
+        anyCatalogFailed = true;
+        continue;
+      }
+      try {
+        this.logger.log(`Importing ${cat.label} catalog...`);
+        const result = await this.careerSeedService.seedFromCatalog(filePath, cat.part);
+        this.logger.log(`  ${cat.label}: ${result.new_inserts} new, ${result.merged_duplicates} merged`);
+      } catch (err: any) {
+        this.logger.error(`Failed to import ${cat.label}: ${err.message}`);
+        anyCatalogFailed = true;
+      }
+    }
+
+    const finalCount = await this.careerModel.countDocuments().exec();
+    if (anyCatalogFailed && finalCount < 50) {
+      this.logger.log('Catalog import incomplete. Falling back to 40 inline careers...');
+      try {
+        await this.careerModel.insertMany(this.getCareersSeedData());
+        this.logger.log('Fallback seeding completed.');
+      } catch (e: any) {
+        this.logger.error(`Fallback seeding failed: ${e.message}`);
+      }
+    } else {
+      this.logger.log(`Catalog seeding complete: ${finalCount} careers in database.`);
     }
   }
 

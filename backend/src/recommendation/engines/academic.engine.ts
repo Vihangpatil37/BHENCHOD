@@ -124,7 +124,7 @@ export class AcademicEngine extends BaseScoringEngine {
     ].map(s => s.toLowerCase());
 
     let weakSubjectPenalty = 100;
-    const requiredList = [];
+    const requiredList: string[] = [];
     if (minMaths > 0) requiredList.push('math');
     if (minScience > 0) requiredList.push('science');
     if (minBiology > 0) requiredList.push('biology');
