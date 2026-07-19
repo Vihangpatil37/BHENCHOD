@@ -47,9 +47,14 @@ export const CareerGallery: React.FC = () => {
   };
 
   const filteredCareers = careers.filter(c => {
-    const matchesSearch = c.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      c.description.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesCat = selectedCatalog === 'All' || c.category_code === selectedCatalog;
+    if (!c) return false;
+    const name = c.name || '';
+    const desc = c.description || '';
+    const catCode = c.category_code || '';
+    
+    const matchesSearch = name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      desc.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesCat = selectedCatalog === 'All' || catCode === selectedCatalog;
     return matchesSearch && matchesCat;
   });
 
