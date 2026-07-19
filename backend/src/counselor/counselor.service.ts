@@ -9,6 +9,7 @@ import { Recommendation, RecommendationDocument } from '../recommendation/schema
 import { Career, CareerDocument } from '../careers/schemas/career.schema';
 import { AIServiceClient } from '../ai-service/ai-service.client';
 import { StartSessionDto } from './dto/counselor.dto';
+import { ChatResponseDto } from './dto/chat-response.dto';
 
 @Injectable()
 export class CounselorService {
@@ -32,10 +33,24 @@ export class CounselorService {
   async startSession(userId: string, dto: StartSessionDto): Promise<ConversationDocument> {
     this.logger.log(`Starting counseling session for user: ${userId}`);
 
-    // Fetch latest recommendation to verify user completed onboarding or has recommendations
-    const latestRec = dto.recommendation_id 
-      ? await this.recommendationModel.findById(dto.recommendation_id).exec()
-      : await this.recommendationModel.findOne({ user_id: userId }).sort({ generated_at: -1 }).exec();
+    // Prune expired sessions first
+    await this.pruneSessions(userId);
+
+    // Limit active conversations per user to a maximum of 2.
+    // If they already have 2, keep the newest one and delete the rest.
+    const existing = await this.conversationModel
+      .find({ user_id: userId })
+      .sort({ last_message_at: -1 })
+      .exec();
+
+    if (existing.length >= 2) {
+      this.logger.log(`User ${userId} has ${existing.length} sessions. Deleting oldest to enforce limit of 2.`);
+      const toDelete = existing.slice(1); // Keep the newest one (index 0), delete the rest
+      for (const conv of toDelete) {
+        await this.conversationModel.findByIdAndDelete(conv._id).exec();
+        await this.messageModel.deleteMany({ conversation_id: String(conv._id) }).exec();
+      }
+    }
 
     // Create new conversation
     const conversation = new this.conversationModel({
@@ -60,10 +75,12 @@ export class CounselorService {
   }
 
   async getSessions(userId: string): Promise<Conversation[]> {
+    await this.pruneSessions(userId);
     return this.conversationModel.find({ user_id: userId }).sort({ last_message_at: -1 }).exec();
   }
 
   async getSessionHistory(userId: string, sessionId: string): Promise<ConversationMessage[]> {
+    await this.pruneSessions(userId);
     const conversation = await this.conversationModel.findById(sessionId).exec();
     if (!conversation || conversation.user_id !== userId) {
       throw new NotFoundException('Conversation not found or unauthorized');
@@ -71,7 +88,8 @@ export class CounselorService {
     return this.messageModel.find({ conversation_id: sessionId }).sort({ created_at: 1 }).exec();
   }
 
-  async sendMessage(userId: string, sessionId: string, messageText: string): Promise<ConversationMessage> {
+  async sendMessage(userId: string, sessionId: string, messageText: string): Promise<ChatResponseDto> {
+    await this.pruneSessions(userId);
     const conversation = await this.conversationModel.findById(sessionId).exec();
     if (!conversation || conversation.user_id !== userId) {
       throw new NotFoundException('Conversation not found or unauthorized');
@@ -181,7 +199,12 @@ export class CounselorService {
     });
     await counselorMessage.save();
 
-    return counselorMessage;
+    return {
+      response: replyText,
+      model_used: aiResponse.model,
+      cached: aiResponse.cached,
+      latency_ms: aiResponse.latency_ms,
+    };
   }
 
   private buildRoadmapReply(data: any): string {
@@ -323,5 +346,21 @@ export class CounselorService {
       }
     }
     return cleanText;
+  }
+
+  private async pruneSessions(userId: string): Promise<void> {
+    const thirtyMinutesAgo = new Date(Date.now() - 30 * 60 * 1000);
+    const expiredSessions = await this.conversationModel.find({
+      user_id: userId,
+      last_message_at: { $lt: thirtyMinutesAgo }
+    }).exec();
+
+    if (expiredSessions.length > 0) {
+      this.logger.log(`Pruning ${expiredSessions.length} expired sessions for user: ${userId}`);
+      for (const session of expiredSessions) {
+        await this.conversationModel.findByIdAndDelete(session._id).exec();
+        await this.messageModel.deleteMany({ conversation_id: String(session._id) }).exec();
+      }
+    }
   }
 }
