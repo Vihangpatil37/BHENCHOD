@@ -16,7 +16,8 @@ export const providerModels: ProviderModels = {
     api_version: 'v1',
   },
   glm: {
-    model: 'glm-4.7-flash',
+    model: 'GLM-4.7-Flash',
+    fallback_model: 'GLM-4.5-Flash',
     api_base: 'https://open.bigmodel.cn/api/paas/v4/chat/completions',
   },
   groq: {
@@ -25,5 +26,9 @@ export const providerModels: ProviderModels = {
   },
   mistral: {
     model: 'mistral-large-latest',
+  },
+  openrouter: {
+    model: 'nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free',
+    fallback_model: 'openrouter/free',
   },
 };

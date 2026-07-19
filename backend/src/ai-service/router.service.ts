@@ -11,7 +11,7 @@ export class RouterService {
   private readonly routes: Record<string, string[]> = {
     career_recommendation: ['gemini', 'groq'],
     roadmap_generation: ['gemini', 'groq'],
-    counselor_chat: ['groq', 'groq', 'gemini'],
+    counselor_chat: ['openrouter', 'groq', 'groq', 'gemini', 'glm', 'glm'],
     career_trait_backfill: ['gemini', 'groq', 'groq'],
     report_summary: ['mistral', 'gemini', 'groq'],
     scenario_generation: ['gemini', 'groq'],

@@ -16,6 +16,7 @@ import { GeminiProvider } from './providers/gemini.provider';
 import { GroqProvider } from './providers/groq.provider';
 import { MistralProvider } from './providers/mistral.provider';
 import { GLMProvider } from './providers/glm.provider';
+import { OpenRouterProvider } from './providers/openrouter.provider';
 
 @Module({
   imports: [
@@ -35,6 +36,7 @@ import { GLMProvider } from './providers/glm.provider';
     GroqProvider,
     MistralProvider,
     GLMProvider,
+    OpenRouterProvider,
   ],
   exports: [
     AIServiceClient,
