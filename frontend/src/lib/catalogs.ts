@@ -16,6 +16,12 @@ export const CATALOGS: Catalog[] = [
   { code: 'emerging_future', label: 'Emerging & Future', accent: 'border-t-indigo-500/60', badge: 'text-indigo-400 bg-indigo-500/10 border-indigo-500/20' },
 ];
 
-export function catalogFor(code: string): Catalog {
-  return CATALOGS.find(c => c.code === code) ?? { code, label: code.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()), accent: 'border-t-white/5', badge: 'text-text-muted/60 bg-bg border-white/10/50' };
+export function catalogFor(code?: string): Catalog {
+  const safeCode = code || 'unknown';
+  return CATALOGS.find(c => c.code === safeCode) ?? { 
+    code: safeCode, 
+    label: safeCode.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()), 
+    accent: 'border-t-white/5', 
+    badge: 'text-text-muted/60 bg-bg border-white/10/50' 
+  };
 }
