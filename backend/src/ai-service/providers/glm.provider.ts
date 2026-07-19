@@ -40,9 +40,14 @@ export class GLMProvider implements AbstractLLMProvider {
       });
 
       const choice = response.data?.choices?.[0];
-      const text = choice?.message?.content;
+      const msg = choice?.message;
+      // ponytail: GLM reasoning models return content in reasoning_content instead of content
+      let text = msg?.content;
+      if (!text || !text.trim()) {
+        text = msg?.reasoning_content;
+      }
 
-      if (!text) {
+      if (!text || !text.trim()) {
         throw new Error('Empty response from GLM API');
       }
 
