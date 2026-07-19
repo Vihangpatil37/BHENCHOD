@@ -130,7 +130,7 @@ describe('sendMessage', () => {
         { provide: getModelToken(Recommendation.name), useValue: recModel },
         { provide: getModelToken(Career.name), useValue: careModel },
         { provide: ContextBuilderService, useValue: { buildContext: jest.fn().mockResolvedValue({}) } },
-        { provide: AIServiceClient, useValue: { run: jest.fn().mockResolvedValue({ success: true, data: { reply: 'Hello there' } }) } },
+        { provide: AIServiceClient, useValue: { run: jest.fn().mockResolvedValue({ success: true, data: { reply: 'Hello there' }, model: 'test-model', cached: false, latency_ms: 100 }) } },
       ],
     }).compile();
     service = module.get(CounselorService);
@@ -142,7 +142,9 @@ describe('sendMessage', () => {
 
   it('returns counselor reply', async () => {
     const result = await service.sendMessage('user-1', 'sid', 'Hi');
-    expect(result.role).toBe('counselor');
-    expect(result.content).toBe('Hello there');
+    expect(result.response).toBe('Hello there');
+    expect(result.model_used).toBe('test-model');
+    expect(result.cached).toBe(false);
+    expect(result.latency_ms).toBe(100);
   });
 });
