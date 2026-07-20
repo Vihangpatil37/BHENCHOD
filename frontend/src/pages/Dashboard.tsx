@@ -109,7 +109,11 @@ export const Dashboard: React.FC = () => {
       const response: any = await client.get(`/reports/download/${reportState.id}`, {
         responseType: 'blob'
       });
-      
+
+      if (!(response instanceof Blob)) {
+        throw new Error('Unexpected response type');
+      }
+
       const blob = new Blob([response], { type: 'application/pdf' });
       const link = document.createElement('a');
       link.href = window.URL.createObjectURL(blob);

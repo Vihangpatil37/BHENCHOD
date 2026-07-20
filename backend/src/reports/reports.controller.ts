@@ -4,11 +4,11 @@ import {
   Get,
   Param,
   Request,
+  Res,
   HttpCode,
   HttpStatus,
-  StreamableFile,
-  Header,
 } from '@nestjs/common';
+import type { Response } from 'express';
 import { ReportsService } from './reports.service';
 
 @Controller('reports')
@@ -27,13 +27,13 @@ export class ReportsController {
   }
 
   @Get('download/:reportId')
-  @Header('Content-Type', 'application/pdf')
-  async download(@Request() req: any, @Param('reportId') reportId: string) {
+  async download(@Request() req: any, @Param('reportId') reportId: string, @Res() res: Response) {
     const stream = await this.reportsService.getReportDownloadStream(req.user.user_id, reportId);
-    return new StreamableFile(stream, {
-      type: 'application/pdf',
-      disposition: `attachment; filename="career_report_${reportId}.pdf"`,
+    res.set({
+      'Content-Type': 'application/pdf',
+      'Content-Disposition': `attachment; filename="career_report_${reportId}.pdf"`,
     });
+    stream.pipe(res);
   }
 
   @Get('history')
