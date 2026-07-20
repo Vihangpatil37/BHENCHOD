@@ -48,12 +48,6 @@ export class CareersController {
     return this.careersService.findRelated(careerCode);
   }
 
-  @Public()
-  @Get(':careerCode')
-  async getOne(@Param('careerCode') careerCode: string) {
-    return this.careersService.findOne(careerCode);
-  }
-
   // Saved / bookmarked careers (requires authentication)
   @Post('save')
   async saveCareer(@Request() req: any, @Body('career_code') careerCode: string) {
@@ -73,6 +67,12 @@ export class CareersController {
   @Get('saved/status/:careerCode')
   async getSavedStatus(@Request() req: any, @Param('careerCode') careerCode: string) {
     return this.careersService.getSavedStatus(req.user.user_id, careerCode);
+  }
+
+  @Public()
+  @Get(':careerCode')
+  async getOne(@Param('careerCode') careerCode: string) {
+    return this.careersService.findOne(careerCode);
   }
 
   // ============ Admin Endpoints (Phase 10) ============
