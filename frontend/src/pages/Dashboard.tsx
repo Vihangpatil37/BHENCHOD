@@ -5,8 +5,6 @@ import { client } from '../api/client';
 import {
   Sparkles,
   Bookmark,
-  FileText,
-  Download,
   CheckCircle,
   ArrowRight,
   User,
@@ -22,13 +20,6 @@ export const Dashboard: React.FC = () => {
   const { user, accessToken, clearAuth } = useAuthStore();
   const [loadingData, setLoadingData] = useState(true);
   const [dashboardData, setDashboardData] = useState<any>(null);
-  
-  // PDF Report states
-  const [reportState, setReportState] = useState<{
-    id: string | null;
-    status: 'IDLE' | 'QUEUED' | 'GENERATING' | 'READY' | 'FAILED' | 'DOWNLOADED';
-    loading: boolean;
-  }>({ id: null, status: 'IDLE', loading: false });
 
   useEffect(() => {
     if (!accessToken) {
@@ -43,18 +34,6 @@ export const Dashboard: React.FC = () => {
     try {
       const res: any = await client.get('/dashboard');
       setDashboardData(res);
-
-      if (res.recommendation?.available) {
-        const reports: any = await client.get('/reports/history').catch(() => []);
-        if (reports && reports.length > 0) {
-          const latestReport = reports[0];
-          setReportState({
-            id: latestReport._id,
-            status: latestReport.status,
-            loading: false
-          });
-        }
-      }
     } catch (err: any) {
       if (err.response?.status === 401) {
         clearAuth();
@@ -65,69 +44,7 @@ export const Dashboard: React.FC = () => {
     }
   };
 
-  const handleStartReportGen = async () => {
-    setReportState(prev => ({ ...prev, loading: true, status: 'QUEUED' }));
-    try {
-      const res: any = await client.post('/reports/generate');
-      setReportState({
-        id: res._id,
-        status: res.status,
-        loading: false
-      });
-      pollReportStatus(res._id);
-    } catch (err: any) {
-      alert(err.message || 'Failed to start PDF report generation');
-      setReportState(prev => ({ ...prev, loading: false, status: 'FAILED' }));
-    }
-  };
 
-  const pollReportStatus = (reportId: string) => {
-    const interval = setInterval(async () => {
-      try {
-        const res: any = await client.get(`/reports/status/${reportId}`);
-        setReportState(prev => ({ ...prev, status: res.status }));
-        
-        if (res.status === 'READY' || res.status === 'FAILED') {
-          clearInterval(interval);
-        }
-      } catch (err) {
-        clearInterval(interval);
-        setReportState(prev => ({ ...prev, status: 'FAILED' }));
-      }
-    }, 1500);
-  };
-
-  const handleDownloadReport = () => {
-    if (!reportState.id) return;
-    downloadReportViaBlob();
-  };
-
-  const downloadReportViaBlob = async () => {
-    if (!reportState.id) return;
-    setReportState(prev => ({ ...prev, loading: true }));
-    try {
-      const response: any = await client.get(`/reports/download/${reportState.id}`, {
-        responseType: 'blob'
-      });
-
-      if (!(response instanceof Blob)) {
-        throw new Error('Unexpected response type');
-      }
-
-      const blob = new Blob([response], { type: 'application/pdf' });
-      const link = document.createElement('a');
-      link.href = window.URL.createObjectURL(blob);
-      link.download = `SCPR_Report_${reportState.id}.pdf`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      
-      setReportState(prev => ({ ...prev, status: 'DOWNLOADED', loading: false }));
-    } catch (err: any) {
-      alert('Failed to download report PDF file.');
-      setReportState(prev => ({ ...prev, loading: false }));
-    }
-  };
 
   const getGreeting = () => {
     const hour = new Date().getHours();
@@ -319,46 +236,7 @@ export const Dashboard: React.FC = () => {
 
       </section>
 
-      {/* PDF Generation section */}
-      {recommendations.available && (
-        <GlassCard elevation={2} className="p-8 border border-solid border-white/[0.08] rounded-[24px] flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6">
-          <div className="space-y-2">
-            <h3 className="text-base font-bold text-text-primary flex items-center space-x-2">
-              <FileText className="h-5 w-5 text-brand" />
-              <span>Export Career Recommendation Report</span>
-            </h3>
-            <p className="text-xs text-text-secondary max-w-xl leading-relaxed">
-              Generate and download an official SCPR PDF report document mapping your 10-dimensional DNA breakdown, complete roadmap breakdowns, college suggestions, and target certification guides.
-            </p>
-          </div>
 
-          <div className="shrink-0 flex items-center gap-3">
-            {reportState.status === 'READY' || reportState.status === 'DOWNLOADED' ? (
-              <Button
-                onClick={handleDownloadReport}
-                className="bg-gradient-to-r from-success to-brand border-transparent"
-                loading={reportState.loading}
-              >
-                <Download className="h-4 w-4" />
-                <span>Download PDF Report</span>
-              </Button>
-            ) : reportState.status === 'QUEUED' || reportState.status === 'GENERATING' ? (
-              <div className="flex items-center space-x-2.5 px-5 py-3 bg-white/[0.02] border border-solid border-white/[0.06] rounded-[18px] text-xs text-text-secondary font-semibold select-none animate-pulse">
-                <Sparkles className="h-4 w-4 text-ai-cyan" />
-                <span>Generating Report ({reportState.status})...</span>
-              </div>
-            ) : (
-              <Button
-                onClick={handleStartReportGen}
-                loading={reportState.loading}
-              >
-                <Sparkles className="h-4 w-4" />
-                <span>Generate Report PDF</span>
-              </Button>
-            )}
-          </div>
-        </GlassCard>
-      )}
     </motion.div>
   );
 };

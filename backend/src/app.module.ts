@@ -10,7 +10,6 @@ import { OnboardingModule } from './onboarding/onboarding.module';
 import { RecommendationModule } from './recommendation/recommendation.module';
 import { CounselorModule } from './counselor/counselor.module';
 import { DashboardModule } from './dashboard/dashboard.module';
-import { ReportsModule } from './reports/reports.module';
 import { AnalyticsModule } from './analytics/analytics.module';
 import { HistoryModule } from './history/history.module';
 import { JwtAuthGuard } from './auth/guards/jwt-auth.guard';
@@ -24,7 +23,9 @@ import { JwtAuthGuard } from './auth/guards/jwt-auth.guard';
     MongooseModule.forRootAsync({
       imports: [ConfigModule],
       useFactory: async (configService: ConfigService) => ({
-        uri: configService.get<string>('MONGODB_URI') || 'mongodb://localhost:27017/scpr',
+        uri:
+          configService.get<string>('MONGODB_URI') ||
+          'mongodb://localhost:27017/scpr',
       }),
       inject: [ConfigService],
     }),
@@ -36,7 +37,6 @@ import { JwtAuthGuard } from './auth/guards/jwt-auth.guard';
     RecommendationModule,
     CounselorModule,
     DashboardModule,
-    ReportsModule,
     AnalyticsModule,
     HistoryModule,
   ],
