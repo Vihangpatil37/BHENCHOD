@@ -59,10 +59,18 @@ export class Recommendation {
   @Prop({ required: true })
   eligible_count: number; // size after Eligibility Engine
 
-  @Prop({ type: [SchemaFactory.createForClass(ShortlistEntry)], required: true, default: [] })
+  @Prop({
+    type: [SchemaFactory.createForClass(ShortlistEntry)],
+    required: true,
+    default: [],
+  })
   shortlist: ShortlistEntry[]; // top 20 candidates
 
-  @Prop({ type: [SchemaFactory.createForClass(FinalRecommendation)], required: true, default: [] })
+  @Prop({
+    type: [SchemaFactory.createForClass(FinalRecommendation)],
+    required: true,
+    default: [],
+  })
   final_recommendations: FinalRecommendation[]; // top 5 ranked by AI
 
   @Prop({ required: true })
@@ -95,4 +103,5 @@ export class Recommendation {
   generated_at?: Date;
 }
 
-export const RecommendationSchema: MongooseSchema = SchemaFactory.createForClass(Recommendation);
+export const RecommendationSchema: MongooseSchema =
+  SchemaFactory.createForClass(Recommendation);

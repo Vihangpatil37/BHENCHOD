@@ -37,7 +37,7 @@ export class AIServiceClient {
   async run<T = any>(
     taskType: string,
     context: Record<string, any>,
-    jsonSchema?: any
+    jsonSchema?: any,
   ): Promise<AIResponse<T>> {
     const startTime = Date.now();
 
@@ -54,7 +54,10 @@ export class AIServiceClient {
     }
 
     // 2. Load and interpolate prompt
-    const { prompt, systemInstruction } = await this.promptBuilderService.build(taskType, context);
+    const { prompt, systemInstruction } = await this.promptBuilderService.build(
+      taskType,
+      context,
+    );
 
     // 3. Resolve routing
     const routes = this.routerService.getRoute(taskType);
@@ -67,7 +70,7 @@ export class AIServiceClient {
         routes,
         prompt,
         systemInstruction,
-        jsonSchema
+        jsonSchema,
       );
     } catch (e: any) {
       // Log failed request attempt
@@ -89,8 +92,10 @@ export class AIServiceClient {
     let finalData = response.data;
     try {
       finalData = this.jsonValidatorService.validateAndRepair(
-        typeof response.data === 'string' ? response.data : JSON.stringify(response.data),
-        taskType
+        typeof response.data === 'string'
+          ? response.data
+          : JSON.stringify(response.data),
+        taskType,
       );
     } catch (err: any) {
       this.logger.error(`Validation and repair failed: ${err.message}`);

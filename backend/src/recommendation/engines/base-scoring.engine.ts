@@ -20,20 +20,39 @@ export abstract class BaseScoringEngine implements RecommendationEngine {
   protected applyBonuses(
     base: number,
     bonuses: { label: string; points: number }[],
-    cap = 15
+    cap = 15,
   ): { score: number; total: number; labels: string[] } {
-    const total = this.clamp(bonuses.reduce((sum, b) => sum + b.points, 0), 0, cap);
-    return { score: this.clamp(base + total), total, labels: bonuses.map(b => b.label) };
+    const total = this.clamp(
+      bonuses.reduce((sum, b) => sum + b.points, 0),
+      0,
+      cap,
+    );
+    return {
+      score: this.clamp(base + total),
+      total,
+      labels: bonuses.map((b) => b.label),
+    };
   }
 
   protected applyPenalties(
     base: number,
     penalties: { label: string; points: number }[],
-    cap = 40
+    cap = 40,
   ): { score: number; total: number; labels: string[] } {
-    const total = this.clamp(penalties.reduce((sum, p) => sum + p.points, 0), 0, cap);
-    return { score: this.clamp(base - total), total, labels: penalties.map(p => p.label) };
+    const total = this.clamp(
+      penalties.reduce((sum, p) => sum + p.points, 0),
+      0,
+      cap,
+    );
+    return {
+      score: this.clamp(base - total),
+      total,
+      labels: penalties.map((p) => p.label),
+    };
   }
 
-  abstract calculate(student: StudentProfile, career: CareerDocument): Promise<ScoreBreakdown> | ScoreBreakdown;
+  abstract calculate(
+    student: StudentProfile,
+    career: CareerDocument,
+  ): Promise<ScoreBreakdown> | ScoreBreakdown;
 }

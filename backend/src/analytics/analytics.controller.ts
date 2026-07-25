@@ -1,4 +1,12 @@
-import { Controller, Get, Post, Body, Request, HttpCode, HttpStatus } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Request,
+  HttpCode,
+  HttpStatus,
+} from '@nestjs/common';
 import { AnalyticsService } from './analytics.service';
 
 @Controller('analytics')
@@ -29,10 +37,14 @@ export class AnalyticsController {
   @HttpCode(HttpStatus.OK)
   async logCustomEvent(
     @Request() req: any,
-    @Body() body: { event_type: string; payload: Record<string, any> }
+    @Body() body: { event_type: string; payload: Record<string, any> },
   ) {
     const userId = req.user?.user_id;
-    await this.analyticsService.trackEvent(userId, body.event_type, body.payload);
+    await this.analyticsService.trackEvent(
+      userId,
+      body.event_type,
+      body.payload,
+    );
     return { success: true };
   }
 }

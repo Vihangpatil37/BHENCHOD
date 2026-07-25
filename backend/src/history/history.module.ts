@@ -6,11 +6,7 @@ import { RecommendationModule } from '../recommendation/recommendation.module';
 import { CareersModule } from '../careers/careers.module';
 
 @Module({
-  imports: [
-    OnboardingModule,
-    RecommendationModule,
-    CareersModule,
-  ],
+  imports: [OnboardingModule, RecommendationModule, CareersModule],
   controllers: [HistoryController],
   providers: [HistoryService],
 })

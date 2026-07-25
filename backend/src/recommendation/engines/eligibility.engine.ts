@@ -10,13 +10,21 @@ import { EligibilityEngineService } from '../eligibility-engine.service';
 export class EligibilityEngine extends BaseScoringEngine {
   readonly name = 'eligibility';
 
-  constructor(private readonly eligibilityEngineService: EligibilityEngineService) {
+  constructor(
+    private readonly eligibilityEngineService: EligibilityEngineService,
+  ) {
     super();
   }
 
-  async calculate(student: StudentProfile, career: CareerDocument): Promise<ScoreBreakdown> {
-    const eligibleCareers = await this.eligibilityEngineService.getEligibleCareers(student);
-    const isEligible = eligibleCareers.some(c => c.career_code === career.career_code);
+  async calculate(
+    student: StudentProfile,
+    career: CareerDocument,
+  ): Promise<ScoreBreakdown> {
+    const eligibleCareers =
+      await this.eligibilityEngineService.getEligibleCareers(student);
+    const isEligible = eligibleCareers.some(
+      (c) => c.career_code === career.career_code,
+    );
 
     return {
       score: isEligible ? 100 : 0,
@@ -25,8 +33,12 @@ export class EligibilityEngine extends BaseScoringEngine {
       confidence: 100,
       bonuses: 0,
       penalties: 0,
-      matchedFactors: isEligible ? ['Meets all eligibility criteria'] : ['Does not meet eligibility criteria'],
-      missingFactors: isEligible ? [] : ['Fails academic or budget eligibility constraints'],
+      matchedFactors: isEligible
+        ? ['Meets all eligibility criteria']
+        : ['Does not meet eligibility criteria'],
+      missingFactors: isEligible
+        ? []
+        : ['Fails academic or budget eligibility constraints'],
       reasoning: isEligible ? ['Eligible'] : ['Ineligible'],
     };
   }

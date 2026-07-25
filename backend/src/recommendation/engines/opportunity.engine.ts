@@ -41,10 +41,14 @@ export class OpportunityEngine extends BaseScoringEngine {
     if (score >= 80) {
       matchedFactors.push('Strong market demand and positive future outlook');
     } else if (score < 50) {
-      missingFactors.push('Below-average growth rate or higher automation exposure');
+      missingFactors.push(
+        'Below-average growth rate or higher automation exposure',
+      );
     }
 
-    const reasoning = [`Market opportunity score of ${Math.round(score)}% based on industry trends`];
+    const reasoning = [
+      `Market opportunity score of ${Math.round(score)}% based on industry trends`,
+    ];
 
     return {
       score: Math.round(score),

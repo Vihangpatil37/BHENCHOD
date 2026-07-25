@@ -11,8 +11,32 @@ const baseProfile = {
       subjects: { maths: 80, science: 70, english: 90, sst: 60, computer: 95 },
     },
   },
-  interests: { research: 80, technology: 90, business: 60, design: 40, media: 30, teaching: 50, nature: 20, sports: 10, government: 20, finance: 30, helping_people: 70, machines: 10 },
-  skills: { logical_thinking: 5, math: 4, creativity: 3, communication: 4, leadership: 2, coding: 5, drawing: 2, observation: 4, patience: 3, problem_solving: 5 },
+  interests: {
+    research: 80,
+    technology: 90,
+    business: 60,
+    design: 40,
+    media: 30,
+    teaching: 50,
+    nature: 20,
+    sports: 10,
+    government: 20,
+    finance: 30,
+    helping_people: 70,
+    machines: 10,
+  },
+  skills: {
+    logical_thinking: 5,
+    math: 4,
+    creativity: 3,
+    communication: 4,
+    leadership: 2,
+    coding: 5,
+    drawing: 2,
+    observation: 4,
+    patience: 3,
+    problem_solving: 5,
+  },
   scenario_responses: [],
 } as unknown as StudentProfile;
 
@@ -20,8 +44,19 @@ describe('TraitEngineService', () => {
   describe('computeDNA', () => {
     it('computes all 10 traits', () => {
       const dna = service.computeDNA(baseProfile);
-      const traits = ['analytical_thinking','creativity','communication','leadership','research','business_acumen','technical_curiosity','empathy','patience','risk_tolerance'];
-      traits.forEach(t => {
+      const traits = [
+        'analytical_thinking',
+        'creativity',
+        'communication',
+        'leadership',
+        'research',
+        'business_acumen',
+        'technical_curiosity',
+        'empathy',
+        'patience',
+        'risk_tolerance',
+      ];
+      traits.forEach((t) => {
         expect(dna).toHaveProperty(t);
         expect((dna as any)[t]).toBeGreaterThanOrEqual(0);
         expect((dna as any)[t]).toBeLessThanOrEqual(100);
@@ -45,7 +80,13 @@ describe('TraitEngineService', () => {
         ...baseProfile,
         interests: { ...baseProfile.interests, research: 100, technology: 100 },
         skills: { ...baseProfile.skills, logical_thinking: 5, math: 5 },
-        scenario_responses: [{ question_id: 'q1', selected_option: 'A', trait_weights: { analytical_thinking: 100 } }],
+        scenario_responses: [
+          {
+            question_id: 'q1',
+            selected_option: 'A',
+            trait_weights: { analytical_thinking: 100 },
+          },
+        ],
       } as unknown as StudentProfile;
       const dna = service.computeDNA(extremeProfile);
       expect(dna.analytical_thinking).toBeLessThanOrEqual(100);
@@ -60,8 +101,19 @@ describe('TraitEngineService', () => {
         scenario_responses: [],
       } as unknown as StudentProfile;
       const dna = service.computeDNA(emptyProfile);
-      const traits = ['analytical_thinking','creativity','communication','leadership','research','business_acumen','technical_curiosity','empathy','patience','risk_tolerance'];
-      traits.forEach(t => {
+      const traits = [
+        'analytical_thinking',
+        'creativity',
+        'communication',
+        'leadership',
+        'research',
+        'business_acumen',
+        'technical_curiosity',
+        'empathy',
+        'patience',
+        'risk_tolerance',
+      ];
+      traits.forEach((t) => {
         expect((dna as any)[t]).toBe(50);
       });
     });
@@ -71,8 +123,16 @@ describe('TraitEngineService', () => {
       const profileWithScenario = {
         ...baseProfile,
         scenario_responses: [
-          { question_id: 'q1', selected_option: 'A', trait_weights: { risk_tolerance: 30 } },
-          { question_id: 'q2', selected_option: 'B', trait_weights: { risk_tolerance: -15 } },
+          {
+            question_id: 'q1',
+            selected_option: 'A',
+            trait_weights: { risk_tolerance: 30 },
+          },
+          {
+            question_id: 'q2',
+            selected_option: 'B',
+            trait_weights: { risk_tolerance: -15 },
+          },
         ],
       } as unknown as StudentProfile;
       const dna2 = service.computeDNA(profileWithScenario);
@@ -85,12 +145,14 @@ describe('TraitEngineService', () => {
     it('handles Map-format trait_weights', () => {
       const profile = {
         ...baseProfile,
-        scenario_responses: [{
-          question_id: 'q1',
-          selected_option: 'A',
-          trait_weights: new Map(Object.entries({ risk_tolerance: 20 })),
-        }],
-      } as unknown as StudentProfile;
+        scenario_responses: [
+          {
+            question_id: 'q1',
+            selected_option: 'A',
+            trait_weights: new Map(Object.entries({ risk_tolerance: 20 })),
+          },
+        ],
+      };
       const dna = service.computeDNA(profile);
       expect(dna.risk_tolerance).toBeGreaterThanOrEqual(0);
     });

@@ -10,10 +10,15 @@ export class HistoryController {
     @Request() req: any,
     @Query('type') type = 'all',
     @Query('page') page = '1',
-    @Query('limit') limit = '10'
+    @Query('limit') limit = '10',
   ) {
     const pageNum = parseInt(page, 10) || 1;
     const limitNum = parseInt(limit, 10) || 10;
-    return this.historyService.getHistory(req.user.user_id, type, pageNum, limitNum);
+    return this.historyService.getHistory(
+      req.user.user_id,
+      type,
+      pageNum,
+      limitNum,
+    );
   }
 }

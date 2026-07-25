@@ -13,6 +13,6 @@ export interface AbstractLLMProvider {
     apiKey: string,
     prompt: string,
     systemInstruction?: string,
-    jsonSchema?: any
+    jsonSchema?: any,
   ): Promise<ProviderResponse>;
 }

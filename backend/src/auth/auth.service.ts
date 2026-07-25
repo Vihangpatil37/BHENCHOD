@@ -21,7 +21,9 @@ export class AuthService {
   ) {}
 
   async register(dto: RegisterDto) {
-    const existing = await this.userModel.findOne({ email: dto.email.toLowerCase() }).exec();
+    const existing = await this.userModel
+      .findOne({ email: dto.email.toLowerCase() })
+      .exec();
     if (existing) {
       throw new ConflictException('Email is already registered');
     }
@@ -46,18 +48,27 @@ export class AuthService {
   }
 
   async login(dto: LoginDto) {
-    const user = await this.userModel.findOne({ email: dto.email.toLowerCase() }).exec();
+    const user = await this.userModel
+      .findOne({ email: dto.email.toLowerCase() })
+      .exec();
     if (!user) {
       throw new UnauthorizedException('Invalid credentials');
     }
 
     // Check lock status
     if (user.locked_until && user.locked_until > new Date()) {
-      const waitTime = Math.ceil((user.locked_until.getTime() - Date.now()) / 1000 / 60);
-      throw new UnauthorizedException(`Account is locked. Try again in ${waitTime} minutes.`);
+      const waitTime = Math.ceil(
+        (user.locked_until.getTime() - Date.now()) / 1000 / 60,
+      );
+      throw new UnauthorizedException(
+        `Account is locked. Try again in ${waitTime} minutes.`,
+      );
     }
 
-    const passwordMatch = await bcrypt.compare(dto.password, user.password_hash);
+    const passwordMatch = await bcrypt.compare(
+      dto.password,
+      user.password_hash,
+    );
     if (!passwordMatch) {
       // Increment failed attempts
       user.failed_login_attempts += 1;
@@ -86,7 +97,9 @@ export class AuthService {
       const payload = this.jwtService.verify(refreshToken, {
         secret: process.env.JWT_REFRESH_SECRET || 'fallback_refresh_secret_123',
       });
-      const user = await this.userModel.findOne({ user_id: payload.sub }).exec();
+      const user = await this.userModel
+        .findOne({ user_id: payload.sub })
+        .exec();
       if (!user) {
         throw new UnauthorizedException('Invalid refresh token');
       }
@@ -106,7 +119,7 @@ export class AuthService {
 
   private async generateTokens(user: User) {
     const payload = { sub: user.user_id, email: user.email, role: user.role };
-    
+
     const accessToken = this.jwtService.sign(payload, {
       secret: process.env.JWT_ACCESS_SECRET || 'fallback_access_secret_123',
       expiresIn: '15m',

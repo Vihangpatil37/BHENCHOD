@@ -29,7 +29,9 @@ export class OnboardingFlowService {
     const targetIdx = this.getStepIndex(targetStep);
 
     if (targetIdx === -1 && targetStep.toLowerCase() !== 'complete') {
-      throw new BadRequestException(`Invalid target onboarding step: ${targetStep}`);
+      throw new BadRequestException(
+        `Invalid target onboarding step: ${targetStep}`,
+      );
     }
 
     // If onboarding is complete, they can edit any step directly
@@ -40,7 +42,7 @@ export class OnboardingFlowService {
     // A user can jump backward to any completed step, or forward by exactly 1 step
     if (targetIdx > currentIdx + 1) {
       throw new BadRequestException(
-        `Cannot skip to step "${targetStep}". You must complete the intervening steps first.`
+        `Cannot skip to step "${targetStep}". You must complete the intervening steps first.`,
       );
     }
   }

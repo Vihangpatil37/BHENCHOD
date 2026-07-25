@@ -162,7 +162,10 @@ export function getSubDomains(categoryCode: string): string[] {
 /**
  * Validate that a sub_domain_code belongs to the given category.
  */
-export function isValidSubDomain(categoryCode: string, subDomainCode: string): boolean {
+export function isValidSubDomain(
+  categoryCode: string,
+  subDomainCode: string,
+): boolean {
   const domains = TAXONOMY[categoryCode];
   return !!domains && domains.includes(subDomainCode);
 }

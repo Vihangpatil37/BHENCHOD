@@ -31,27 +31,43 @@ describe('classifyIntent', () => {
       providers: [
         CounselorService,
         { provide: getModelToken('Conversation'), useValue: makeModel() },
-        { provide: getModelToken('ConversationMessage'), useValue: makeModel() },
+        {
+          provide: getModelToken('ConversationMessage'),
+          useValue: makeModel(),
+        },
         { provide: getModelToken(StudentProfile.name), useValue: makeModel() },
         { provide: getModelToken(Recommendation.name), useValue: makeModel() },
         { provide: getModelToken(Career.name), useValue: makeModel() },
-        { provide: ContextBuilderService, useValue: { buildContext: jest.fn() } },
+        {
+          provide: ContextBuilderService,
+          useValue: { buildContext: jest.fn() },
+        },
         { provide: AIServiceClient, useValue: { run: jest.fn() } },
       ],
     }).compile();
-    classify = (t: string) => (module.get(CounselorService) as any).classifyIntent(t);
+    classify = (t: string) => module.get(CounselorService).classifyIntent(t);
   });
 
-  it('roadmap_question from "roadmap"', () => expect(classify('What is the roadmap?')).toBe('roadmap_question'));
-  it('roadmap_question from "step"', () => expect(classify('What steps?')).toBe('roadmap_question'));
-  it('roadmap_question from "path"', () => expect(classify('Career path?')).toBe('roadmap_question'));
-  it('roadmap_question from "how to"', () => expect(classify('How to become?')).toBe('roadmap_question'));
-  it('career_question from "career"', () => expect(classify('Tell me about this career')).toBe('career_question'));
-  it('career_question from "salary"', () => expect(classify('Salary range?')).toBe('career_question'));
-  it('career_question from "job"', () => expect(classify('What jobs?')).toBe('career_question'));
-  it('career_question from "work"', () => expect(classify('What kind of work?')).toBe('career_question'));
-  it('general_chat for ordinary', () => expect(classify('Hello!')).toBe('general_chat'));
-  it('case-insensitive', () => expect(classify('ROADMAP')).toBe('roadmap_question'));
+  it('roadmap_question from "roadmap"', () =>
+    expect(classify('What is the roadmap?')).toBe('roadmap_question'));
+  it('roadmap_question from "step"', () =>
+    expect(classify('What steps?')).toBe('roadmap_question'));
+  it('roadmap_question from "path"', () =>
+    expect(classify('Career path?')).toBe('roadmap_question'));
+  it('roadmap_question from "how to"', () =>
+    expect(classify('How to become?')).toBe('roadmap_question'));
+  it('career_question from "career"', () =>
+    expect(classify('Tell me about this career')).toBe('career_question'));
+  it('career_question from "salary"', () =>
+    expect(classify('Salary range?')).toBe('career_question'));
+  it('career_question from "job"', () =>
+    expect(classify('What jobs?')).toBe('career_question'));
+  it('career_question from "work"', () =>
+    expect(classify('What kind of work?')).toBe('career_question'));
+  it('general_chat for ordinary', () =>
+    expect(classify('Hello!')).toBe('general_chat'));
+  it('case-insensitive', () =>
+    expect(classify('ROADMAP')).toBe('roadmap_question'));
 });
 
 // --- Pure-logic: applySafetyFilter ---
@@ -65,28 +81,43 @@ describe('applySafetyFilter', () => {
       providers: [
         CounselorService,
         { provide: getModelToken('Conversation'), useValue: makeModel() },
-        { provide: getModelToken('ConversationMessage'), useValue: makeModel() },
+        {
+          provide: getModelToken('ConversationMessage'),
+          useValue: makeModel(),
+        },
         { provide: getModelToken(StudentProfile.name), useValue: makeModel() },
         { provide: getModelToken(Recommendation.name), useValue: makeModel() },
         { provide: getModelToken(Career.name), useValue: makeModel() },
-        { provide: ContextBuilderService, useValue: { buildContext: jest.fn() } },
+        {
+          provide: ContextBuilderService,
+          useValue: { buildContext: jest.fn() },
+        },
         { provide: AIServiceClient, useValue: { run: jest.fn() } },
       ],
     }).compile();
     const srv = module.get(CounselorService);
     filter = (t: string) => (srv as any).applySafetyFilter(t);
-    logWarn = jest.spyOn((srv as any).logger, 'warn').mockImplementation(() => {});
+    logWarn = jest
+      .spyOn((srv as any).logger, 'warn')
+      .mockImplementation(() => {});
   });
 
   afterAll(() => logWarn.mockRestore());
 
-  it('replaces "hack"', () => expect(filter('hack the system')).toBe('*** the system'));
-  it('replaces "kill"', () => expect(filter('this will kill')).toBe('this will ***'));
-  it('replaces "suicide"', () => expect(filter('suicide is not')).toBe('*** is not'));
+  it('replaces "hack"', () =>
+    expect(filter('hack the system')).toBe('*** the system'));
+  it('replaces "kill"', () =>
+    expect(filter('this will kill')).toBe('this will ***'));
+  it('replaces "suicide"', () =>
+    expect(filter('suicide is not')).toBe('*** is not'));
   it('replaces "bomb"', () => expect(filter('make a bomb')).toBe('make a ***'));
   it('case-insensitive', () => expect(filter('HACK')).toBe('***'));
-  it('passes clean text', () => expect(filter('What careers?')).toBe('What careers?'));
-  it('logs warning on blocklist hit', () => { filter('hack'); expect(logWarn).toHaveBeenCalled(); });
+  it('passes clean text', () =>
+    expect(filter('What careers?')).toBe('What careers?'));
+  it('logs warning on blocklist hit', () => {
+    filter('hack');
+    expect(logWarn).toHaveBeenCalled();
+  });
 });
 
 // --- sendMessage ---
@@ -111,9 +142,22 @@ describe('sendMessage', () => {
     };
 
     // trace: findById -> exec finds conversation
-    execs.conv.mockResolvedValue({ user_id: 'user-1', set: jest.fn(), save: jest.fn() });
+    execs.conv.mockResolvedValue({
+      user_id: 'user-1',
+      set: jest.fn(),
+      save: jest.fn(),
+    });
     // trace: findOne -> exec finds profile
-    execs.prof.mockResolvedValue({ user_id: 'user-1', interests: {}, skills: {}, goals: [], work_preferences: [], personal: {}, constraints: {}, academic: {} });
+    execs.prof.mockResolvedValue({
+      user_id: 'user-1',
+      interests: {},
+      skills: {},
+      goals: [],
+      work_preferences: [],
+      personal: {},
+      constraints: {},
+      academic: {},
+    });
     // trace: findOne -> sort -> exec finds rec (null = fallback to top seeding)
     execs.rec.mockResolvedValue(null);
     // trace: find -> limit -> exec for top seeding
@@ -129,15 +173,31 @@ describe('sendMessage', () => {
         { provide: getModelToken(StudentProfile.name), useValue: profModel },
         { provide: getModelToken(Recommendation.name), useValue: recModel },
         { provide: getModelToken(Career.name), useValue: careModel },
-        { provide: ContextBuilderService, useValue: { buildContext: jest.fn().mockResolvedValue({}) } },
-        { provide: AIServiceClient, useValue: { run: jest.fn().mockResolvedValue({ success: true, data: { reply: 'Hello there' }, model: 'test-model', cached: false, latency_ms: 100 }) } },
+        {
+          provide: ContextBuilderService,
+          useValue: { buildContext: jest.fn().mockResolvedValue({}) },
+        },
+        {
+          provide: AIServiceClient,
+          useValue: {
+            run: jest.fn().mockResolvedValue({
+              success: true,
+              data: { reply: 'Hello there' },
+              model: 'test-model',
+              cached: false,
+              latency_ms: 100,
+            }),
+          },
+        },
       ],
     }).compile();
     service = module.get(CounselorService);
   });
 
   it('rejects unauthorized session', async () => {
-    await expect(service.sendMessage('other', 'sid', 'Hi')).rejects.toThrow(NotFoundException);
+    await expect(service.sendMessage('other', 'sid', 'Hi')).rejects.toThrow(
+      NotFoundException,
+    );
   });
 
   it('returns counselor reply', async () => {

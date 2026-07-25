@@ -4,14 +4,19 @@ import { BaseScoringEngine } from './base-scoring.engine';
 import { StudentProfile } from '../../onboarding/schemas/student-profile.schema';
 import { CareerDocument } from '../../careers/schemas/career.schema';
 import { ScoreBreakdown } from '../interfaces/score-breakdown.interface';
-import { TraitMatchingEngineService, TRAIT_KEYS } from '../trait-matching-engine.service';
+import {
+  TraitMatchingEngineService,
+  TRAIT_KEYS,
+} from '../trait-matching-engine.service';
 import { getWeights } from '../utils/weight-calculator';
 
 @Injectable()
 export class PersonalityEngine extends BaseScoringEngine {
   readonly name = 'personality';
 
-  constructor(private readonly traitMatchingEngine: TraitMatchingEngineService) {
+  constructor(
+    private readonly traitMatchingEngine: TraitMatchingEngineService,
+  ) {
     super();
   }
 
@@ -33,7 +38,9 @@ export class PersonalityEngine extends BaseScoringEngine {
       };
     }
 
-    const matches = this.traitMatchingEngine.matchCareers(student.current_dna, [career]);
+    const matches = this.traitMatchingEngine.matchCareers(student.current_dna, [
+      career,
+    ]);
     const score = matches[0]?.score ?? 0;
 
     const matchedFactors: string[] = [];
@@ -48,13 +55,19 @@ export class PersonalityEngine extends BaseScoringEngine {
 
       const humanFriendlyKey = key.replace('_', ' ');
       if (careerVal >= 70 && studentVal >= 70) {
-        matchedFactors.push(`Your high ${humanFriendlyKey} aligns well with this career`);
+        matchedFactors.push(
+          `Your high ${humanFriendlyKey} aligns well with this career`,
+        );
       } else if (careerVal >= 70 && studentVal < 50) {
-        missingFactors.push(`This career typically requires higher ${humanFriendlyKey}`);
+        missingFactors.push(
+          `This career typically requires higher ${humanFriendlyKey}`,
+        );
       }
     }
 
-    const reasoning = [`Personality alignment score of ${score}% via Student DNA matching`];
+    const reasoning = [
+      `Personality alignment score of ${score}% via Student DNA matching`,
+    ];
 
     return {
       score,

@@ -11,7 +11,13 @@ const makeProfile = (overrides: any = {}): StudentProfile => ({
   user_id: 'test-uuid',
   academic: {
     class10: {
-      subjects: { maths: 80, science: 70, english: 75, sst: 65, computer: 90 },
+      subjects: {
+        maths: 80,
+        science: 70,
+        english: 75,
+        sst: 65,
+        computer: 90,
+      },
     },
   },
   constraints: {
@@ -19,7 +25,7 @@ const makeProfile = (overrides: any = {}): StudentProfile => ({
     study_duration_max: 4,
   },
   ...overrides,
-} as any);
+});
 
 describe('EligibilityEngineService', () => {
   let service: EligibilityEngineService;

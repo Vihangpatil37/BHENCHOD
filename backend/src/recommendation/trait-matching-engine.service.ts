@@ -20,8 +20,13 @@ export const TRAIT_KEYS = [
 export class TraitMatchingEngineService {
   private readonly logger = new Logger(TraitMatchingEngineService.name);
 
-  matchCareers(dna: StudentDNA, eligibleCareers: CareerDocument[]): { career: CareerDocument; score: number }[] {
-    this.logger.log(`Running Trait Matching Engine against ${eligibleCareers.length} eligible careers`);
+  matchCareers(
+    dna: StudentDNA,
+    eligibleCareers: CareerDocument[],
+  ): { career: CareerDocument; score: number }[] {
+    this.logger.log(
+      `Running Trait Matching Engine against ${eligibleCareers.length} eligible careers`,
+    );
 
     // 1. Build vector for Student DNA
     const dnaVector = TRAIT_KEYS.map((key) => (dna as any)[key] || 0);
@@ -29,7 +34,9 @@ export class TraitMatchingEngineService {
     const scored = eligibleCareers.map((career) => {
       // 2. Build vector for Career Trait Weights
       const careerWeights = career.trait_weights || {};
-      const careerVector = TRAIT_KEYS.map((key) => (careerWeights as any)[key] || 0);
+      const careerVector = TRAIT_KEYS.map(
+        (key) => (careerWeights as any)[key] || 0,
+      );
 
       // 3. Compute cosine similarity (convert -1 to 1 to a 0 to 100 percentage score)
       const similarity = cosineSimilarity(dnaVector, careerVector);

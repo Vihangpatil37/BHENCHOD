@@ -24,7 +24,10 @@ export interface CategoryEligibilityRule {
 /**
  * Eligibility rules keyed by category_code.
  */
-export const ELIGIBILITY_RULES: Record<string, EligibilityConstraints | CategoryEligibilityRule> = {
+export const ELIGIBILITY_RULES: Record<
+  string,
+  EligibilityConstraints | CategoryEligibilityRule
+> = {
   science: {
     fallback: {
       min_maths: 0,
@@ -167,10 +170,7 @@ export const ELIGIBILITY_RULES: Record<string, EligibilityConstraints | Category
  * Sub-domains within government_defence that are open at Class 10/12 level.
  * These have short/no study duration requirements.
  */
-export const GOVT_OPEN_ENTRY_SUBDOMAINS = new Set([
-  'ssc',
-  'railways_rrb',
-]);
+export const GOVT_OPEN_ENTRY_SUBDOMAINS = new Set(['ssc', 'railways_rrb']);
 
 /**
  * Government defence sub-domains where officer-level roles require graduation.
@@ -289,13 +289,16 @@ export function computeEligibility(
 
   // Simple rule (no sub-domain overrides)
   if (!('fallback' in rule)) {
-    return { eligibility: rule as EligibilityConstraints, needs_enrichment: false };
+    return {
+      eligibility: rule,
+      needs_enrichment: false,
+    };
   }
 
   // Rule with overrides
   const { fallback, overrides } = rule;
   if (overrides && subDomainCode in overrides) {
-    const override = overrides[subDomainCode]!;
+    const override = overrides[subDomainCode];
     return {
       eligibility: { ...fallback, ...override },
       needs_enrichment: false,

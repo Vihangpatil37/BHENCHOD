@@ -40,42 +40,68 @@ export class AcademicEngine extends BaseScoringEngine {
 
     if (minMaths > 0) {
       reqCount++;
-      const subjectScore = studentMaths >= minMaths ? 100 : (studentMaths / minMaths) * 100;
+      const subjectScore =
+        studentMaths >= minMaths ? 100 : (studentMaths / minMaths) * 100;
       reqSum += subjectScore;
       if (studentMaths >= minMaths) {
-        matchedFactors.push(`Maths grade (${studentMaths}%) meets the minimum requirement of ${minMaths}%`);
+        matchedFactors.push(
+          `Maths grade (${studentMaths}%) meets the minimum requirement of ${minMaths}%`,
+        );
       } else {
-        missingFactors.push(`Maths grade (${studentMaths}%) is below the minimum requirement of ${minMaths}%`);
+        missingFactors.push(
+          `Maths grade (${studentMaths}%) is below the minimum requirement of ${minMaths}%`,
+        );
       }
     }
     if (minScience > 0) {
       reqCount++;
-      const subjectScore = studentScience >= minScience ? 100 : (studentScience / minScience) * 100;
+      const subjectScore =
+        studentScience >= minScience
+          ? 100
+          : (studentScience / minScience) * 100;
       reqSum += subjectScore;
       if (studentScience >= minScience) {
-        matchedFactors.push(`Science grade (${studentScience}%) meets the minimum requirement of ${minScience}%`);
+        matchedFactors.push(
+          `Science grade (${studentScience}%) meets the minimum requirement of ${minScience}%`,
+        );
       } else {
-        missingFactors.push(`Science grade (${studentScience}%) is below the minimum requirement of ${minScience}%`);
+        missingFactors.push(
+          `Science grade (${studentScience}%) is below the minimum requirement of ${minScience}%`,
+        );
       }
     }
     if (minBiology > 0) {
       reqCount++;
-      const subjectScore = studentBiology >= minBiology ? 100 : (studentBiology / minBiology) * 100;
+      const subjectScore =
+        studentBiology >= minBiology
+          ? 100
+          : (studentBiology / minBiology) * 100;
       reqSum += subjectScore;
       if (studentBiology >= minBiology) {
-        matchedFactors.push(`Biology grade (${studentBiology}%) meets the minimum requirement of ${minBiology}%`);
+        matchedFactors.push(
+          `Biology grade (${studentBiology}%) meets the minimum requirement of ${minBiology}%`,
+        );
       } else {
-        missingFactors.push(`Biology grade (${studentBiology}%) is below the minimum requirement of ${minBiology}%`);
+        missingFactors.push(
+          `Biology grade (${studentBiology}%) is below the minimum requirement of ${minBiology}%`,
+        );
       }
     }
     if (minEnglish > 0) {
       reqCount++;
-      const subjectScore = studentEnglish >= minEnglish ? 100 : (studentEnglish / minEnglish) * 100;
+      const subjectScore =
+        studentEnglish >= minEnglish
+          ? 100
+          : (studentEnglish / minEnglish) * 100;
       reqSum += subjectScore;
       if (studentEnglish >= minEnglish) {
-        matchedFactors.push(`English grade (${studentEnglish}%) meets the minimum requirement of ${minEnglish}%`);
+        matchedFactors.push(
+          `English grade (${studentEnglish}%) meets the minimum requirement of ${minEnglish}%`,
+        );
       } else {
-        missingFactors.push(`English grade (${studentEnglish}%) is below the minimum requirement of ${minEnglish}%`);
+        missingFactors.push(
+          `English grade (${studentEnglish}%) is below the minimum requirement of ${minEnglish}%`,
+        );
       }
     }
 
@@ -94,24 +120,60 @@ export class AcademicEngine extends BaseScoringEngine {
     const favorites = [
       ...(class12?.favorite_subjects || []),
       ...(class10?.favorite_subjects || []),
-    ].map(s => s.toLowerCase());
+    ].map((s) => s.toLowerCase());
 
     let favoriteSubjectsAlignment = 0;
     if (favorites.length > 0) {
       const careerCat = career.category_code?.toLowerCase();
       let matchFound = false;
 
-      if (careerCat === 'science' && favorites.some(f => ['math', 'mathematics', 'science', 'physics', 'chemistry', 'biology', 'computer'].some(k => f.includes(k)))) {
+      if (
+        careerCat === 'science' &&
+        favorites.some((f) =>
+          [
+            'math',
+            'mathematics',
+            'science',
+            'physics',
+            'chemistry',
+            'biology',
+            'computer',
+          ].some((k) => f.includes(k)),
+        )
+      ) {
         matchFound = true;
-      } else if (careerCat === 'commerce' && favorites.some(f => ['math', 'accounts', 'economics', 'business', 'finance'].some(k => f.includes(k)))) {
+      } else if (
+        careerCat === 'commerce' &&
+        favorites.some((f) =>
+          ['math', 'accounts', 'economics', 'business', 'finance'].some((k) =>
+            f.includes(k),
+          ),
+        )
+      ) {
         matchFound = true;
-      } else if (careerCat === 'arts_humanities' && favorites.some(f => ['english', 'history', 'geography', 'social', 'sst', 'art', 'music', 'language'].some(k => f.includes(k)))) {
+      } else if (
+        careerCat === 'arts_humanities' &&
+        favorites.some((f) =>
+          [
+            'english',
+            'history',
+            'geography',
+            'social',
+            'sst',
+            'art',
+            'music',
+            'language',
+          ].some((k) => f.includes(k)),
+        )
+      ) {
         matchFound = true;
       }
 
       favoriteSubjectsAlignment = matchFound ? 100 : 50;
       if (matchFound) {
-        matchedFactors.push('Academic interests align with this career category');
+        matchedFactors.push(
+          'Academic interests align with this career category',
+        );
       }
     } else {
       favoriteSubjectsAlignment = 0;
@@ -121,7 +183,7 @@ export class AcademicEngine extends BaseScoringEngine {
     const weak = [
       ...(class12?.weak_subjects || []),
       ...(class10?.weak_subjects || []),
-    ].map(s => s.toLowerCase());
+    ].map((s) => s.toLowerCase());
 
     let weakSubjectPenalty = 100;
     const requiredList: string[] = [];
@@ -130,19 +192,22 @@ export class AcademicEngine extends BaseScoringEngine {
     if (minBiology > 0) requiredList.push('biology');
     if (minEnglish > 0) requiredList.push('english');
 
-    const hasWeakOverlap = weak.some(w => requiredList.some(r => w.includes(r)));
+    const hasWeakOverlap = weak.some((w) =>
+      requiredList.some((r) => w.includes(r)),
+    );
     if (hasWeakOverlap) {
       weakSubjectPenalty = 0;
       missingFactors.push('A required subject is marked as a weak area');
     }
 
     // Calculate base weighted score
-    const baseScore = (!class10 && !class12)
-      ? 20
-      : (requiredSubjectsMatch * 0.60) +
-        (overallPerformance * 0.20) +
-        (favoriteSubjectsAlignment * 0.10) +
-        (weakSubjectPenalty * 0.10);
+    const baseScore =
+      !class10 && !class12
+        ? 20
+        : requiredSubjectsMatch * 0.6 +
+          overallPerformance * 0.2 +
+          favoriteSubjectsAlignment * 0.1 +
+          weakSubjectPenalty * 0.1;
 
     // --- Bonuses and Penalties ---
     const bonusesApplied: { label: string; points: number }[] = [];
@@ -152,14 +217,26 @@ export class AcademicEngine extends BaseScoringEngine {
     const requiredStream = eligibility?.required_stream;
     if (requiredStream && requiredStream !== 'any') {
       if (stream && stream.toLowerCase() === requiredStream.toLowerCase()) {
-        bonusesApplied.push({ label: `Matches required stream: ${requiredStream}`, points: 10 });
+        bonusesApplied.push({
+          label: `Matches required stream: ${requiredStream}`,
+          points: 10,
+        });
       } else if (stream) {
-        penaltiesApplied.push({ label: `Stream mismatch: requires ${requiredStream}`, points: 15 });
+        penaltiesApplied.push({
+          label: `Stream mismatch: requires ${requiredStream}`,
+          points: 15,
+        });
       }
     }
 
-    const { score: scoreWithBonus, total: totalBonuses } = this.applyBonuses(baseScore, bonusesApplied);
-    const { score: finalScore, total: totalPenalties } = this.applyPenalties(scoreWithBonus, penaltiesApplied);
+    const { score: scoreWithBonus, total: totalBonuses } = this.applyBonuses(
+      baseScore,
+      bonusesApplied,
+    );
+    const { score: finalScore, total: totalPenalties } = this.applyPenalties(
+      scoreWithBonus,
+      penaltiesApplied,
+    );
 
     // Setup confidence
     let confidence = 100;

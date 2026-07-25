@@ -18,25 +18,38 @@ export class HistoryService {
   private readonly logger = new Logger(HistoryService.name);
 
   constructor(
-    @InjectModel(StudentDNAHistory.name) private readonly dnaHistoryModel: Model<any>,
-    @InjectModel(Recommendation.name) private readonly recommendationModel: Model<any>,
-    @InjectModel(SavedCareer.name) private readonly savedCareerModel: Model<any>,
+    @InjectModel(StudentDNAHistory.name)
+    private readonly dnaHistoryModel: Model<any>,
+    @InjectModel(Recommendation.name)
+    private readonly recommendationModel: Model<any>,
+    @InjectModel(SavedCareer.name)
+    private readonly savedCareerModel: Model<any>,
     @InjectModel(Career.name) private readonly careerModel: Model<any>,
   ) {}
 
-  async getHistory(userId: string, type: string, page = 1, limit = 10): Promise<{
+  async getHistory(
+    userId: string,
+    type: string,
+    page = 1,
+    limit = 10,
+  ): Promise<{
     items: HistoryItem[];
     total: number;
     page: number;
     limit: number;
   }> {
-    this.logger.log(`Fetching history type=${type} page=${page} for user: ${userId}`);
+    this.logger.log(
+      `Fetching history type=${type} page=${page} for user: ${userId}`,
+    );
 
     let items: HistoryItem[] = [];
 
     const onboardingHistoryPromise = (async (): Promise<HistoryItem[]> => {
       if (type !== 'all' && type !== 'onboarding') return [];
-      const records = await this.dnaHistoryModel.find({ user_id: userId }).sort({ computed_at: -1 }).exec();
+      const records = await this.dnaHistoryModel
+        .find({ user_id: userId })
+        .sort({ computed_at: -1 })
+        .exec();
       return records.map((r) => ({
         type: 'onboarding',
         timestamp: r.computed_at || r.created_at,
@@ -50,7 +63,10 @@ export class HistoryService {
 
     const recommendationsHistoryPromise = (async (): Promise<HistoryItem[]> => {
       if (type !== 'all' && type !== 'recommendations') return [];
-      const records = await this.recommendationModel.find({ user_id: userId }).sort({ generated_at: -1 }).exec();
+      const records = await this.recommendationModel
+        .find({ user_id: userId })
+        .sort({ generated_at: -1 })
+        .exec();
       return records.map((r) => ({
         type: 'recommendation',
         timestamp: r.generated_at,
@@ -65,15 +81,23 @@ export class HistoryService {
 
     const savedCareersHistoryPromise = (async (): Promise<HistoryItem[]> => {
       if (type !== 'all' && type !== 'careers') return [];
-      const records = await this.savedCareerModel.find({ user_id: userId }).sort({ created_at: -1 }).exec();
-      
+      const records = await this.savedCareerModel
+        .find({ user_id: userId })
+        .sort({ created_at: -1 })
+        .exec();
+
       // Look up names of careers
       const careerCodes = records.map((r) => r.career_code);
-      const careers = await this.careerModel.find({ career_code: { $in: careerCodes } }).exec();
-      const nameMap = careers.reduce((acc, curr) => {
-        acc[curr.career_code] = curr.name;
-        return acc;
-      }, {} as Record<string, string>);
+      const careers = await this.careerModel
+        .find({ career_code: { $in: careerCodes } })
+        .exec();
+      const nameMap = careers.reduce(
+        (acc, curr) => {
+          acc[curr.career_code] = curr.name;
+          return acc;
+        },
+        {} as Record<string, string>,
+      );
 
       return records.map((r) => ({
         type: 'saved_career',
@@ -94,13 +118,19 @@ export class HistoryService {
 
     // Merge and sort
     items = [...onboard, ...recs, ...saved].sort((a, b) => {
-      const timeA = a.timestamp instanceof Date ? a.timestamp.getTime() : new Date(a.timestamp).getTime();
-      const timeB = b.timestamp instanceof Date ? b.timestamp.getTime() : new Date(b.timestamp).getTime();
+      const timeA =
+        a.timestamp instanceof Date
+          ? a.timestamp.getTime()
+          : new Date(a.timestamp).getTime();
+      const timeB =
+        b.timestamp instanceof Date
+          ? b.timestamp.getTime()
+          : new Date(b.timestamp).getTime();
       return timeB - timeA;
     });
 
     const total = items.length;
-    
+
     // Paginate manually
     const startIndex = (page - 1) * limit;
     const paginatedItems = items.slice(startIndex, startIndex + limit);

@@ -13,7 +13,11 @@ import {
   ForbiddenException,
 } from '@nestjs/common';
 import { CareersService } from './careers.service';
-import { CreateCareerDto, UpdateCareerDto, ReviewPromoteDto } from './dto/career.dto';
+import {
+  CreateCareerDto,
+  UpdateCareerDto,
+  ReviewPromoteDto,
+} from './dto/career.dto';
 import { Public } from '../auth/decorators/public.decorator';
 
 @Controller('careers')
@@ -38,7 +42,9 @@ export class CareersController {
   @Public()
   @Get('by-codes')
   async getCareersByCodes(@Query('codes') codesString?: string) {
-    const codes = codesString ? codesString.split(',').map((c) => c.trim()) : [];
+    const codes = codesString
+      ? codesString.split(',').map((c) => c.trim())
+      : [];
     return this.careersService.findByCodes(codes);
   }
 
@@ -50,12 +56,18 @@ export class CareersController {
 
   // Saved / bookmarked careers (requires authentication)
   @Post('save')
-  async saveCareer(@Request() req: any, @Body('career_code') careerCode: string) {
+  async saveCareer(
+    @Request() req: any,
+    @Body('career_code') careerCode: string,
+  ) {
     return this.careersService.saveCareer(req.user.user_id, careerCode);
   }
 
   @Delete('save/:careerCode')
-  async unsaveCareer(@Request() req: any, @Param('careerCode') careerCode: string) {
+  async unsaveCareer(
+    @Request() req: any,
+    @Param('careerCode') careerCode: string,
+  ) {
     return this.careersService.unsaveCareer(req.user.user_id, careerCode);
   }
 
@@ -65,7 +77,10 @@ export class CareersController {
   }
 
   @Get('saved/status/:careerCode')
-  async getSavedStatus(@Request() req: any, @Param('careerCode') careerCode: string) {
+  async getSavedStatus(
+    @Request() req: any,
+    @Param('careerCode') careerCode: string,
+  ) {
     return this.careersService.getSavedStatus(req.user.user_id, careerCode);
   }
 
@@ -106,7 +121,8 @@ export class CareersController {
         const ne = (needsEnrichment || '').toLowerCase();
         return ne === 'true' ? true : ne === 'false' ? false : undefined;
       })(),
-      is_active: isActive === 'true' ? true : isActive === 'false' ? false : undefined,
+      is_active:
+        isActive === 'true' ? true : isActive === 'false' ? false : undefined,
       search,
       sort_by: sortBy || 'name',
       sort_order: sortOrder === 'desc' ? -1 : 1,
@@ -114,7 +130,10 @@ export class CareersController {
   }
 
   @Get('admin/careers/:careerCode')
-  async adminGetCareer(@Request() req: any, @Param('careerCode') careerCode: string) {
+  async adminGetCareer(
+    @Request() req: any,
+    @Param('careerCode') careerCode: string,
+  ) {
     this.checkAdminRole(req.user);
     return this.careersService.adminFindOne(careerCode);
   }
@@ -130,13 +149,19 @@ export class CareersController {
   }
 
   @Post('admin/careers/:careerCode/publish-draft')
-  async adminPublishDraft(@Request() req: any, @Param('careerCode') careerCode: string) {
+  async adminPublishDraft(
+    @Request() req: any,
+    @Param('careerCode') careerCode: string,
+  ) {
     this.checkAdminRole(req.user);
     return this.careersService.adminPublishDraft(careerCode);
   }
 
   @Post('admin/careers/:careerCode/reject-draft')
-  async adminRejectDraft(@Request() req: any, @Param('careerCode') careerCode: string) {
+  async adminRejectDraft(
+    @Request() req: any,
+    @Param('careerCode') careerCode: string,
+  ) {
     this.checkAdminRole(req.user);
     return this.careersService.adminRejectDraft(careerCode);
   }
@@ -157,7 +182,10 @@ export class CareersController {
   }
 
   @Patch('admin/careers/:careerCode/toggle-active')
-  async adminToggleActive(@Request() req: any, @Param('careerCode') careerCode: string) {
+  async adminToggleActive(
+    @Request() req: any,
+    @Param('careerCode') careerCode: string,
+  ) {
     this.checkAdminRole(req.user);
     return this.careersService.adminToggleActive(careerCode);
   }

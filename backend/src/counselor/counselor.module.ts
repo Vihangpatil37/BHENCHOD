@@ -1,7 +1,13 @@
 import { Module } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
-import { Conversation, ConversationSchema } from './schemas/conversation.schema';
-import { ConversationMessage, ConversationMessageSchema } from './schemas/conversation-message.schema';
+import {
+  Conversation,
+  ConversationSchema,
+} from './schemas/conversation.schema';
+import {
+  ConversationMessage,
+  ConversationMessageSchema,
+} from './schemas/conversation-message.schema';
 import { CounselorService } from './counselor.service';
 import { ContextBuilderService } from './context-builder.service';
 import { CounselorController } from './counselor.controller';

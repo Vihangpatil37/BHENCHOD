@@ -13,7 +13,9 @@ export class CacheService {
   private readonly ttlSeconds: number;
 
   constructor() {
-    this.ttlSeconds = parseInt(process.env.AI_SERVICE_CACHE_TTL_SECONDS || '3600');
+    this.ttlSeconds = parseInt(
+      process.env.AI_SERVICE_CACHE_TTL_SECONDS || '3600',
+    );
   }
 
   generateKey(taskType: string, context: Record<string, any>): string {

@@ -24,7 +24,7 @@ export class HybridRankingEngine {
   calculate(
     careerCode: string,
     careerName: string,
-    inputs: HybridInput
+    inputs: HybridInput,
   ): { score: number; totalBonuses: number; totalPenalties: number } {
     const engines = [
       inputs.academic,
@@ -52,16 +52,22 @@ export class HybridRankingEngine {
 
     // Normalize weighted base score sum if weights don't sum to 1.0 (e.g. when Opportunity is missing)
     if (sumWeights > 0 && Math.abs(sumWeights - 1.0) > 0.001) {
-      weightedBaseScoreSum = (weightedBaseScoreSum / sumWeights);
+      weightedBaseScoreSum = weightedBaseScoreSum / sumWeights;
     }
 
     // Apply global caps to bonuses and penalties
-    const globalBonuses = Math.min(sumBonuses, THRESHOLDS.HYBRID_RANKING_BONUS_CAP);
-    const globalPenalties = Math.min(sumPenalties, THRESHOLDS.HYBRID_RANKING_PENALTY_CAP);
+    const globalBonuses = Math.min(
+      sumBonuses,
+      THRESHOLDS.HYBRID_RANKING_BONUS_CAP,
+    );
+    const globalPenalties = Math.min(
+      sumPenalties,
+      THRESHOLDS.HYBRID_RANKING_PENALTY_CAP,
+    );
 
     const finalScore = Math.min(
       100,
-      Math.max(0, weightedBaseScoreSum + globalBonuses - globalPenalties)
+      Math.max(0, weightedBaseScoreSum + globalBonuses - globalPenalties),
     );
 
     return {
@@ -79,16 +85,22 @@ export class HybridRankingEngine {
       }
 
       // Tie-breaking priority: Interest -> Skill -> Personality -> Opportunity -> Alphabetical
-      const interestDiff = (b.breakdown.interest?.score ?? 0) - (a.breakdown.interest?.score ?? 0);
+      const interestDiff =
+        (b.breakdown.interest?.score ?? 0) - (a.breakdown.interest?.score ?? 0);
       if (interestDiff !== 0) return interestDiff;
 
-      const skillDiff = (b.breakdown.skill?.score ?? 0) - (a.breakdown.skill?.score ?? 0);
+      const skillDiff =
+        (b.breakdown.skill?.score ?? 0) - (a.breakdown.skill?.score ?? 0);
       if (skillDiff !== 0) return skillDiff;
 
-      const personalityDiff = (b.breakdown.personality?.score ?? 0) - (a.breakdown.personality?.score ?? 0);
+      const personalityDiff =
+        (b.breakdown.personality?.score ?? 0) -
+        (a.breakdown.personality?.score ?? 0);
       if (personalityDiff !== 0) return personalityDiff;
 
-      const opportunityDiff = (b.breakdown.opportunity?.score ?? 0) - (a.breakdown.opportunity?.score ?? 0);
+      const opportunityDiff =
+        (b.breakdown.opportunity?.score ?? 0) -
+        (a.breakdown.opportunity?.score ?? 0);
       if (opportunityDiff !== 0) return opportunityDiff;
 
       return a.name.localeCompare(b.name);

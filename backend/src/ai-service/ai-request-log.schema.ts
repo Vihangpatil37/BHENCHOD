@@ -36,4 +36,5 @@ export class AIRequestLog {
   cached: boolean;
 }
 
-export const AIRequestLogSchema: MongooseSchema = SchemaFactory.createForClass(AIRequestLog);
+export const AIRequestLogSchema: MongooseSchema =
+  SchemaFactory.createForClass(AIRequestLog);

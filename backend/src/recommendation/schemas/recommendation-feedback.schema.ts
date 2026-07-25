@@ -24,4 +24,5 @@ export class RecommendationFeedback {
   comment?: string;
 }
 
-export const RecommendationFeedbackSchema: MongooseSchema = SchemaFactory.createForClass(RecommendationFeedback);
+export const RecommendationFeedbackSchema: MongooseSchema =
+  SchemaFactory.createForClass(RecommendationFeedback);

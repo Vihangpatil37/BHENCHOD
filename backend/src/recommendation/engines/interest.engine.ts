@@ -54,26 +54,34 @@ export class InterestEngine extends BaseScoringEngine {
     const missingFactors: string[] = [];
 
     // Identify top student interests and compare with career required interests
-    const sortedStudent = INTEREST_KEYS.map((key, i) => ({ key, score: studentVector[i] }))
-      .sort((a, b) => b.score - a.score);
+    const sortedStudent = INTEREST_KEYS.map((key, i) => ({
+      key,
+      score: studentVector[i],
+    })).sort((a, b) => b.score - a.score);
 
-    const sortedCareer = INTEREST_KEYS.map((key, i) => ({ key, score: careerVector[i] }))
-      .sort((a, b) => b.score - a.score);
+    const sortedCareer = INTEREST_KEYS.map((key, i) => ({
+      key,
+      score: careerVector[i],
+    })).sort((a, b) => b.score - a.score);
 
-    const topStudent = sortedStudent.slice(0, 3).map(x => x.key);
-    const topCareer = sortedCareer.slice(0, 3).map(x => x.key);
+    const topStudent = sortedStudent.slice(0, 3).map((x) => x.key);
+    const topCareer = sortedCareer.slice(0, 3).map((x) => x.key);
 
-    const common = topStudent.filter(x => {
+    const common = topStudent.filter((x) => {
       const idx = INTEREST_KEYS.indexOf(x);
       return topCareer.includes(x) && studentVector[idx] >= 50;
     });
     if (common.length > 0) {
       matchedFactors.push(`Shared interest in: ${common.join(', ')}`);
     } else {
-      missingFactors.push(`Your top interests (${topStudent.slice(0, 2).join(', ')}) do not strongly overlap with typical career drivers`);
+      missingFactors.push(
+        `Your top interests (${topStudent.slice(0, 2).join(', ')}) do not strongly overlap with typical career drivers`,
+      );
     }
 
-    const reasoning = [`Interest similarity score of ${score}% based on vector overlap`];
+    const reasoning = [
+      `Interest similarity score of ${score}% based on vector overlap`,
+    ];
 
     return {
       score,
@@ -134,40 +142,102 @@ export class InterestEngine extends BaseScoringEngine {
 
     // Name keyword mappings
     const name = career.name?.toLowerCase() || '';
-    if (name.includes('teach') || name.includes('professor') || name.includes('educator')) {
+    if (
+      name.includes('teach') ||
+      name.includes('professor') ||
+      name.includes('educator')
+    ) {
       setVal('teaching', 90);
     }
-    if (name.includes('design') || name.includes('art') || name.includes('architect') || name.includes('creative')) {
+    if (
+      name.includes('design') ||
+      name.includes('art') ||
+      name.includes('architect') ||
+      name.includes('creative')
+    ) {
       setVal('design', 90);
     }
-    if (name.includes('media') || name.includes('writer') || name.includes('journal') || name.includes('film')) {
+    if (
+      name.includes('media') ||
+      name.includes('writer') ||
+      name.includes('journal') ||
+      name.includes('film')
+    ) {
       setVal('media', 90);
     }
-    if (name.includes('finance') || name.includes('bank') || name.includes('account') || name.includes('audit')) {
+    if (
+      name.includes('finance') ||
+      name.includes('bank') ||
+      name.includes('account') ||
+      name.includes('audit')
+    ) {
       setVal('finance', 90);
     }
-    if (name.includes('doctor') || name.includes('nurse') || name.includes('counsel') || name.includes('therapy') || name.includes('medicine')) {
+    if (
+      name.includes('doctor') ||
+      name.includes('nurse') ||
+      name.includes('counsel') ||
+      name.includes('therapy') ||
+      name.includes('medicine')
+    ) {
       setVal('helping_people', 90);
     }
-    if (name.includes('manager') || name.includes('business') || name.includes('executive') || name.includes('entrepreneur')) {
+    if (
+      name.includes('manager') ||
+      name.includes('business') ||
+      name.includes('executive') ||
+      name.includes('entrepreneur')
+    ) {
       setVal('business', 90);
     }
-    if (name.includes('sport') || name.includes('athlete') || name.includes('coach') || name.includes('physical')) {
+    if (
+      name.includes('sport') ||
+      name.includes('athlete') ||
+      name.includes('coach') ||
+      name.includes('physical')
+    ) {
       setVal('sports', 90);
     }
-    if (name.includes('developer') || name.includes('code') || name.includes('software') || name.includes('computer') || name.includes('data')) {
+    if (
+      name.includes('developer') ||
+      name.includes('code') ||
+      name.includes('software') ||
+      name.includes('computer') ||
+      name.includes('data')
+    ) {
       setVal('technology', 90);
     }
-    if (name.includes('research') || name.includes('science') || name.includes('scientist')) {
+    if (
+      name.includes('research') ||
+      name.includes('science') ||
+      name.includes('scientist')
+    ) {
       setVal('research', 90);
     }
-    if (name.includes('engineer') || name.includes('mechanic') || name.includes('electric') || name.includes('technician')) {
+    if (
+      name.includes('engineer') ||
+      name.includes('mechanic') ||
+      name.includes('electric') ||
+      name.includes('technician')
+    ) {
       setVal('machines', 90);
     }
-    if (name.includes('nature') || name.includes('agri') || name.includes('farm') || name.includes('environ') || name.includes('forest')) {
+    if (
+      name.includes('nature') ||
+      name.includes('agri') ||
+      name.includes('farm') ||
+      name.includes('environ') ||
+      name.includes('forest')
+    ) {
       setVal('nature', 90);
     }
-    if (name.includes('police') || name.includes('army') || name.includes('defence') || name.includes('naval') || name.includes('officer')) {
+    if (
+      name.includes('police') ||
+      name.includes('army') ||
+      name.includes('defence') ||
+      name.includes('naval') ||
+      name.includes('officer')
+    ) {
       setVal('government', 90);
     }
 

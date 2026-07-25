@@ -16,7 +16,10 @@ async function bootstrap() {
   console.log('\n===== Phase 2 Seed Runner — Commerce Catalog =====\n');
 
   const projectRoot = path.resolve(__dirname, '../../../../');
-  const catalogFile = path.join(projectRoot, 'SCPR_Master_Career_Catalog_Part_2_Commerce.md');
+  const catalogFile = path.join(
+    projectRoot,
+    'SCPR_Master_Career_Catalog_Part_2_Commerce.md',
+  );
 
   if (!fs.existsSync(catalogFile)) {
     console.error(`ERROR: Catalog file not found at: ${catalogFile}`);

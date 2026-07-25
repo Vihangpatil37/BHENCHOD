@@ -16,17 +16,16 @@ export interface Response<T> {
 }
 
 @Injectable()
-export class TransformInterceptor<T>
-  implements NestInterceptor<T, Response<T> | StreamableFile>
-{
-  intercept(
-    context: ExecutionContext,
-    next: CallHandler,
-  ) {
+export class TransformInterceptor<T> implements NestInterceptor<
+  T,
+  Response<T> | StreamableFile
+> {
+  intercept(context: ExecutionContext, next: CallHandler) {
     const request = context.switchToHttp().getRequest();
 
     if (!request.requestId) {
-      request.requestId = request.headers['x-request-id'] || randomUUID().replace(/-/g, '');
+      request.requestId =
+        request.headers['x-request-id'] || randomUUID().replace(/-/g, '');
     }
     const requestId = request.requestId;
 

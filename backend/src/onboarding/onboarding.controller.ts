@@ -81,11 +81,11 @@ export class OnboardingController {
     // Perform dynamic class validation
     const dtoInstance = plainToInstance(dtoClass, body);
     const errors = await validate(dtoInstance);
-    
+
     if (errors.length > 0) {
       // Format validation errors to match validation filter format
       const errorMessages = errors.flatMap((err) =>
-        Object.values(err.constraints || {})
+        Object.values(err.constraints || {}),
       );
       throw new BadRequestException(errorMessages);
     }

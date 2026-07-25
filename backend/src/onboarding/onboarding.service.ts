@@ -1,8 +1,20 @@
-import { Injectable, NotFoundException, BadRequestException, Logger } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+  Logger,
+} from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
-import { StudentProfile, StudentProfileDocument, StudentDNA } from './schemas/student-profile.schema';
-import { StudentDNAHistory, StudentDNAHistoryDocument } from './schemas/student-dna-history.schema';
+import {
+  StudentProfile,
+  StudentProfileDocument,
+  StudentDNA,
+} from './schemas/student-profile.schema';
+import {
+  StudentDNAHistory,
+  StudentDNAHistoryDocument,
+} from './schemas/student-dna-history.schema';
 import { OnboardingFlowService } from './onboarding-flow.service';
 import { TraitEngineService } from './trait-engine.service';
 import { AIServiceClient } from '../ai-service/ai-service.client';
@@ -52,13 +64,18 @@ export class OnboardingService {
   async saveStep(userId: string, stepKey: string, stepData: any) {
     const profile = await this.profileModel.findOne({ user_id: userId }).exec();
     if (!profile) {
-      throw new NotFoundException('Onboarding profile not found. Call start first.');
+      throw new NotFoundException(
+        'Onboarding profile not found. Call start first.',
+      );
     }
 
     const normalizedStep = stepKey.toLowerCase();
-    
+
     // Validate step transition
-    this.flowService.validateStepTransition(profile.onboarding_step, normalizedStep);
+    this.flowService.validateStepTransition(
+      profile.onboarding_step,
+      normalizedStep,
+    );
 
     // Save the step data dynamically into the corresponding sub-document/field
     switch (normalizedStep) {
@@ -93,14 +110,20 @@ export class OnboardingService {
     // Update current step index and progression percentage if onboarding is not complete
     if (profile.onboarding_step !== 'complete') {
       const nextStep = this.flowService.getNextStep(normalizedStep);
-      if (this.flowService.getStepIndex(normalizedStep) >= this.flowService.getStepIndex(profile.onboarding_step)) {
+      if (
+        this.flowService.getStepIndex(normalizedStep) >=
+        this.flowService.getStepIndex(profile.onboarding_step)
+      ) {
         profile.onboarding_step = nextStep;
       }
-      profile.completion_percentage = this.flowService.getCompletionPercentage(normalizedStep);
+      profile.completion_percentage =
+        this.flowService.getCompletionPercentage(normalizedStep);
     }
 
     await profile.save();
-    this.logger.log(`Saved onboarding step ${normalizedStep} for user: ${userId}`);
+    this.logger.log(
+      `Saved onboarding step ${normalizedStep} for user: ${userId}`,
+    );
 
     onboardingEvents.emit('ONBOARDING_STEP_COMPLETED', {
       user_id: userId,
@@ -123,9 +146,12 @@ export class OnboardingService {
     }
 
     // Ensure all steps are completed (step key must be 'complete' or we are on the final step 'scenarios')
-    if (profile.onboarding_step !== 'complete' && profile.onboarding_step !== 'scenarios') {
+    if (
+      profile.onboarding_step !== 'complete' &&
+      profile.onboarding_step !== 'scenarios'
+    ) {
       throw new BadRequestException(
-        `Cannot complete onboarding yet. Current step is: ${profile.onboarding_step}`
+        `Cannot complete onboarding yet. Current step is: ${profile.onboarding_step}`,
       );
     }
 
@@ -146,7 +172,9 @@ export class OnboardingService {
     });
     await history.save();
 
-    this.logger.log(`Completed onboarding and generated DNA for user: ${userId}`);
+    this.logger.log(
+      `Completed onboarding and generated DNA for user: ${userId}`,
+    );
 
     // 4. Emit event to trigger recommendation pipeline (Phase 4 stub)
     onboardingEvents.emit('ONBOARDING_COMPLETED', {
@@ -184,7 +212,9 @@ export class OnboardingService {
   async getDNA(userId: string): Promise<StudentDNA> {
     const profile = await this.profileModel.findOne({ user_id: userId }).exec();
     if (!profile || !profile.current_dna) {
-      throw new NotFoundException('Student DNA not found. Onboarding must be completed first.');
+      throw new NotFoundException(
+        'Student DNA not found. Onboarding must be completed first.',
+      );
     }
     return profile.current_dna;
   }

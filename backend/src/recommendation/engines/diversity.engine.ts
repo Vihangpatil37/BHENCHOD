@@ -14,10 +14,12 @@ export class DiversityEngine {
   diversify(
     candidates: DiversityInput[],
     mode: 'strict' | 'balanced' | 'exploration' = 'balanced',
-    targetSize = 8
+    targetSize = 8,
   ): DiversityInput[] {
-    const similarityLimit = mode === 'strict' ? 0.70 : mode === 'exploration' ? 0.95 : 0.85;
-    const maxPerCluster = mode === 'strict' ? 1 : mode === 'exploration' ? 3 : 2;
+    const similarityLimit =
+      mode === 'strict' ? 0.7 : mode === 'exploration' ? 0.95 : 0.85;
+    const maxPerCluster =
+      mode === 'strict' ? 1 : mode === 'exploration' ? 3 : 2;
 
     const diversified: (DiversityInput & { related: string[] })[] = [];
     const clusterCounts = new Map<string, number>();
@@ -25,7 +27,11 @@ export class DiversityEngine {
     for (const cand of candidates) {
       const career = cand.career;
       // Use careerMetadata.cluster if available, otherwise sub_domain_code or category_code
-      const cluster = (career as any).careerMetadata?.cluster || career.sub_domain_code || career.category_code || 'general';
+      const cluster =
+        (career as any).careerMetadata?.cluster ||
+        career.sub_domain_code ||
+        career.category_code ||
+        'general';
 
       // Check count limit in this cluster
       const currentCount = clusterCounts.get(cluster) ?? 0;
@@ -38,7 +44,11 @@ export class DiversityEngine {
       let similarSelected: any = null;
 
       for (const selected of diversified) {
-        const selCluster = (selected.career as any).careerMetadata?.cluster || selected.career.sub_domain_code || selected.career.category_code || 'general';
+        const selCluster =
+          (selected.career as any).careerMetadata?.cluster ||
+          selected.career.sub_domain_code ||
+          selected.career.category_code ||
+          'general';
         if (selCluster === cluster) {
           const sim = this.calculateSimilarity(career, selected.career);
           if (sim > similarityLimit) {
@@ -67,7 +77,7 @@ export class DiversityEngine {
     }
 
     // Attach relatedCareers to the original result object if provided
-    return diversified.map(d => {
+    return diversified.map((d) => {
       if (d.originalResult) {
         d.originalResult.relatedCareers = d.related;
       }
@@ -89,17 +99,20 @@ export class DiversityEngine {
     const t1 = c1.trait_weights;
     const t2 = c2.trait_weights;
     if (t1 && t2) {
-      const keys = Object.keys(t1).filter(k => typeof (t1 as any)[k] === 'number');
-      const vec1 = keys.map(k => (t1 as any)[k] ?? 0);
-      const vec2 = keys.map(k => (t2 as any)[k] ?? 0);
+      const keys = Object.keys(t1).filter(
+        (k) => typeof (t1 as any)[k] === 'number',
+      );
+      const vec1 = keys.map((k) => (t1 as any)[k] ?? 0);
+      const vec2 = keys.map((k) => (t2 as any)[k] ?? 0);
       if (vec1.length > 0 && vec2.length > 0) {
         return cosineSimilarity(vec1, vec2);
       }
     }
 
     if (c1.career_code === c2.career_code) return 1.0;
-    if (c1.sub_domain_code && c1.sub_domain_code === c2.sub_domain_code) return 0.90;
-    if (c1.category_code === c2.category_code) return 0.60;
-    return 0.10;
+    if (c1.sub_domain_code && c1.sub_domain_code === c2.sub_domain_code)
+      return 0.9;
+    if (c1.category_code === c2.category_code) return 0.6;
+    return 0.1;
   }
 }

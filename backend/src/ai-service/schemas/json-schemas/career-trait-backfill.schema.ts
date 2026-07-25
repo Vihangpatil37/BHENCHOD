@@ -1,9 +1,16 @@
 const traitWeightsSchema = {
   type: 'object',
   required: [
-    'analytical_thinking', 'creativity', 'communication', 'leadership',
-    'research', 'business_acumen', 'technical_curiosity', 'empathy',
-    'patience', 'risk_tolerance',
+    'analytical_thinking',
+    'creativity',
+    'communication',
+    'leadership',
+    'research',
+    'business_acumen',
+    'technical_curiosity',
+    'empathy',
+    'patience',
+    'risk_tolerance',
   ],
   additionalProperties: false,
   properties: {
@@ -22,7 +29,12 @@ const traitWeightsSchema = {
 
 const eligibilitySchema = {
   type: 'object',
-  required: ['min_maths', 'min_science', 'max_budget_tier', 'min_study_duration_years'],
+  required: [
+    'min_maths',
+    'min_science',
+    'max_budget_tier',
+    'min_study_duration_years',
+  ],
   additionalProperties: false,
   properties: {
     min_maths: { type: 'number', minimum: 0, maximum: 100 },

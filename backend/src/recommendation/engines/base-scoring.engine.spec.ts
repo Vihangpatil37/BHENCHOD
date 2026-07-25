@@ -28,11 +28,19 @@ class TestScoringEngine extends BaseScoringEngine {
     return this.clamp(value, min, max);
   }
 
-  testApplyBonuses(base: number, bonuses: { label: string; points: number }[], cap?: number) {
+  testApplyBonuses(
+    base: number,
+    bonuses: { label: string; points: number }[],
+    cap?: number,
+  ) {
     return this.applyBonuses(base, bonuses, cap);
   }
 
-  testApplyPenalties(base: number, penalties: { label: string; points: number }[], cap?: number) {
+  testApplyPenalties(
+    base: number,
+    penalties: { label: string; points: number }[],
+    cap?: number,
+  ) {
     return this.applyPenalties(base, penalties, cap);
   }
 }

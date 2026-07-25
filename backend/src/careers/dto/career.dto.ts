@@ -1,4 +1,13 @@
-import { IsString, IsNotEmpty, IsOptional, IsArray, IsNumber, Min, Max, IsBoolean } from 'class-validator';
+import {
+  IsString,
+  IsNotEmpty,
+  IsOptional,
+  IsArray,
+  IsNumber,
+  Min,
+  Max,
+  IsBoolean,
+} from 'class-validator';
 
 export class CreateCareerDto {
   @IsString()

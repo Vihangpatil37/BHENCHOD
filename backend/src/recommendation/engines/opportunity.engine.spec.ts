@@ -20,7 +20,9 @@ describe('OpportunityEngine', () => {
 
     const result = engine.calculate(student, career);
     expect(result.score).toBe(85);
-    expect(result.matchedFactors).toContain('Strong market demand and positive future outlook');
+    expect(result.matchedFactors).toContain(
+      'Strong market demand and positive future outlook',
+    );
   });
 
   it('computes score dynamically using market_demand and future_scope if missing from metadata', () => {

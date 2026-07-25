@@ -12,16 +12,25 @@ interface ProviderHealth {
 }
 
 // ponytail: simple in-memory cache with 5-min TTL for health check results
-let healthCache: { timestamp: number; data: Record<string, ProviderHealth> } | null = null;
+let healthCache: {
+  timestamp: number;
+  data: Record<string, ProviderHealth>;
+} | null = null;
 const HEALTH_CACHE_TTL = 5 * 60 * 1000;
 
 @Controller('ai-service')
 export class AIServiceController {
-  private readonly providerEndpoints: Record<string, { url: string; auth: 'query' | 'header' }> = {
-    gemini:    { url: `https://generativelanguage.googleapis.com/${providerModels.gemini.api_version ?? 'v1'}/models`, auth: 'query' },
-    groq:      { url: 'https://api.groq.com/openai/v1/models', auth: 'header' },
-    mistral:   { url: 'https://api.mistral.ai/v1/models', auth: 'header' },
-    glm:       { url: 'https://open.bigmodel.cn/api/paas/v4/models', auth: 'header' },
+  private readonly providerEndpoints: Record<
+    string,
+    { url: string; auth: 'query' | 'header' }
+  > = {
+    gemini: {
+      url: `https://generativelanguage.googleapis.com/${providerModels.gemini.api_version ?? 'v1'}/models`,
+      auth: 'query',
+    },
+    groq: { url: 'https://api.groq.com/openai/v1/models', auth: 'header' },
+    mistral: { url: 'https://api.mistral.ai/v1/models', auth: 'header' },
+    glm: { url: 'https://open.bigmodel.cn/api/paas/v4/models', auth: 'header' },
   };
 
   constructor(private readonly keyPoolService: KeyPoolService) {}
@@ -42,7 +51,9 @@ export class AIServiceController {
         const key = keys[0];
         const start = Date.now();
         try {
-          const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+          const headers: Record<string, string> = {
+            'Content-Type': 'application/json',
+          };
           let url = cfg.url;
           if (key) {
             if (cfg.auth === 'query') {
@@ -52,7 +63,11 @@ export class AIServiceController {
             }
           }
           await axios.get(url, { headers, timeout: 5000 });
-          statusMap[name] = { loaded_keys_count: keys.length, status: 'healthy', latency_ms: Date.now() - start };
+          statusMap[name] = {
+            loaded_keys_count: keys.length,
+            status: 'healthy',
+            latency_ms: Date.now() - start,
+          };
         } catch (err: any) {
           const status = err.response?.status;
           const isAuth = status === 401 || status === 403;
@@ -63,7 +78,7 @@ export class AIServiceController {
             error: err.response?.data?.error?.message || err.message,
           };
         }
-      })
+      }),
     );
 
     healthCache = { timestamp: Date.now(), data: statusMap };

@@ -18,4 +18,5 @@ export class CounselorChatSession {
   title: string;
 }
 
-export const CounselorChatSessionSchema: MongooseSchema = SchemaFactory.createForClass(CounselorChatSession);
+export const CounselorChatSessionSchema: MongooseSchema =
+  SchemaFactory.createForClass(CounselorChatSession);

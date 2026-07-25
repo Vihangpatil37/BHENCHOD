@@ -15,4 +15,5 @@ export class Conversation {
   summary: string; // rolling summary for long chats
 }
 
-export const ConversationSchema: MongooseSchema = SchemaFactory.createForClass(Conversation);
+export const ConversationSchema: MongooseSchema =
+  SchemaFactory.createForClass(Conversation);

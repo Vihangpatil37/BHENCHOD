@@ -7,13 +7,12 @@ import { User } from '../schemas/user.schema';
 
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {
-  constructor(
-    @InjectModel(User.name) private userModel: Model<User>,
-  ) {
+  constructor(@InjectModel(User.name) private userModel: Model<User>) {
     super({
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
       ignoreExpiration: false,
-      secretOrKey: process.env.JWT_ACCESS_SECRET || 'fallback_access_secret_123',
+      secretOrKey:
+        process.env.JWT_ACCESS_SECRET || 'fallback_access_secret_123',
     });
   }
 

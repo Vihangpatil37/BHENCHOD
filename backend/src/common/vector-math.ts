@@ -6,7 +6,7 @@
 export function cosineSimilarity(
   vecA: number[],
   vecB: number[],
-  weights?: number[]
+  weights?: number[],
 ): number {
   if (vecA.length !== vecB.length) {
     throw new Error('Vectors must be of the same length');
@@ -30,7 +30,8 @@ export function cosineSimilarity(
     return 0;
   }
 
-  const similarity = dotProduct / (Math.sqrt(normASquared) * Math.sqrt(normBSquared));
+  const similarity =
+    dotProduct / (Math.sqrt(normASquared) * Math.sqrt(normBSquared));
   // Round to 4 decimal places
   return Math.round(similarity * 10000) / 10000;
 }

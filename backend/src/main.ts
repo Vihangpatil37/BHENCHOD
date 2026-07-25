@@ -36,7 +36,9 @@ async function bootstrap() {
   for (const provider of primaryProviders) {
     const keys = process.env[`${provider}_API_KEYS`];
     if (!keys || keys.trim().length === 0) {
-      console.warn(`\n⚠️  WARNING: ${provider}_API_KEYS is missing or empty. ${provider} is a primary provider in the routing table.\n`);
+      console.warn(
+        `\n⚠️  WARNING: ${provider}_API_KEYS is missing or empty. ${provider} is a primary provider in the routing table.\n`,
+      );
     }
   }
   const port = process.env.PORT ?? 3000;

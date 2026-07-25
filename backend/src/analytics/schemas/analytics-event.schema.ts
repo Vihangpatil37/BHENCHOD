@@ -14,8 +14,13 @@ export class AnalyticsEvent {
   @Prop({ required: true, index: true })
   event_type: string; // e.g. "ONBOARDING_STARTED", "AI_PROVIDER_FALLBACK_TRIGGERED", etc.
 
-  @Prop({ type: MongooseSchema.Types.Map, of: MongooseSchema.Types.Mixed, required: true })
+  @Prop({
+    type: MongooseSchema.Types.Map,
+    of: MongooseSchema.Types.Mixed,
+    required: true,
+  })
   payload: Map<string, any>;
 }
 
-export const AnalyticsEventSchema: MongooseSchema = SchemaFactory.createForClass(AnalyticsEvent);
+export const AnalyticsEventSchema: MongooseSchema =
+  SchemaFactory.createForClass(AnalyticsEvent);

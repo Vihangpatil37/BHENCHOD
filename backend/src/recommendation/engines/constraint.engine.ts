@@ -30,17 +30,21 @@ export class ConstraintEngine extends BaseScoringEngine {
         const diff = careerMaxBudget - studentBudget;
         if (diff === 1) {
           penaltiesApplied.push({
-            label: 'Available budget tier is slightly below typical cost — government quota or scholarship pathways can help close this gap.',
+            label:
+              'Available budget tier is slightly below typical cost — government quota or scholarship pathways can help close this gap.',
             points: 10,
           });
         } else {
           penaltiesApplied.push({
-            label: 'Significant budget tier gap — government quota, education loans, or scholarship paths will be highly important to make this reachable.',
+            label:
+              'Significant budget tier gap — government quota, education loans, or scholarship paths will be highly important to make this reachable.',
             points: 25,
           });
         }
       } else {
-        matchedFactors.push('Budget profile matches the cost tier of this career');
+        matchedFactors.push(
+          'Budget profile matches the cost tier of this career',
+        );
       }
 
       // 2. Study Duration Match
@@ -49,7 +53,8 @@ export class ConstraintEngine extends BaseScoringEngine {
 
       if (studentMaxDuration < careerMinDuration) {
         penaltiesApplied.push({
-          label: 'Typical study duration is longer than preferred — bridge programs or part-time learning paths can help make this duration profile reachable.',
+          label:
+            'Typical study duration is longer than preferred — bridge programs or part-time learning paths can help make this duration profile reachable.',
           points: 15,
         });
       } else {
@@ -63,7 +68,8 @@ export class ConstraintEngine extends BaseScoringEngine {
 
       if (abroadRequired && !abroadOk) {
         penaltiesApplied.push({
-          label: 'Requires study or work abroad — domestic alternatives in adjacent fields can provide a reachable pathway.',
+          label:
+            'Requires study or work abroad — domestic alternatives in adjacent fields can provide a reachable pathway.',
           points: 20,
         });
       }
@@ -73,14 +79,17 @@ export class ConstraintEngine extends BaseScoringEngine {
         const cat = career.category_code?.toLowerCase();
         if (cat === 'government_defence' || cat === 'science') {
           penaltiesApplied.push({
-            label: 'Relocation may be required — local branch offices or remote-first roles in this domain would make this more reachable.',
+            label:
+              'Relocation may be required — local branch offices or remote-first roles in this domain would make this more reachable.',
             points: 10,
           });
         }
       }
 
       if (willingToRelocate) {
-        matchedFactors.push('Willingness to relocate aligns well with typical job placements');
+        matchedFactors.push(
+          'Willingness to relocate aligns well with typical job placements',
+        );
       }
 
       // 4. Govt vs Private preference match
@@ -89,12 +98,17 @@ export class ConstraintEngine extends BaseScoringEngine {
 
       if (govtPrivatePref === 'govt' && cat !== 'government_defence') {
         penaltiesApplied.push({
-          label: 'Private sector dominant — looking for public sector units (PSUs) or government contracts within this field would close the preference gap.',
+          label:
+            'Private sector dominant — looking for public sector units (PSUs) or government contracts within this field would close the preference gap.',
           points: 15,
         });
-      } else if (govtPrivatePref === 'private' && cat === 'government_defence') {
+      } else if (
+        govtPrivatePref === 'private' &&
+        cat === 'government_defence'
+      ) {
         penaltiesApplied.push({
-          label: 'Government sector dominant — private consulting or private contractor roles adjacent to this field would make this more reachable.',
+          label:
+            'Government sector dominant — private consulting or private contractor roles adjacent to this field would make this more reachable.',
           points: 15,
         });
       } else if (govtPrivatePref !== 'any') {
@@ -102,9 +116,15 @@ export class ConstraintEngine extends BaseScoringEngine {
       }
     }
 
-    const { score: finalScore, total: totalPenalties, labels } = this.applyPenalties(baseScore, penaltiesApplied, 40);
+    const {
+      score: finalScore,
+      total: totalPenalties,
+      labels,
+    } = this.applyPenalties(baseScore, penaltiesApplied, 40);
 
-    const reasoning = [`Constraint suitability score of ${finalScore}% after evaluating lifestyle and financial match`];
+    const reasoning = [
+      `Constraint suitability score of ${finalScore}% after evaluating lifestyle and financial match`,
+    ];
 
     return {
       score: Math.round(finalScore),

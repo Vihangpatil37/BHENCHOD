@@ -22,7 +22,9 @@ export class HttpExceptionFilter implements ExceptionFilter {
 
     // Retrieve or generate request ID
     if (!request.requestId) {
-      request.requestId = (request.headers['x-request-id'] as string) || randomUUID().replace(/-/g, '');
+      request.requestId =
+        (request.headers['x-request-id'] as string) ||
+        randomUUID().replace(/-/g, '');
     }
     const requestId = request.requestId;
 
@@ -40,7 +42,7 @@ export class HttpExceptionFilter implements ExceptionFilter {
       if (typeof resContent === 'object' && resContent !== null) {
         message = resContent.message || exception.message;
         detail = resContent.error || undefined;
-        
+
         // Handle class-validator validation errors (usually in message as array of strings)
         if (Array.isArray(resContent.message)) {
           message = 'Validation failed';

@@ -7,7 +7,8 @@ describe('penalty utility', () => {
       { id: 'relocation-restriction', label: 'Cannot Relocate', points: 10 },
     ];
 
-    const mockEvaluator = (ruleId: string) => ruleId === 'relocation-restriction';
+    const mockEvaluator = (ruleId: string) =>
+      ruleId === 'relocation-restriction';
 
     const result = evaluatePenaltyRules(rules, mockEvaluator);
     expect(result).toHaveLength(1);

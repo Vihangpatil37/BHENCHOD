@@ -7,12 +7,7 @@ import { RecommendationModule } from '../recommendation/recommendation.module';
 import { CareersModule } from '../careers/careers.module';
 
 @Module({
-  imports: [
-    AuthModule,
-    OnboardingModule,
-    RecommendationModule,
-    CareersModule,
-  ],
+  imports: [AuthModule, OnboardingModule, RecommendationModule, CareersModule],
   controllers: [DashboardController],
   providers: [DashboardService],
 })

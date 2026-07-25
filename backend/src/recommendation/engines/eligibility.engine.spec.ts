@@ -22,7 +22,9 @@ describe('EligibilityEngine', () => {
 
     const breakdown = await engine.calculate(student, career);
     expect(breakdown.score).toBe(100);
-    expect(breakdown.matchedFactors).toContain('Meets all eligibility criteria');
+    expect(breakdown.matchedFactors).toContain(
+      'Meets all eligibility criteria',
+    );
   });
 
   it('returns 0 when the career is not eligible', async () => {
@@ -32,6 +34,8 @@ describe('EligibilityEngine', () => {
 
     const breakdown = await engine.calculate(student, career);
     expect(breakdown.score).toBe(0);
-    expect(breakdown.missingFactors).toContain('Fails academic or budget eligibility constraints');
+    expect(breakdown.missingFactors).toContain(
+      'Fails academic or budget eligibility constraints',
+    );
   });
 });

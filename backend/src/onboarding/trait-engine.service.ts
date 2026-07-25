@@ -71,8 +71,10 @@ export class TraitEngineService {
   };
 
   computeDNA(profile: StudentProfile): StudentDNA {
-    this.logger.log(`Computing StudentDNA for profile of user: ${profile.user_id}`);
-    
+    this.logger.log(
+      `Computing StudentDNA for profile of user: ${profile.user_id}`,
+    );
+
     const dna: any = {};
     const traits = Object.keys(this.TRAIT_CONFIG);
 
@@ -119,23 +121,28 @@ export class TraitEngineService {
 
       // Average the profile components that are configured
       const profileComponents: number[] = [];
-      if (config.subjects && profile.academic?.class10?.subjects) profileComponents.push(subjectScore);
-      if (config.interests && profile.interests) profileComponents.push(interestScore);
+      if (config.subjects && profile.academic?.class10?.subjects)
+        profileComponents.push(subjectScore);
+      if (config.interests && profile.interests)
+        profileComponents.push(interestScore);
       if (config.skills && profile.skills) profileComponents.push(skillScore);
 
-      const profileAvg = profileComponents.length > 0
-        ? profileComponents.reduce((a, b) => a + b, 0) / profileComponents.length
-        : 50; // default middle fallback
+      const profileAvg =
+        profileComponents.length > 0
+          ? profileComponents.reduce((a, b) => a + b, 0) /
+            profileComponents.length
+          : 50; // default middle fallback
 
       // 4. Compute Scenarios Component
       let scenarioSum = 50; // base starting score for scenarios to keep it bounded 0-100
       if (profile.scenario_responses && profile.scenario_responses.length > 0) {
         let impactSum = 0;
         for (const resp of profile.scenario_responses) {
-          const impact = resp.trait_weights instanceof Map 
-            ? resp.trait_weights.get(trait)
-            : (resp.trait_weights as any)?.[trait];
-          
+          const impact =
+            resp.trait_weights instanceof Map
+              ? resp.trait_weights.get(trait)
+              : (resp.trait_weights as any)?.[trait];
+
           if (impact !== undefined && impact !== null) {
             impactSum += impact;
           }
@@ -144,8 +151,10 @@ export class TraitEngineService {
       }
 
       // Combine profile avg with scenario responses
-      const finalScore = profileAvg * config.profile_weight + scenarioSum * (1 - config.profile_weight);
-      
+      const finalScore =
+        profileAvg * config.profile_weight +
+        scenarioSum * (1 - config.profile_weight);
+
       // Save rounded value
       dna[trait] = Math.round(Math.min(100, Math.max(0, finalScore)));
     }

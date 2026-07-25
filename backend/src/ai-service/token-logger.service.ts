@@ -8,7 +8,8 @@ export class TokenLoggerService {
   private readonly logger = new Logger(TokenLoggerService.name);
 
   constructor(
-    @InjectModel(AIRequestLog.name) private readonly logModel: Model<AIRequestLog>,
+    @InjectModel(AIRequestLog.name)
+    private readonly logModel: Model<AIRequestLog>,
   ) {}
 
   async log(logData: {
@@ -26,7 +27,7 @@ export class TokenLoggerService {
       const log = new this.logModel(logData);
       await log.save();
       this.logger.debug(
-        `Logged AI call for ${logData.task_type} via ${logData.provider} (${logData.model}) - success: ${logData.success}, latency: ${logData.latency_ms}ms`
+        `Logged AI call for ${logData.task_type} via ${logData.provider} (${logData.model}) - success: ${logData.success}, latency: ${logData.latency_ms}ms`,
       );
     } catch (e: any) {
       // Non-negotiable rule: "Analytics must never throw" / logging errors shouldn't crash requests

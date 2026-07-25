@@ -1,6 +1,9 @@
 import { Injectable, Logger, HttpException, HttpStatus } from '@nestjs/common';
 import { KeyPoolService } from './key-pool.service';
-import { AbstractLLMProvider, ProviderResponse } from './providers/provider.interface';
+import {
+  AbstractLLMProvider,
+  ProviderResponse,
+} from './providers/provider.interface';
 import { GeminiProvider } from './providers/gemini.provider';
 import { GroqProvider } from './providers/groq.provider';
 import { MistralProvider } from './providers/mistral.provider';
@@ -51,7 +54,7 @@ export class RetryManagerService {
     routes: RouteConfig[],
     prompt: string,
     systemInstruction?: string,
-    jsonSchema?: any
+    jsonSchema?: any,
   ): Promise<{
     provider: string;
     model: string;
@@ -102,7 +105,7 @@ export class RetryManagerService {
         const attemptStartTime = Date.now();
 
         this.logger.log(
-          `Executing AI call: task=${taskType}, provider=${route.provider}, model=${route.model}, key_index=${k}/${keys.length - 1}`
+          `Executing AI call: task=${taskType}, provider=${route.provider}, model=${route.model}, key_index=${k}/${keys.length - 1}`,
         );
 
         const response: ProviderResponse = await providerInstance.call(
@@ -110,7 +113,7 @@ export class RetryManagerService {
           apiKey,
           prompt,
           systemInstruction,
-          jsonSchema
+          jsonSchema,
         );
 
         const latency = Date.now() - attemptStartTime;
@@ -129,7 +132,7 @@ export class RetryManagerService {
         }
 
         this.logger.error(
-          `AI Call failed (provider=${route.provider}, model=${route.model}, key_index=${k}): ${response.error || 'Unknown error'}`
+          `AI Call failed (provider=${route.provider}, model=${route.model}, key_index=${k}): ${response.error || 'Unknown error'}`,
         );
 
         if (this.isQuotaError(response.error)) {
@@ -149,10 +152,11 @@ export class RetryManagerService {
 
     throw new HttpException(
       {
-        message: 'AI Service failed. All configured LLM providers and key attempts were exhausted.',
+        message:
+          'AI Service failed. All configured LLM providers and key attempts were exhausted.',
         timestamp: new Date().toISOString(),
       },
-      HttpStatus.SERVICE_UNAVAILABLE
+      HttpStatus.SERVICE_UNAVAILABLE,
     );
   }
 }

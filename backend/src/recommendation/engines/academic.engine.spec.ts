@@ -15,7 +15,13 @@ describe('AcademicEngine', () => {
       academic: {
         class10: {
           percentage: 85,
-          subjects: { maths: 90, science: 85, english: 80, sst: 75, computer: 80 },
+          subjects: {
+            maths: 90,
+            science: 85,
+            english: 80,
+            sst: 75,
+            computer: 80,
+          },
           favorite_subjects: ['Maths', 'Science'],
           weak_subjects: [],
         },

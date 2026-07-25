@@ -9,17 +9,20 @@ export class EligibilityEngineService {
   private readonly logger = new Logger(EligibilityEngineService.name);
 
   constructor(
-    @InjectModel(Career.name) private readonly careerModel: Model<CareerDocument>,
+    @InjectModel(Career.name)
+    private readonly careerModel: Model<CareerDocument>,
   ) {}
 
   async getEligibleCareers(student: StudentProfile): Promise<CareerDocument[]> {
-    this.logger.log(`Running Eligibility Engine for student: ${student.user_id}`);
+    this.logger.log(
+      `Running Eligibility Engine for student: ${student.user_id}`,
+    );
 
     const mathsScore = student.academic?.class10?.subjects?.maths ?? 0;
     const scienceScore = student.academic?.class10?.subjects?.science ?? 0;
     const budgetTier = student.constraints?.budget_tier ?? 4;
     const studyDurationMax = student.constraints?.study_duration_max ?? 5;
-    
+
     // Extra fields to check from eligibility schema
     const biologyScore = student.academic?.class10?.subjects?.computer ?? 0; // fallback or biological check if needed
     const englishScore = student.academic?.class10?.subjects?.english ?? 0;
@@ -33,8 +36,10 @@ export class EligibilityEngineService {
     };
 
     const eligible = await this.careerModel.find(query).exec();
-    this.logger.log(`Eligibility check: found ${eligible.length} careers matching hard gates`);
-    
+    this.logger.log(
+      `Eligibility check: found ${eligible.length} careers matching hard gates`,
+    );
+
     return eligible;
   }
 }

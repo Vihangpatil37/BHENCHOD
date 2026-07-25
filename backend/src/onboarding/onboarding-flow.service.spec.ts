@@ -1,5 +1,8 @@
 import { BadRequestException } from '@nestjs/common';
-import { OnboardingFlowService, ONBOARDING_STEPS } from './onboarding-flow.service';
+import {
+  OnboardingFlowService,
+  ONBOARDING_STEPS,
+} from './onboarding-flow.service';
 
 describe('OnboardingFlowService', () => {
   const service = new OnboardingFlowService();
@@ -34,30 +37,45 @@ describe('OnboardingFlowService', () => {
 
   describe('validateStepTransition', () => {
     it('allows jumping back to any completed step', () => {
-      expect(() => service.validateStepTransition('skills', 'personal')).not.toThrow();
-      expect(() => service.validateStepTransition('skills', 'academic')).not.toThrow();
+      expect(() =>
+        service.validateStepTransition('skills', 'personal'),
+      ).not.toThrow();
+      expect(() =>
+        service.validateStepTransition('skills', 'academic'),
+      ).not.toThrow();
     });
 
     it('allows forward by exactly 1 step', () => {
-      expect(() => service.validateStepTransition('personal', 'academic')).not.toThrow();
-      expect(() => service.validateStepTransition('academic', 'interests')).not.toThrow();
+      expect(() =>
+        service.validateStepTransition('personal', 'academic'),
+      ).not.toThrow();
+      expect(() =>
+        service.validateStepTransition('academic', 'interests'),
+      ).not.toThrow();
     });
 
     it('rejects skipping forward', () => {
-      expect(() => service.validateStepTransition('personal', 'skills'))
-        .toThrow(BadRequestException);
-      expect(() => service.validateStepTransition('personal', 'scenarios'))
-        .toThrow(BadRequestException);
+      expect(() =>
+        service.validateStepTransition('personal', 'skills'),
+      ).toThrow(BadRequestException);
+      expect(() =>
+        service.validateStepTransition('personal', 'scenarios'),
+      ).toThrow(BadRequestException);
     });
 
     it('rejects invalid target step', () => {
-      expect(() => service.validateStepTransition('personal', 'invalid_step'))
-        .toThrow(BadRequestException);
+      expect(() =>
+        service.validateStepTransition('personal', 'invalid_step'),
+      ).toThrow(BadRequestException);
     });
 
     it('allows editing any step from complete', () => {
-      expect(() => service.validateStepTransition('complete', 'personal')).not.toThrow();
-      expect(() => service.validateStepTransition('complete', 'scenarios')).not.toThrow();
+      expect(() =>
+        service.validateStepTransition('complete', 'personal'),
+      ).not.toThrow();
+      expect(() =>
+        service.validateStepTransition('complete', 'scenarios'),
+      ).not.toThrow();
     });
   });
 

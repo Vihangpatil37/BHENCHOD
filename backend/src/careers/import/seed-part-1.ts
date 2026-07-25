@@ -41,4 +41,6 @@ export function resolvePart1Path(projectRoot?: string): string {
   return `${base}/${PART_1_CONFIG.fileName}`;
 }
 
-logger.log(`Part 1 seed script loaded. Config: ${JSON.stringify(PART_1_CONFIG)}`);
+logger.log(
+  `Part 1 seed script loaded. Config: ${JSON.stringify(PART_1_CONFIG)}`,
+);

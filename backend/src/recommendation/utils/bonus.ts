@@ -7,7 +7,7 @@ export interface BonusRule {
 
 export function evaluateBonusRules(
   rules: BonusRule[],
-  evaluator: (ruleId: string) => boolean
+  evaluator: (ruleId: string) => boolean,
 ): { label: string; points: number }[] {
   const applied: { label: string; points: number }[] = [];
   for (const rule of rules) {

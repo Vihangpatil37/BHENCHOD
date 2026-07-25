@@ -18,7 +18,10 @@ export const careerRecommendationSchema = {
           explanation: { type: 'string' },
           roadmap: { type: 'string' },
           suggested_colleges: { type: 'array', items: { type: 'string' } },
-          suggested_certifications: { type: 'array', items: { type: 'string' } },
+          suggested_certifications: {
+            type: 'array',
+            items: { type: 'string' },
+          },
         },
       },
     },

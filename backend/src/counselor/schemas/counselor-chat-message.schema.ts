@@ -21,4 +21,5 @@ export class CounselorChatMessage {
   token_count: number;
 }
 
-export const CounselorChatMessageSchema: MongooseSchema = SchemaFactory.createForClass(CounselorChatMessage);
+export const CounselorChatMessageSchema: MongooseSchema =
+  SchemaFactory.createForClass(CounselorChatMessage);

@@ -118,10 +118,10 @@ describe('parseTreeToLeaves', () => {
 `;
     const leaves = parseTreeToLeaves(tree.trim());
     expect(leaves.length).toBe(4);
-    expect(leaves.map(l => l.name)).toContain('Software Engineer');
-    expect(leaves.map(l => l.name)).toContain('Electronics Engineer');
-    expect(leaves.map(l => l.name)).toContain('Physicist');
-    expect(leaves.map(l => l.name)).toContain('Doctor');
+    expect(leaves.map((l) => l.name)).toContain('Software Engineer');
+    expect(leaves.map((l) => l.name)).toContain('Electronics Engineer');
+    expect(leaves.map((l) => l.name)).toContain('Physicist');
+    expect(leaves.map((l) => l.name)).toContain('Doctor');
   });
 
   it('should skip Overview subtrees', () => {
@@ -138,8 +138,8 @@ describe('parseTreeToLeaves', () => {
 `;
     const leaves = parseTreeToLeaves(tree.trim());
     expect(leaves.length).toBe(2);
-    expect(leaves.map(l => l.name)).not.toContain('Duration: 4 years');
-    expect(leaves.map(l => l.name)).not.toContain('Eligibility: 10+2 PCM');
+    expect(leaves.map((l) => l.name)).not.toContain('Duration: 4 years');
+    expect(leaves.map((l) => l.name)).not.toContain('Eligibility: 10+2 PCM');
   });
 
   it('should extract pathway_tags', () => {
@@ -154,11 +154,11 @@ describe('parseTreeToLeaves', () => {
     const leaves = parseTreeToLeaves(tree.trim());
     expect(leaves.length).toBe(2);
 
-    const aiEngineer = leaves.find(l => l.name === 'AI Engineer');
+    const aiEngineer = leaves.find((l) => l.name === 'AI Engineer');
     expect(aiEngineer).toBeDefined();
     expect(aiEngineer!.pathway_tags).toContain('B.Tech CSE');
 
-    const hwEngineer = leaves.find(l => l.name === 'Hardware Engineer');
+    const hwEngineer = leaves.find((l) => l.name === 'Hardware Engineer');
     expect(hwEngineer).toBeDefined();
     expect(hwEngineer!.pathway_tags).toContain('B.Tech ECE');
   });
@@ -174,12 +174,12 @@ describe('parseTreeToLeaves', () => {
 `;
     const leaves = parseTreeToLeaves(tree.trim());
 
-    const chemicalEng = leaves.find(l => l.name === 'Chemical Engineering');
+    const chemicalEng = leaves.find((l) => l.name === 'Chemical Engineering');
     expect(chemicalEng).toBeDefined();
     // The depth-1 ancestor is "Engineering" (depth 1) under "Science (PCM)" (depth 0)
     expect(chemicalEng!.sub_domain_source).toBe('Engineering');
 
-    const surgeon = leaves.find(l => l.name === 'Surgeon');
+    const surgeon = leaves.find((l) => l.name === 'Surgeon');
     expect(surgeon).toBeDefined();
     // depth-1 ancestor is "Medical" under "Science (PCB)"
     expect(surgeon!.sub_domain_source).toBe('Medical');
@@ -195,8 +195,8 @@ describe('parseTreeToLeaves', () => {
 `;
     const leaves = parseTreeToLeaves(tree.trim());
     expect(leaves.length).toBe(2);
-    expect(leaves.map(l => l.name)).toContain('Software Engineer');
-    expect(leaves.map(l => l.name)).toContain('Mechanical Engineer');
+    expect(leaves.map((l) => l.name)).toContain('Software Engineer');
+    expect(leaves.map((l) => l.name)).toContain('Mechanical Engineer');
   });
 
   it('should handle empty trees', () => {
@@ -212,7 +212,9 @@ describe('parseTreeToLeaves', () => {
     const leaves = parseTreeToLeaves(tree.trim());
     // "Engineering (internal node with no explicit children)" has no children, so it IS a leaf
     expect(leaves.length).toBe(1);
-    expect(leaves[0].name).toBe('Engineering (internal node with no explicit children)');
+    expect(leaves[0].name).toBe(
+      'Engineering (internal node with no explicit children)',
+    );
   });
 });
 

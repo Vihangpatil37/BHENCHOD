@@ -36,7 +36,8 @@ export class CareerTraitProfile {
   risk_tolerance: number;
 }
 
-export const CareerTraitProfileSchema = SchemaFactory.createForClass(CareerTraitProfile);
+export const CareerTraitProfileSchema =
+  SchemaFactory.createForClass(CareerTraitProfile);
 
 @Schema({ _id: false })
 export class CareerConstraints {
@@ -68,7 +69,8 @@ export class CareerConstraints {
   abroad_required: boolean;
 }
 
-export const CareerConstraintsSchema = SchemaFactory.createForClass(CareerConstraints);
+export const CareerConstraintsSchema =
+  SchemaFactory.createForClass(CareerConstraints);
 
 @Schema({
   timestamps: { createdAt: 'created_at', updatedAt: 'updated_at' },
@@ -147,4 +149,5 @@ export class Career {
   imported_at?: Date;
 }
 
-export const CareerSchema: MongooseSchema = SchemaFactory.createForClass(Career);
+export const CareerSchema: MongooseSchema =
+  SchemaFactory.createForClass(Career);

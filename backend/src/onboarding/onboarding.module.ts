@@ -1,7 +1,13 @@
 import { Module } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
-import { StudentProfile, StudentProfileSchema } from './schemas/student-profile.schema';
-import { StudentDNAHistory, StudentDNAHistorySchema } from './schemas/student-dna-history.schema';
+import {
+  StudentProfile,
+  StudentProfileSchema,
+} from './schemas/student-profile.schema';
+import {
+  StudentDNAHistory,
+  StudentDNAHistorySchema,
+} from './schemas/student-dna-history.schema';
 import { OnboardingService } from './onboarding.service';
 import { OnboardingFlowService } from './onboarding-flow.service';
 import { TraitEngineService } from './trait-engine.service';

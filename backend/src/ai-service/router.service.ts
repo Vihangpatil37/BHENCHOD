@@ -29,9 +29,10 @@ export class RouterService {
     // ponytail: consecutive same-provider entries use fallback_model
     return providers.map((p, i) => {
       const cfg = providerModels[p];
-      const model = (i > 0 && providers[i - 1] === p && cfg.fallback_model)
-        ? cfg.fallback_model
-        : cfg.model;
+      const model =
+        i > 0 && providers[i - 1] === p && cfg.fallback_model
+          ? cfg.fallback_model
+          : cfg.model;
       return { provider: p, model };
     });
   }

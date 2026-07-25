@@ -13,7 +13,8 @@ const mockModel = () => {
     this.password_hash = data.password_hash;
     this.failed_login_attempts = data.failed_login_attempts || 0;
     this.locked_until = data.locked_until;
-    this.get = (field: string) => (field === 'created_at' || field === 'updated_at' ? new Date() : undefined);
+    this.get = (field: string) =>
+      field === 'created_at' || field === 'updated_at' ? new Date() : undefined;
     this.save = jest.fn().mockResolvedValue(undefined);
   };
   fn.findOne = jest.fn(() => ({ exec: execMock }));
@@ -35,7 +36,8 @@ const makeUser = (overrides = {}) => ({
   failed_login_attempts: 0,
   locked_until: undefined,
   last_login: undefined,
-  get: (field: string) => (field === 'created_at' || field === 'updated_at' ? new Date() : undefined),
+  get: (field: string) =>
+    field === 'created_at' || field === 'updated_at' ? new Date() : undefined,
   save: jest.fn().mockResolvedValue(undefined),
   ...overrides,
 });
@@ -55,13 +57,22 @@ describe('AuthService', () => {
   describe('register', () => {
     it('throws ConflictException when email exists', async () => {
       execMock.mockResolvedValue(makeUser());
-      await expect(service.register({ email: 't@t.com', password: '123456', full_name: 'T' }))
-        .rejects.toThrow(ConflictException);
+      await expect(
+        service.register({
+          email: 't@t.com',
+          password: '123456',
+          full_name: 'T',
+        }),
+      ).rejects.toThrow(ConflictException);
     });
 
     it('creates user for new email', async () => {
       execMock.mockResolvedValue(null);
-      const result = await service.register({ email: 'new@t.com', password: '123456', full_name: 'New' });
+      const result = await service.register({
+        email: 'new@t.com',
+        password: '123456',
+        full_name: 'New',
+      });
       expect(result.email).toBe('new@t.com');
       expect(result).not.toHaveProperty('password_hash');
     });
@@ -70,22 +81,27 @@ describe('AuthService', () => {
   describe('login', () => {
     it('rejects unknown email', async () => {
       execMock.mockResolvedValue(null);
-      await expect(service.login({ email: 'x@x.com', password: 'x' }))
-        .rejects.toThrow(UnauthorizedException);
+      await expect(
+        service.login({ email: 'x@x.com', password: 'x' }),
+      ).rejects.toThrow(UnauthorizedException);
     });
 
     it('rejects locked account', async () => {
-      execMock.mockResolvedValue(makeUser({ locked_until: new Date(Date.now() + 60000) }));
-      await expect(service.login({ email: 't@t.com', password: 'x' }))
-        .rejects.toThrow(/Account is locked/);
+      execMock.mockResolvedValue(
+        makeUser({ locked_until: new Date(Date.now() + 60000) }),
+      );
+      await expect(
+        service.login({ email: 't@t.com', password: 'x' }),
+      ).rejects.toThrow(/Account is locked/);
     });
 
     it('locks after 5 failed attempts', async () => {
       const user = makeUser({ failed_login_attempts: 4 });
       execMock.mockResolvedValue(user);
 
-      await expect(service.login({ email: 't@t.com', password: 'wrong' }))
-        .rejects.toThrow(UnauthorizedException);
+      await expect(
+        service.login({ email: 't@t.com', password: 'wrong' }),
+      ).rejects.toThrow(UnauthorizedException);
       expect(user.failed_login_attempts).toBe(5);
       expect(user.locked_until).toBeInstanceOf(Date);
     });
@@ -94,7 +110,10 @@ describe('AuthService', () => {
       const user = makeUser({ failed_login_attempts: 2 });
       execMock.mockResolvedValue(user);
 
-      const result = await service.login({ email: 't@t.com', password: 'password123' });
+      const result = await service.login({
+        email: 't@t.com',
+        password: 'password123',
+      });
       expect(result.access_token).toBe('mock-token');
       expect(result.user).toBeDefined();
       expect(user.failed_login_attempts).toBe(0);
@@ -104,8 +123,12 @@ describe('AuthService', () => {
 
   describe('refresh', () => {
     it('rejects invalid token', async () => {
-      jwtService.verify.mockImplementation(() => { throw new Error('bad'); });
-      await expect(service.refresh('bad')).rejects.toThrow(UnauthorizedException);
+      jwtService.verify.mockImplementation(() => {
+        throw new Error('bad');
+      });
+      await expect(service.refresh('bad')).rejects.toThrow(
+        UnauthorizedException,
+      );
     });
 
     it('returns new tokens for valid refresh token', async () => {

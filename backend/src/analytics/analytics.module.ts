@@ -1,10 +1,19 @@
 import { Module, Global } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
-import { AnalyticsEvent, AnalyticsEventSchema } from './schemas/analytics-event.schema';
+import {
+  AnalyticsEvent,
+  AnalyticsEventSchema,
+} from './schemas/analytics-event.schema';
 import { AnalyticsService } from './analytics.service';
 import { AnalyticsController } from './analytics.controller';
-import { AIRequestLog, AIRequestLogSchema } from '../ai-service/ai-request-log.schema';
-import { SavedCareer, SavedCareerSchema } from '../careers/schemas/saved-career.schema';
+import {
+  AIRequestLog,
+  AIRequestLogSchema,
+} from '../ai-service/ai-request-log.schema';
+import {
+  SavedCareer,
+  SavedCareerSchema,
+} from '../careers/schemas/saved-career.schema';
 import { AIServiceModule } from '../ai-service/ai-service.module';
 import { CareersModule } from '../careers/careers.module';
 

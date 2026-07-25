@@ -14,12 +14,15 @@ export class JsonValidatorService {
     }
   }
 
-  validate(taskType: string, data: unknown): { valid: boolean; errors: ErrorObject[] | null } {
+  validate(
+    taskType: string,
+    data: unknown,
+  ): { valid: boolean; errors: ErrorObject[] | null } {
     const validate = this.validators.get(taskType);
     if (!validate) {
       return { valid: true, errors: null };
     }
-    const valid = validate(data) as boolean;
+    const valid = validate(data);
     return { valid, errors: validate.errors ?? null };
   }
 
@@ -39,7 +42,10 @@ export class JsonValidatorService {
     let startIdx = -1;
     let endChar = '';
 
-    if (firstBrace !== -1 && (firstBracket === -1 || firstBrace < firstBracket)) {
+    if (
+      firstBrace !== -1 &&
+      (firstBracket === -1 || firstBrace < firstBracket)
+    ) {
       startIdx = firstBrace;
       endChar = '}';
     } else if (firstBracket !== -1) {
@@ -63,7 +69,9 @@ export class JsonValidatorService {
         parsed = JSON.parse(this.repairJson(text));
       } catch {
         this.logger.error(`JSON Parsing failed. Raw text: ${rawText}`);
-        throw new BadRequestException('AI provider response is not valid JSON and could not be repaired');
+        throw new BadRequestException(
+          'AI provider response is not valid JSON and could not be repaired',
+        );
       }
     }
 
@@ -72,10 +80,15 @@ export class JsonValidatorService {
       const result = this.validate(taskType, parsed);
       if (!result.valid) {
         const messages = result.errors!.map(
-          (e) => `${e.instancePath} ${e.message}${e.params ? ' (' + JSON.stringify(e.params) + ')' : ''}`
+          (e) =>
+            `${e.instancePath} ${e.message}${e.params ? ' (' + JSON.stringify(e.params) + ')' : ''}`,
         );
-        this.logger.error(`JSON Schema validation failed for ${taskType}: ${messages.join('; ')}`);
-        throw new BadRequestException(`AI provider response failed schema validation: ${messages.join('; ')}`);
+        this.logger.error(
+          `JSON Schema validation failed for ${taskType}: ${messages.join('; ')}`,
+        );
+        throw new BadRequestException(
+          `AI provider response failed schema validation: ${messages.join('; ')}`,
+        );
       }
     }
 

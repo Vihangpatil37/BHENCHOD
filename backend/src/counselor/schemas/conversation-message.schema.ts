@@ -24,4 +24,5 @@ export class ConversationMessage {
   is_structured: boolean;
 }
 
-export const ConversationMessageSchema: MongooseSchema = SchemaFactory.createForClass(ConversationMessage);
+export const ConversationMessageSchema: MongooseSchema =
+  SchemaFactory.createForClass(ConversationMessage);

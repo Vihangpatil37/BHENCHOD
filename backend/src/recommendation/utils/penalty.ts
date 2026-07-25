@@ -7,7 +7,7 @@ export interface PenaltyRule {
 
 export function evaluatePenaltyRules(
   rules: PenaltyRule[],
-  evaluator: (ruleId: string) => boolean
+  evaluator: (ruleId: string) => boolean,
 ): { label: string; points: number }[] {
   const applied: { label: string; points: number }[] = [];
   for (const rule of rules) {

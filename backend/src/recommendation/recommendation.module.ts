@@ -1,7 +1,13 @@
 import { Module } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
-import { Recommendation, RecommendationSchema } from './schemas/recommendation.schema';
-import { RecommendationFeedback, RecommendationFeedbackSchema } from './schemas/recommendation-feedback.schema';
+import {
+  Recommendation,
+  RecommendationSchema,
+} from './schemas/recommendation.schema';
+import {
+  RecommendationFeedback,
+  RecommendationFeedbackSchema,
+} from './schemas/recommendation-feedback.schema';
 import { RecommendationService } from './recommendation.service';
 import { EligibilityEngineService } from './eligibility-engine.service';
 import { TraitMatchingEngineService } from './trait-matching-engine.service';
@@ -26,7 +32,10 @@ import { ExplainabilityEngine } from './engines/explainability.engine';
   imports: [
     MongooseModule.forFeature([
       { name: Recommendation.name, schema: RecommendationSchema },
-      { name: RecommendationFeedback.name, schema: RecommendationFeedbackSchema },
+      {
+        name: RecommendationFeedback.name,
+        schema: RecommendationFeedbackSchema,
+      },
     ]),
     CareersModule,
     OnboardingModule,

@@ -1,4 +1,7 @@
-import { computeTraitWeights, BASE_TRAIT_PROFILES } from './default-weights.config';
+import {
+  computeTraitWeights,
+  BASE_TRAIT_PROFILES,
+} from './default-weights.config';
 
 describe('computeTraitWeights', () => {
   describe('base profiles', () => {
@@ -28,7 +31,9 @@ describe('computeTraitWeights', () => {
     });
 
     it('should throw for unknown categories', () => {
-      expect(() => computeTraitWeights('unknown', 'Test')).toThrow('Unknown category_code');
+      expect(() => computeTraitWeights('unknown', 'Test')).toThrow(
+        'Unknown category_code',
+      );
     });
   });
 
@@ -72,7 +77,10 @@ describe('computeTraitWeights', () => {
     });
 
     it('should apply Officer modifier', () => {
-      const result = computeTraitWeights('government_defence', 'Police Officer');
+      const result = computeTraitWeights(
+        'government_defence',
+        'Police Officer',
+      );
       // leadership: 70 + 10 = 80
       expect(result.leadership).toBe(80);
       // risk_tolerance: 60 + 10 = 70
@@ -80,7 +88,10 @@ describe('computeTraitWeights', () => {
     });
 
     it('should apply multiple matching keyword modifiers', () => {
-      const result = computeTraitWeights('commerce', 'Chief Technology Officer');
+      const result = computeTraitWeights(
+        'commerce',
+        'Chief Technology Officer',
+      );
       // chief: leadership +15, business_acumen +10
       // officer: leadership +10, risk_tolerance +10
       // leadership: 55 + 15 + 10 = 80

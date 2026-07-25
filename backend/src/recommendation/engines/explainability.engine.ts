@@ -23,7 +23,7 @@ export class ExplainabilityEngine {
     result: HybridRankedResult,
     rank: number,
     confidence: number,
-    nextResult?: HybridRankedResult
+    nextResult?: HybridRankedResult,
   ): RecommendationReason {
     const primaryReasons: string[] = [];
     const secondaryReasons: string[] = [];
@@ -66,8 +66,12 @@ export class ExplainabilityEngine {
 
     // Personality Match
     if (breakdown.personality) {
-      studentStrengths.push(...breakdown.personality.matchedFactors.slice(0, 2));
-      improvementAreas.push(...breakdown.personality.missingFactors.slice(0, 1));
+      studentStrengths.push(
+        ...breakdown.personality.matchedFactors.slice(0, 2),
+      );
+      improvementAreas.push(
+        ...breakdown.personality.missingFactors.slice(0, 1),
+      );
     }
 
     // Constraint penalties
@@ -91,7 +95,8 @@ export class ExplainabilityEngine {
     }
 
     // Frame comparison summary relative to the next career in rank
-    let comparisonSummary = 'Ranked highly based on overall composite match across academics, interests, and traits.';
+    let comparisonSummary =
+      'Ranked highly based on overall composite match across academics, interests, and traits.';
     if (nextResult) {
       const scoreDiff = result.score - nextResult.score;
       if (scoreDiff < 0.5) {
@@ -106,7 +111,10 @@ export class ExplainabilityEngine {
       // Remove or rephrase any banned words
       return str
         .replace(/\b(can't|cannot)\b/gi, 'may require additional pathways to')
-        .replace(/\b(not eligible|don't qualify|doesn't qualify)\b/gi, 'has specific requirements to meet')
+        .replace(
+          /\b(not eligible|don't qualify|doesn't qualify)\b/gi,
+          'has specific requirements to meet',
+        )
         .replace(/\btoo low\b/gi, 'has room to grow')
         .replace(/\btoo weak\b/gi, 'is an improvement area');
     };

@@ -274,7 +274,11 @@ export class StudentProfile {
   @Prop({ type: StudentConstraints, required: true, default: () => ({}) })
   constraints: StudentConstraints;
 
-  @Prop({ type: [SchemaFactory.createForClass(ScenarioResponse)], required: true, default: [] })
+  @Prop({
+    type: [SchemaFactory.createForClass(ScenarioResponse)],
+    required: true,
+    default: [],
+  })
   scenario_responses: ScenarioResponse[];
 
   @Prop({ type: [MongooseSchema.Types.Mixed], required: false })
@@ -284,4 +288,5 @@ export class StudentProfile {
   current_dna?: StudentDNA;
 }
 
-export const StudentProfileSchema: MongooseSchema = SchemaFactory.createForClass(StudentProfile);
+export const StudentProfileSchema: MongooseSchema =
+  SchemaFactory.createForClass(StudentProfile);

@@ -48,7 +48,10 @@ describe('computeEligibility', () => {
 
   describe('arts_humanities category', () => {
     it('should return arts eligibility', () => {
-      const { eligibility } = computeEligibility('arts_humanities', 'ba_psychology');
+      const { eligibility } = computeEligibility(
+        'arts_humanities',
+        'ba_psychology',
+      );
       expect(eligibility.required_stream).toBe('Arts');
       expect(eligibility.min_study_duration_years).toBe(3);
       expect(eligibility.max_budget_tier).toBe(2);
@@ -57,7 +60,10 @@ describe('computeEligibility', () => {
 
   describe('diploma category', () => {
     it('should return diploma eligibility', () => {
-      const { eligibility } = computeEligibility('diploma', 'computer_engineering');
+      const { eligibility } = computeEligibility(
+        'diploma',
+        'computer_engineering',
+      );
       expect(eligibility.min_maths).toBe(35);
       expect(eligibility.min_science).toBe(35);
       expect(eligibility.required_stream).toBe('any');
@@ -68,7 +74,10 @@ describe('computeEligibility', () => {
 
   describe('iti_polytechnic category', () => {
     it('should return ITI eligibility', () => {
-      const { eligibility } = computeEligibility('iti_polytechnic', 'iti_electrician');
+      const { eligibility } = computeEligibility(
+        'iti_polytechnic',
+        'iti_electrician',
+      );
       expect(eligibility.min_study_duration_years).toBe(1);
       expect(eligibility.max_budget_tier).toBe(1);
       expect(eligibility.required_stream).toBe('any');
@@ -134,21 +143,30 @@ describe('computeEligibility', () => {
 
   describe('emerging_future category', () => {
     it('should return default PCM eligibility for most sub_domains', () => {
-      const { eligibility } = computeEligibility('emerging_future', 'artificial_intelligence');
+      const { eligibility } = computeEligibility(
+        'emerging_future',
+        'artificial_intelligence',
+      );
       expect(eligibility.min_maths).toBe(55);
       expect(eligibility.required_stream).toBe('PCM');
       expect(eligibility.max_budget_tier).toBe(2);
     });
 
     it('should return relaxed eligibility for freelancing', () => {
-      const { eligibility } = computeEligibility('emerging_future', 'freelancing');
+      const { eligibility } = computeEligibility(
+        'emerging_future',
+        'freelancing',
+      );
       expect(eligibility.min_maths).toBe(0);
       expect(eligibility.required_stream).toBe('any');
       expect(eligibility.min_study_duration_years).toBe(0);
     });
 
     it('should return relaxed eligibility for creator_economy', () => {
-      const { eligibility } = computeEligibility('emerging_future', 'creator_economy');
+      const { eligibility } = computeEligibility(
+        'emerging_future',
+        'creator_economy',
+      );
       expect(eligibility.min_maths).toBe(0);
       expect(eligibility.required_stream).toBe('any');
     });
@@ -156,7 +174,9 @@ describe('computeEligibility', () => {
 
   describe('error handling', () => {
     it('should throw for unknown category', () => {
-      expect(() => computeEligibility('unknown', 'foo')).toThrow('Unknown category_code');
+      expect(() => computeEligibility('unknown', 'foo')).toThrow(
+        'Unknown category_code',
+      );
     });
   });
 });

@@ -20,7 +20,10 @@ async function bootstrap() {
 
   // Resolve file path
   const projectRoot = path.resolve(__dirname, '../../../../');
-  const catalogFile = path.join(projectRoot, 'SCPR_Master_Career_Catalog_Part_1_Science_v2.md');
+  const catalogFile = path.join(
+    projectRoot,
+    'SCPR_Master_Career_Catalog_Part_1_Science_v2.md',
+  );
 
   // Verify file exists
   if (!fs.existsSync(catalogFile)) {

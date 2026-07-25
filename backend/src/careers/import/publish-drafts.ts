@@ -27,15 +27,19 @@ async function bootstrap() {
   });
   console.log('Application initialized.\n');
 
-  const careerModel = app.get<Model<CareerDocument>>(getModelToken(Career.name));
+  const careerModel = app.get<Model<CareerDocument>>(
+    getModelToken(Career.name),
+  );
 
   // Query careers with drafts
-  const draftCount = await careerModel.countDocuments({
-    $or: [
-      { trait_weights_draft: { $exists: true, $ne: null } },
-      { eligibility_draft: { $exists: true, $ne: null } },
-    ],
-  }).exec();
+  const draftCount = await careerModel
+    .countDocuments({
+      $or: [
+        { trait_weights_draft: { $exists: true, $ne: null } },
+        { eligibility_draft: { $exists: true, $ne: null } },
+      ],
+    })
+    .exec();
 
   console.log(`Found ${draftCount} careers with pending drafts.\n`);
 
@@ -46,26 +50,30 @@ async function bootstrap() {
   }
 
   // Find and publish all careers with drafts
-  const careers = await careerModel.find({
-    $or: [
-      { trait_weights_draft: { $exists: true, $ne: null } },
-      { eligibility_draft: { $exists: true, $ne: null } },
-    ],
-  }).exec();
+  const careers = await careerModel
+    .find({
+      $or: [
+        { trait_weights_draft: { $exists: true, $ne: null } },
+        { eligibility_draft: { $exists: true, $ne: null } },
+      ],
+    })
+    .exec();
 
-  console.log('Publishing all drafts to live trait_weights and eligibility...\n');
+  console.log(
+    'Publishing all drafts to live trait_weights and eligibility...\n',
+  );
 
   let published = 0;
   for (const career of careers) {
     if (career.trait_weights_draft) {
-      career.trait_weights = career.trait_weights_draft as any;
-      career.trait_weights_draft = undefined as any;
+      career.trait_weights = career.trait_weights_draft;
+      career.trait_weights_draft = undefined;
     }
     if (career.eligibility_draft) {
-      career.eligibility = career.eligibility_draft as any;
-      career.eligibility_draft = undefined as any;
+      career.eligibility = career.eligibility_draft;
+      career.eligibility_draft = undefined;
     }
-    career.backfill_status = 'published' as any;
+    career.backfill_status = 'published';
     await career.save();
     published++;
   }
@@ -75,8 +83,12 @@ async function bootstrap() {
   console.log('============================================');
   console.log(`  Careers with drafts:  ${draftCount}`);
   console.log(`  Published:            ${published}`);
-  console.log(`  Message:              Published drafts for ${published} careers`);
-  console.log('\nAll draft fields promoted to live. backfill_status set to "published".\n');
+  console.log(
+    `  Message:              Published drafts for ${published} careers`,
+  );
+  console.log(
+    '\nAll draft fields promoted to live. backfill_status set to "published".\n',
+  );
 
   await app.close();
 }

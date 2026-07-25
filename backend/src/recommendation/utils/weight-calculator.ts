@@ -28,15 +28,18 @@ export function validateWeights(weights: RecommendationWeights): boolean {
 }
 
 export function getWeights(): RecommendationWeights {
-  const jsonPath = path.resolve(__dirname, '../config/recommendation-weights.v1.json');
+  const jsonPath = path.resolve(
+    __dirname,
+    '../config/recommendation-weights.v1.json',
+  );
   if (!fs.existsSync(jsonPath)) {
     return {
       academic: 0.25,
-      interest: 0.20,
-      skill: 0.20,
+      interest: 0.2,
+      skill: 0.2,
       personality: 0.15,
-      constraint: 0.10,
-      opportunity: 0.10,
+      constraint: 0.1,
+      opportunity: 0.1,
     };
   }
 
@@ -45,11 +48,11 @@ export function getWeights(): RecommendationWeights {
 
   const weights: RecommendationWeights = {
     academic: typeof w.academic === 'number' ? w.academic : 0.25,
-    interest: typeof w.interest === 'number' ? w.interest : 0.20,
-    skill: typeof w.skill === 'number' ? w.skill : 0.20,
+    interest: typeof w.interest === 'number' ? w.interest : 0.2,
+    skill: typeof w.skill === 'number' ? w.skill : 0.2,
     personality: typeof w.personality === 'number' ? w.personality : 0.15,
-    constraint: typeof w.constraint === 'number' ? w.constraint : 0.10,
-    opportunity: typeof w.opportunity === 'number' ? w.opportunity : 0.10,
+    constraint: typeof w.constraint === 'number' ? w.constraint : 0.1,
+    opportunity: typeof w.opportunity === 'number' ? w.opportunity : 0.1,
   };
 
   if (!validateWeights(weights)) {

@@ -1,5 +1,9 @@
 // engines/hybrid-ranking.engine.spec.ts
-import { HybridRankingEngine, HybridInput, HybridRankedResult } from './hybrid-ranking.engine';
+import {
+  HybridRankingEngine,
+  HybridInput,
+  HybridRankedResult,
+} from './hybrid-ranking.engine';
 import { ScoreBreakdown } from '../interfaces/score-breakdown.interface';
 
 describe('HybridRankingEngine', () => {
@@ -9,7 +13,12 @@ describe('HybridRankingEngine', () => {
     engine = new HybridRankingEngine();
   });
 
-  const dummyBreakdown = (score: number, weight: number, bonuses = 0, penalties = 0): ScoreBreakdown => ({
+  const dummyBreakdown = (
+    score: number,
+    weight: number,
+    bonuses = 0,
+    penalties = 0,
+  ): ScoreBreakdown => ({
     score,
     weight,
     weightedScore: score * weight,
@@ -24,11 +33,11 @@ describe('HybridRankingEngine', () => {
   it('correctly calculates weighted hybrid score and applies global caps', () => {
     const inputs: HybridInput = {
       academic: dummyBreakdown(80, 0.25, 5, 0),
-      interest: dummyBreakdown(90, 0.20, 10, 0),
-      skill: dummyBreakdown(70, 0.20, 0, 10),
+      interest: dummyBreakdown(90, 0.2, 10, 0),
+      skill: dummyBreakdown(70, 0.2, 0, 10),
       personality: dummyBreakdown(85, 0.15, 0, 0),
-      constraint: dummyBreakdown(90, 0.10, 0, 20),
-      opportunity: dummyBreakdown(80, 0.10, 0, 0),
+      constraint: dummyBreakdown(90, 0.1, 0, 20),
+      opportunity: dummyBreakdown(80, 0.1, 0, 0),
     };
 
     const result = engine.calculate('se', 'Software Engineer', inputs);

@@ -11,7 +11,7 @@ export class OpenRouterProvider implements AbstractLLMProvider {
     apiKey: string,
     prompt: string,
     systemInstruction?: string,
-    jsonSchema?: any
+    jsonSchema?: any,
   ): Promise<ProviderResponse> {
     const url = 'https://openrouter.ai/api/v1/chat/completions';
 
@@ -49,7 +49,11 @@ export class OpenRouterProvider implements AbstractLLMProvider {
       }
 
       let parsedData = text;
-      if (jsonSchema || text.trim().startsWith('{') || text.trim().startsWith('[')) {
+      if (
+        jsonSchema ||
+        text.trim().startsWith('{') ||
+        text.trim().startsWith('[')
+      ) {
         try {
           parsedData = JSON.parse(text);
         } catch (e) {

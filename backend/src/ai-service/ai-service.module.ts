@@ -20,7 +20,9 @@ import { OpenRouterProvider } from './providers/openrouter.provider';
 
 @Module({
   imports: [
-    MongooseModule.forFeature([{ name: AIRequestLog.name, schema: AIRequestLogSchema }]),
+    MongooseModule.forFeature([
+      { name: AIRequestLog.name, schema: AIRequestLogSchema },
+    ]),
   ],
   controllers: [AIServiceController],
   providers: [

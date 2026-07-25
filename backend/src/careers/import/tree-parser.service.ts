@@ -35,10 +35,10 @@ export function slugify(text: string): string {
   return text
     .toLowerCase()
     .trim()
-    .replace(/[^a-z0-9_ ]/g, '')   // strip punctuation but keep spaces and underscores
-    .replace(/\s+/g, '_')           // spaces to underscores
-    .replace(/_+/g, '_')            // collapse multiple underscores
-    .replace(/^_|_$/g, '');         // trim leading/trailing underscores
+    .replace(/[^a-z0-9_ ]/g, '') // strip punctuation but keep spaces and underscores
+    .replace(/\s+/g, '_') // spaces to underscores
+    .replace(/_+/g, '_') // collapse multiple underscores
+    .replace(/^_|_$/g, ''); // trim leading/trailing underscores
 }
 
 /**
@@ -61,7 +61,9 @@ export function extractFencedBlock(content: string): string | null {
  * - Depth 2: marker is at column ~8 (e.g. `│   │   ├── Computer Science`)
  * Each indent level is 4 characters wide.
  */
-export function parseTreeLine(line: string): { depth: number; text: string } | null {
+export function parseTreeLine(
+  line: string,
+): { depth: number; text: string } | null {
   const trimmed = line.trimEnd();
   if (!trimmed) return null;
 
@@ -119,7 +121,10 @@ export function parseTreeToLeaves(treeContent: string): ParsedCareerLeaf[] {
     const node = nodes[i];
 
     // Pop stack until we find a node at a shallower depth
-    while (parentStack.length > 0 && nodes[parentStack[parentStack.length - 1]].depth >= node.depth) {
+    while (
+      parentStack.length > 0 &&
+      nodes[parentStack[parentStack.length - 1]].depth >= node.depth
+    ) {
       parentStack.pop();
     }
 
@@ -138,7 +143,7 @@ export function parseTreeToLeaves(treeContent: string): ParsedCareerLeaf[] {
       // Mark this node and all its descendants
       for (let j = i; j < nodes.length; j++) {
         let ancestor = nodeParents[j];
-        let isDescendant = (j === i);
+        let isDescendant = j === i;
         while (ancestor >= 0) {
           if (ancestor === i) {
             isDescendant = true;
@@ -192,7 +197,8 @@ export function parseTreeToLeaves(treeContent: string): ParsedCareerLeaf[] {
       pathIdx = nodeParents[pathIdx];
     }
 
-    const subDomainSource = subDomainAncestor >= 0 ? nodes[subDomainAncestor].text : '';
+    const subDomainSource =
+      subDomainAncestor >= 0 ? nodes[subDomainAncestor].text : '';
 
     leaves.push({
       name: node.text,
@@ -212,7 +218,11 @@ export function parseTreeToLeaves(treeContent: string): ParsedCareerLeaf[] {
 export function parseCatalogFile(
   content: string,
   catalogPart: string,
-): { leaves: ParsedCareerLeaf[]; anomalies: string[]; overview_skipped: number } {
+): {
+  leaves: ParsedCareerLeaf[];
+  anomalies: string[];
+  overview_skipped: number;
+} {
   const treeBlock = extractFencedBlock(content);
 
   if (!treeBlock) {

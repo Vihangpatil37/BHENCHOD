@@ -47,24 +47,38 @@ export class SkillEngine extends BaseScoringEngine {
     const missingFactors: string[] = [];
 
     // Find top student skills and compare to career requirements
-    const sortedStudent = SKILL_KEYS.map((key, i) => ({ key, val: studentVector[i] }))
-      .sort((a, b) => b.val - a.val);
+    const sortedStudent = SKILL_KEYS.map((key, i) => ({
+      key,
+      val: studentVector[i],
+    })).sort((a, b) => b.val - a.val);
 
-    const requiredCareerSkills = SKILL_KEYS.filter((_, i) => careerVector[i] > 50);
+    const requiredCareerSkills = SKILL_KEYS.filter(
+      (_, i) => careerVector[i] > 50,
+    );
 
-    const topSkills = sortedStudent.slice(0, 3).map(x => x.key);
-    const matchingRequired = topSkills.filter(x => requiredCareerSkills.includes(x));
+    const topSkills = sortedStudent.slice(0, 3).map((x) => x.key);
+    const matchingRequired = topSkills.filter((x) =>
+      requiredCareerSkills.includes(x),
+    );
 
     if (matchingRequired.length > 0) {
-      matchedFactors.push(`Your strong skills in ${matchingRequired.join(', ')} match career requirements`);
+      matchedFactors.push(
+        `Your strong skills in ${matchingRequired.join(', ')} match career requirements`,
+      );
     }
 
-    const missingRequired = requiredCareerSkills.filter(x => !topSkills.includes(x));
+    const missingRequired = requiredCareerSkills.filter(
+      (x) => !topSkills.includes(x),
+    );
     if (missingRequired.length > 0) {
-      missingFactors.push(`Consider developing your skills in: ${missingRequired.slice(0, 2).join(', ')}`);
+      missingFactors.push(
+        `Consider developing your skills in: ${missingRequired.slice(0, 2).join(', ')}`,
+      );
     }
 
-    const reasoning = [`Skill similarity score of ${score}% based on vector overlap`];
+    const reasoning = [
+      `Skill similarity score of ${score}% based on vector overlap`,
+    ];
 
     return {
       score,
@@ -94,37 +108,85 @@ export class SkillEngine extends BaseScoringEngine {
       ...(career.required_skills || []),
       ...(career.technical_skills || []),
       ...(career.soft_skills || []),
-    ].map(s => s.toLowerCase());
+    ].map((s) => s.toLowerCase());
 
     for (const skill of reqSkills) {
-      if (skill.includes('code') || skill.includes('program') || skill.includes('develop') || skill.includes('software')) {
+      if (
+        skill.includes('code') ||
+        skill.includes('program') ||
+        skill.includes('develop') ||
+        skill.includes('software')
+      ) {
         setVal('coding', 100);
       }
-      if (skill.includes('math') || skill.includes('quant') || skill.includes('stat') || skill.includes('calculus')) {
+      if (
+        skill.includes('math') ||
+        skill.includes('quant') ||
+        skill.includes('stat') ||
+        skill.includes('calculus')
+      ) {
         setVal('math', 100);
       }
-      if (skill.includes('communicat') || skill.includes('speak') || skill.includes('writ') || skill.includes('present')) {
+      if (
+        skill.includes('communicat') ||
+        skill.includes('speak') ||
+        skill.includes('writ') ||
+        skill.includes('present')
+      ) {
         setVal('communication', 100);
       }
-      if (skill.includes('lead') || skill.includes('manag') || skill.includes('team') || skill.includes('strateg')) {
+      if (
+        skill.includes('lead') ||
+        skill.includes('manag') ||
+        skill.includes('team') ||
+        skill.includes('strateg')
+      ) {
         setVal('leadership', 100);
       }
-      if (skill.includes('problem') || skill.includes('solv') || skill.includes('analyt') || skill.includes('think')) {
+      if (
+        skill.includes('problem') ||
+        skill.includes('solv') ||
+        skill.includes('analyt') ||
+        skill.includes('think')
+      ) {
         setVal('problem_solving', 100);
       }
-      if (skill.includes('logic') || skill.includes('reason') || skill.includes('critic')) {
+      if (
+        skill.includes('logic') ||
+        skill.includes('reason') ||
+        skill.includes('critic')
+      ) {
         setVal('logical_thinking', 100);
       }
-      if (skill.includes('creat') || skill.includes('design') || skill.includes('innov') || skill.includes('art')) {
+      if (
+        skill.includes('creat') ||
+        skill.includes('design') ||
+        skill.includes('innov') ||
+        skill.includes('art')
+      ) {
         setVal('creativity', 100);
       }
-      if (skill.includes('draw') || skill.includes('sketch') || skill.includes('illustrat')) {
+      if (
+        skill.includes('draw') ||
+        skill.includes('sketch') ||
+        skill.includes('illustrat')
+      ) {
         setVal('drawing', 100);
       }
-      if (skill.includes('observ') || skill.includes('detail') || skill.includes('research') || skill.includes('attent')) {
+      if (
+        skill.includes('observ') ||
+        skill.includes('detail') ||
+        skill.includes('research') ||
+        skill.includes('attent')
+      ) {
         setVal('observation', 100);
       }
-      if (skill.includes('patient') || skill.includes('counsel') || skill.includes('care') || skill.includes('help')) {
+      if (
+        skill.includes('patient') ||
+        skill.includes('counsel') ||
+        skill.includes('care') ||
+        skill.includes('help')
+      ) {
         setVal('patience', 100);
       }
     }

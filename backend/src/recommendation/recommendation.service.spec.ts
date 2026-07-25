@@ -53,9 +53,16 @@ describe('RecommendationService', () => {
     user_id: 'user-1',
     onboarding_step: 'complete',
     current_dna: {
-      analytical_thinking: 80, creativity: 50, communication: 60,
-      leadership: 40, research: 70, business_acumen: 30,
-      technical_curiosity: 90, empathy: 50, patience: 40, risk_tolerance: 50,
+      analytical_thinking: 80,
+      creativity: 50,
+      communication: 60,
+      leadership: 40,
+      research: 70,
+      business_acumen: 30,
+      technical_curiosity: 90,
+      empathy: 50,
+      patience: 40,
+      risk_tolerance: 50,
     },
     academic: { class10: { subjects: { maths: 80, science: 75 } } },
     interests: { technology: 90 },
@@ -66,8 +73,22 @@ describe('RecommendationService', () => {
   };
 
   const eligible = [
-    { career_code: 'se', name: 'SE', description: '', required_skills: [], trait_weights: { analytical_thinking: 80 }, eligibility: {} },
-    { career_code: 'ds', name: 'DS', description: '', required_skills: [], trait_weights: { analytical_thinking: 90 }, eligibility: {} },
+    {
+      career_code: 'se',
+      name: 'SE',
+      description: '',
+      required_skills: [],
+      trait_weights: { analytical_thinking: 80 },
+      eligibility: {},
+    },
+    {
+      career_code: 'ds',
+      name: 'DS',
+      description: '',
+      required_skills: [],
+      trait_weights: { analytical_thinking: 90 },
+      eligibility: {},
+    },
   ];
 
   beforeEach(async () => {
@@ -79,14 +100,64 @@ describe('RecommendationService', () => {
     traitMatchingEngine = { matchCareers: jest.fn() };
     aiClient = { run: jest.fn() };
 
-    const mockAcademicEngine = { calculate: jest.fn().mockReturnValue({ score: 80, weight: 0.25, weightedScore: 20, bonuses: 0, penalties: 0 }) };
-    const mockInterestEngine = { calculate: jest.fn().mockReturnValue({ score: 80, weight: 0.2, weightedScore: 16, bonuses: 0, penalties: 0 }) };
-    const mockSkillEngine = { calculate: jest.fn().mockReturnValue({ score: 80, weight: 0.2, weightedScore: 16, bonuses: 0, penalties: 0 }) };
-    const mockPersonalityEngine = { calculate: jest.fn().mockReturnValue({ score: 80, weight: 0.15, weightedScore: 12, bonuses: 0, penalties: 0 }) };
-    const mockConstraintEngine = { calculate: jest.fn().mockReturnValue({ score: 80, weight: 0.1, weightedScore: 8, bonuses: 0, penalties: 0 }) };
-    const mockOpportunityEngine = { calculate: jest.fn().mockReturnValue({ score: 80, weight: 0.1, weightedScore: 8, bonuses: 0, penalties: 0 }) };
+    const mockAcademicEngine = {
+      calculate: jest.fn().mockReturnValue({
+        score: 80,
+        weight: 0.25,
+        weightedScore: 20,
+        bonuses: 0,
+        penalties: 0,
+      }),
+    };
+    const mockInterestEngine = {
+      calculate: jest.fn().mockReturnValue({
+        score: 80,
+        weight: 0.2,
+        weightedScore: 16,
+        bonuses: 0,
+        penalties: 0,
+      }),
+    };
+    const mockSkillEngine = {
+      calculate: jest.fn().mockReturnValue({
+        score: 80,
+        weight: 0.2,
+        weightedScore: 16,
+        bonuses: 0,
+        penalties: 0,
+      }),
+    };
+    const mockPersonalityEngine = {
+      calculate: jest.fn().mockReturnValue({
+        score: 80,
+        weight: 0.15,
+        weightedScore: 12,
+        bonuses: 0,
+        penalties: 0,
+      }),
+    };
+    const mockConstraintEngine = {
+      calculate: jest.fn().mockReturnValue({
+        score: 80,
+        weight: 0.1,
+        weightedScore: 8,
+        bonuses: 0,
+        penalties: 0,
+      }),
+    };
+    const mockOpportunityEngine = {
+      calculate: jest.fn().mockReturnValue({
+        score: 80,
+        weight: 0.1,
+        weightedScore: 8,
+        bonuses: 0,
+        penalties: 0,
+      }),
+    };
     const mockHybridRankingEngine = {
-      calculate: jest.fn().mockReturnValue({ score: 80, totalBonuses: 0, totalPenalties: 0 }),
+      calculate: jest
+        .fn()
+        .mockReturnValue({ score: 80, totalBonuses: 0, totalPenalties: 0 }),
       rank: jest.fn().mockImplementation((x) => x),
     };
     const mockDiversityEngine = {
@@ -116,7 +187,10 @@ describe('RecommendationService', () => {
       providers: [
         RecommendationService,
         { provide: getModelToken('Recommendation'), useValue: recModel },
-        { provide: getModelToken('RecommendationFeedback'), useValue: feedbackModel },
+        {
+          provide: getModelToken('RecommendationFeedback'),
+          useValue: feedbackModel,
+        },
         { provide: getModelToken(StudentProfile.name), useValue: profileModel },
         { provide: EligibilityEngineService, useValue: eligibilityEngine },
         { provide: TraitMatchingEngineService, useValue: traitMatchingEngine },
@@ -140,35 +214,62 @@ describe('RecommendationService', () => {
   describe('generateRecommendation', () => {
     it('throws when profile or DNA not found', async () => {
       execMock.mockResolvedValue(null);
-      await expect(service.generateRecommendation('user-1')).rejects.toThrow(BadRequestException);
+      await expect(service.generateRecommendation('user-1')).rejects.toThrow(
+        BadRequestException,
+      );
     });
 
     it('throws when zero eligible careers', async () => {
       execMock.mockResolvedValue(mockProfile);
       eligibilityEngine.getEligibleCareers.mockResolvedValue([]);
-      await expect(service.generateRecommendation('user-1')).rejects.toThrow(BadRequestException);
+      await expect(service.generateRecommendation('user-1')).rejects.toThrow(
+        BadRequestException,
+      );
     });
 
     it('throws when AI call fails', async () => {
       execMock.mockResolvedValue(mockProfile);
       eligibilityEngine.getEligibleCareers.mockResolvedValue(eligible);
-      traitMatchingEngine.matchCareers.mockReturnValue(eligible.map(c => ({ career: c, score: 80 })));
+      traitMatchingEngine.matchCareers.mockReturnValue(
+        eligible.map((c) => ({ career: c, score: 80 })),
+      );
       aiClient.run.mockResolvedValue({ success: false, data: null });
-      await expect(service.generateRecommendation('user-1')).rejects.toThrow(BadRequestException);
+      await expect(service.generateRecommendation('user-1')).rejects.toThrow(
+        BadRequestException,
+      );
     });
 
     it('saves recommendation with top 5 on success', async () => {
       execMock.mockResolvedValue(mockProfile);
       eligibilityEngine.getEligibleCareers.mockResolvedValue(eligible);
-      traitMatchingEngine.matchCareers.mockReturnValue(eligible.map(c => ({ career: c, score: 85 })));
+      traitMatchingEngine.matchCareers.mockReturnValue(
+        eligible.map((c) => ({ career: c, score: 85 })),
+      );
       aiClient.run.mockResolvedValue({
         success: true,
-        data: { final_recommendations: [{ career_code: 'se', rank: 1, ai_score: 95, explanation: 'G', roadmap: 'R', suggested_colleges: [], suggested_certifications: [] }] },
-        provider: 'gemini', model: 'g', fallback_used: false,
+        data: {
+          final_recommendations: [
+            {
+              career_code: 'se',
+              rank: 1,
+              ai_score: 95,
+              explanation: 'G',
+              roadmap: 'R',
+              suggested_colleges: [],
+              suggested_certifications: [],
+            },
+          ],
+        },
+        provider: 'gemini',
+        model: 'g',
+        fallback_used: false,
       });
 
       await service.generateRecommendation('user-1');
-      expect(recModel.updateMany).toHaveBeenCalledWith({ user_id: 'user-1' }, { stale: true });
+      expect(recModel.updateMany).toHaveBeenCalledWith(
+        { user_id: 'user-1' },
+        { stale: true },
+      );
     });
 
     it('saves V2 recommendation on success with engine version v2', async () => {
@@ -178,8 +279,22 @@ describe('RecommendationService', () => {
         eligibilityEngine.getEligibleCareers.mockResolvedValue(eligible);
         aiClient.run.mockResolvedValue({
           success: true,
-          data: { final_recommendations: [{ career_code: 'se', rank: 1, ai_score: 95, explanation: 'G', roadmap: 'R', suggested_colleges: [], suggested_certifications: [] }] },
-          provider: 'gemini', model: 'g', fallback_used: false,
+          data: {
+            final_recommendations: [
+              {
+                career_code: 'se',
+                rank: 1,
+                ai_score: 95,
+                explanation: 'G',
+                roadmap: 'R',
+                suggested_colleges: [],
+                suggested_certifications: [],
+              },
+            ],
+          },
+          provider: 'gemini',
+          model: 'g',
+          fallback_used: false,
         });
 
         // We wrap the returned recommendation mock behavior since our makeModel mock Assigns data to `this`
@@ -195,11 +310,17 @@ describe('RecommendationService', () => {
   describe('getLatestRecommendation', () => {
     it('throws when none exists', async () => {
       execMock.mockResolvedValue(null);
-      await expect(service.getLatestRecommendation('user-1')).rejects.toThrow(NotFoundException);
+      await expect(service.getLatestRecommendation('user-1')).rejects.toThrow(
+        NotFoundException,
+      );
     });
 
     it('returns latest', async () => {
-      execMock.mockResolvedValue({ _id: 'rec-1', user_id: 'user-1', final_recommendations: [] });
+      execMock.mockResolvedValue({
+        _id: 'rec-1',
+        user_id: 'user-1',
+        final_recommendations: [],
+      });
       const result = await service.getLatestRecommendation('user-1');
       expect(result._id).toBe('rec-1');
     });
@@ -208,12 +329,23 @@ describe('RecommendationService', () => {
   describe('submitFeedback', () => {
     it('throws when recommendation not found', async () => {
       execMock.mockResolvedValue(null);
-      await expect(service.submitFeedback('user-1', { recommendation_id: 'bad', career_code: 'se', rating: 5 })).rejects.toThrow(NotFoundException);
+      await expect(
+        service.submitFeedback('user-1', {
+          recommendation_id: 'bad',
+          career_code: 'se',
+          rating: 5,
+        }),
+      ).rejects.toThrow(NotFoundException);
     });
 
     it('saves feedback for correct user', async () => {
       execMock.mockResolvedValue({ _id: 'rec-1', user_id: 'user-1' });
-      await service.submitFeedback('user-1', { recommendation_id: 'rec-1', career_code: 'se', rating: 5, comment: 'Nice' });
+      await service.submitFeedback('user-1', {
+        recommendation_id: 'rec-1',
+        career_code: 'se',
+        rating: 5,
+        comment: 'Nice',
+      });
     });
   });
 

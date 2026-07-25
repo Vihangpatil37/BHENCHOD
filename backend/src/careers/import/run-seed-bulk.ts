@@ -21,12 +21,37 @@ interface PhaseConfig {
 }
 
 const phases: PhaseConfig[] = [
-  { part: 'part_3_arts_humanities', fileName: 'SCPR_Master_Career_Catalog_Part_3_Arts_Humanities.md', label: 'Phase 3 — Arts & Humanities' },
-  { part: 'part_4_diploma', fileName: 'SCPR_Master_Career_Catalog_Part_4_Diploma.md', label: 'Phase 4 — Diploma' },
-  { part: 'part_5_iti_polytechnic', fileName: 'SCPR_Master_Career_Catalog_Part_5_ITI_Polytechnic.md', label: 'Phase 5 — ITI & Polytechnic' },
-  { part: 'part_6_vocational', fileName: 'SCPR_Master_Career_Catalog_Part_6_Vocational_Skill_Development.md', label: 'Phase 6 — Vocational' },
-  { part: 'part_7_government_defence', fileName: 'SCPR_Master_Career_Catalog_Part_7_Government_Defence.md', label: 'Phase 7 — Government & Defence' },
-  { part: 'part_8_emerging_future', fileName: 'SCPR_Master_Career_Catalog_Part_8_Emerging_Future_Careers.md', label: 'Phase 8 — Emerging & Future' },
+  {
+    part: 'part_3_arts_humanities',
+    fileName: 'SCPR_Master_Career_Catalog_Part_3_Arts_Humanities.md',
+    label: 'Phase 3 — Arts & Humanities',
+  },
+  {
+    part: 'part_4_diploma',
+    fileName: 'SCPR_Master_Career_Catalog_Part_4_Diploma.md',
+    label: 'Phase 4 — Diploma',
+  },
+  {
+    part: 'part_5_iti_polytechnic',
+    fileName: 'SCPR_Master_Career_Catalog_Part_5_ITI_Polytechnic.md',
+    label: 'Phase 5 — ITI & Polytechnic',
+  },
+  {
+    part: 'part_6_vocational',
+    fileName:
+      'SCPR_Master_Career_Catalog_Part_6_Vocational_Skill_Development.md',
+    label: 'Phase 6 — Vocational',
+  },
+  {
+    part: 'part_7_government_defence',
+    fileName: 'SCPR_Master_Career_Catalog_Part_7_Government_Defence.md',
+    label: 'Phase 7 — Government & Defence',
+  },
+  {
+    part: 'part_8_emerging_future',
+    fileName: 'SCPR_Master_Career_Catalog_Part_8_Emerging_Future_Careers.md',
+    label: 'Phase 8 — Emerging & Future',
+  },
 ];
 
 async function bootstrap() {
@@ -59,7 +84,9 @@ async function bootstrap() {
   for (const phase of phases) {
     console.log(`\n---------- ${phase.label} ----------\n`);
     const filePath = path.join(projectRoot, phase.fileName);
-    console.log(`File: ${phase.fileName} (${fs.statSync(filePath).size} bytes)`);
+    console.log(
+      `File: ${phase.fileName} (${fs.statSync(filePath).size} bytes)`,
+    );
 
     const result = await seedService.seedFromCatalog(filePath, phase.part);
 
@@ -92,7 +119,9 @@ async function bootstrap() {
   let totalMerged = 0;
 
   for (const r of results) {
-    console.log(`  ${r.catalogPart}: +${r.new_inserts} new, ${r.merged_duplicates} merged`);
+    console.log(
+      `  ${r.catalogPart}: +${r.new_inserts} new, ${r.merged_duplicates} merged`,
+    );
     totalNew += r.new_inserts;
     totalMerged += r.merged_duplicates;
   }

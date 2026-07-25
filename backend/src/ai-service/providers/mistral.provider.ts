@@ -11,10 +11,10 @@ export class MistralProvider implements AbstractLLMProvider {
     apiKey: string,
     prompt: string,
     systemInstruction?: string,
-    jsonSchema?: any
+    jsonSchema?: any,
   ): Promise<ProviderResponse> {
     const url = 'https://api.mistral.ai/v1/chat/completions';
-    
+
     const messages: any[] = [];
     if (systemInstruction) {
       messages.push({ role: 'system', content: systemInstruction });
@@ -47,7 +47,11 @@ export class MistralProvider implements AbstractLLMProvider {
       }
 
       let parsedData = text;
-      if (jsonSchema || text.trim().startsWith('{') || text.trim().startsWith('[')) {
+      if (
+        jsonSchema ||
+        text.trim().startsWith('{') ||
+        text.trim().startsWith('[')
+      ) {
         try {
           parsedData = JSON.parse(text);
         } catch (e) {

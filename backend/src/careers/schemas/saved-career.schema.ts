@@ -15,4 +15,5 @@ export class SavedCareer {
   career_code: string; // stable career code
 }
 
-export const SavedCareerSchema: MongooseSchema = SchemaFactory.createForClass(SavedCareer);
+export const SavedCareerSchema: MongooseSchema =
+  SchemaFactory.createForClass(SavedCareer);

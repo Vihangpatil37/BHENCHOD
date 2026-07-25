@@ -12,11 +12,11 @@ export class GeminiProvider implements AbstractLLMProvider {
     apiKey: string,
     prompt: string,
     systemInstruction?: string,
-    jsonSchema?: any
+    jsonSchema?: any,
   ): Promise<ProviderResponse> {
     const apiVersion = providerModels.gemini.api_version ?? 'v1';
     const url = `https://generativelanguage.googleapis.com/${apiVersion}/models/${model}:generateContent?key=${apiKey}`;
-    
+
     const contents: any[] = [{ parts: [{ text: prompt }] }];
     const body: any = { contents };
 
@@ -39,14 +39,18 @@ export class GeminiProvider implements AbstractLLMProvider {
 
       const candidate = response.data?.candidates?.[0];
       const text = candidate?.content?.parts?.[0]?.text;
-      
+
       if (!text) {
         throw new Error('Empty response from Gemini API');
       }
 
       // Try to parse JSON if expected
       let parsedData = text;
-      if (jsonSchema || text.trim().startsWith('{') || text.trim().startsWith('[')) {
+      if (
+        jsonSchema ||
+        text.trim().startsWith('{') ||
+        text.trim().startsWith('[')
+      ) {
         try {
           parsedData = JSON.parse(text);
         } catch (e) {

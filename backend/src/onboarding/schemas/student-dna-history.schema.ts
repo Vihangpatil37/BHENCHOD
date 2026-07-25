@@ -19,4 +19,5 @@ export class StudentDNAHistory {
   trigger: string; // "onboarding_complete" | "profile_updated" | "manual_recompute"
 }
 
-export const StudentDNAHistorySchema: MongooseSchema = SchemaFactory.createForClass(StudentDNAHistory);
+export const StudentDNAHistorySchema: MongooseSchema =
+  SchemaFactory.createForClass(StudentDNAHistory);

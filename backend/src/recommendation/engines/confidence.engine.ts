@@ -5,7 +5,10 @@ import { HybridRankedResult } from './hybrid-ranking.engine';
 
 @Injectable()
 export class ConfidenceEngine {
-  calculate(student: StudentProfile, rankedResults: HybridRankedResult[]): number {
+  calculate(
+    student: StudentProfile,
+    rankedResults: HybridRankedResult[],
+  ): number {
     // 1. Profile Completeness (29% weight)
     const completeness = student.completion_percentage ?? 0;
 

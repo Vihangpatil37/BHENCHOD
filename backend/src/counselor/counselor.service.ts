@@ -1,11 +1,28 @@
-import { Injectable, NotFoundException, BadRequestException, Logger } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+  Logger,
+} from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
-import { Conversation, ConversationDocument } from './schemas/conversation.schema';
-import { ConversationMessage, ConversationMessageDocument } from './schemas/conversation-message.schema';
+import {
+  Conversation,
+  ConversationDocument,
+} from './schemas/conversation.schema';
+import {
+  ConversationMessage,
+  ConversationMessageDocument,
+} from './schemas/conversation-message.schema';
 import { ContextBuilderService } from './context-builder.service';
-import { StudentProfile, StudentProfileDocument } from '../onboarding/schemas/student-profile.schema';
-import { Recommendation, RecommendationDocument } from '../recommendation/schemas/recommendation.schema';
+import {
+  StudentProfile,
+  StudentProfileDocument,
+} from '../onboarding/schemas/student-profile.schema';
+import {
+  Recommendation,
+  RecommendationDocument,
+} from '../recommendation/schemas/recommendation.schema';
 import { Career, CareerDocument } from '../careers/schemas/career.schema';
 import { AIServiceClient } from '../ai-service/ai-service.client';
 import { StartSessionDto } from './dto/counselor.dto';
@@ -30,7 +47,10 @@ export class CounselorService {
     private readonly aiServiceClient: AIServiceClient,
   ) {}
 
-  async startSession(userId: string, dto: StartSessionDto): Promise<ConversationDocument> {
+  async startSession(
+    userId: string,
+    dto: StartSessionDto,
+  ): Promise<ConversationDocument> {
     this.logger.log(`Starting counseling session for user: ${userId}`);
 
     // Prune expired sessions first
@@ -44,11 +64,15 @@ export class CounselorService {
       .exec();
 
     if (existing.length >= 2) {
-      this.logger.log(`User ${userId} has ${existing.length} sessions. Deleting oldest to enforce limit of 2.`);
+      this.logger.log(
+        `User ${userId} has ${existing.length} sessions. Deleting oldest to enforce limit of 2.`,
+      );
       const toDelete = existing.slice(1); // Keep the newest one (index 0), delete the rest
       for (const conv of toDelete) {
         await this.conversationModel.findByIdAndDelete(conv._id).exec();
-        await this.messageModel.deleteMany({ conversation_id: String(conv._id) }).exec();
+        await this.messageModel
+          .deleteMany({ conversation_id: String(conv._id) })
+          .exec();
       }
     }
 
@@ -61,7 +85,7 @@ export class CounselorService {
 
     // Seed initial greeting message
     const greetingText = `Hello! I am your AI career counselor. I see you completed your onboarding and we have matched some careers for you. What would you like to discuss today?`;
-    
+
     const message = new this.messageModel({
       conversation_id: String(conversation._id),
       role: 'counselor',
@@ -76,21 +100,38 @@ export class CounselorService {
 
   async getSessions(userId: string): Promise<Conversation[]> {
     await this.pruneSessions(userId);
-    return this.conversationModel.find({ user_id: userId }).sort({ last_message_at: -1 }).exec();
+    return this.conversationModel
+      .find({ user_id: userId })
+      .sort({ last_message_at: -1 })
+      .exec();
   }
 
-  async getSessionHistory(userId: string, sessionId: string): Promise<ConversationMessage[]> {
+  async getSessionHistory(
+    userId: string,
+    sessionId: string,
+  ): Promise<ConversationMessage[]> {
     await this.pruneSessions(userId);
-    const conversation = await this.conversationModel.findById(sessionId).exec();
+    const conversation = await this.conversationModel
+      .findById(sessionId)
+      .exec();
     if (!conversation || conversation.user_id !== userId) {
       throw new NotFoundException('Conversation not found or unauthorized');
     }
-    return this.messageModel.find({ conversation_id: sessionId }).sort({ created_at: 1 }).exec();
+    return this.messageModel
+      .find({ conversation_id: sessionId })
+      .sort({ created_at: 1 })
+      .exec();
   }
 
-  async sendMessage(userId: string, sessionId: string, messageText: string): Promise<ChatResponseDto> {
+  async sendMessage(
+    userId: string,
+    sessionId: string,
+    messageText: string,
+  ): Promise<ChatResponseDto> {
     await this.pruneSessions(userId);
-    const conversation = await this.conversationModel.findById(sessionId).exec();
+    const conversation = await this.conversationModel
+      .findById(sessionId)
+      .exec();
     if (!conversation || conversation.user_id !== userId) {
       throw new NotFoundException('Conversation not found or unauthorized');
     }
@@ -115,7 +156,9 @@ export class CounselorService {
     // 3. Retrieve student profile and latest recommendations
     const profile = await this.profileModel.findOne({ user_id: userId }).exec();
     if (!profile) {
-      throw new BadRequestException('Student profile not found. Please complete onboarding first.');
+      throw new BadRequestException(
+        'Student profile not found. Please complete onboarding first.',
+      );
     }
 
     const latestRec = await this.recommendationModel
@@ -127,15 +170,17 @@ export class CounselorService {
     let candidateCareersList: string[] = [];
     if (latestRec && latestRec.shortlist && latestRec.shortlist.length > 0) {
       const careerCodes = latestRec.shortlist.map((c) => c.career_code);
-      const careers = await this.careerModel.find({ career_code: { $in: careerCodes } }).exec();
+      const careers = await this.careerModel
+        .find({ career_code: { $in: careerCodes } })
+        .exec();
       candidateCareersList = careers.map(
-        (c) => `- ${c.name} (Code: ${c.career_code}): ${c.description}`
+        (c) => `- ${c.name} (Code: ${c.career_code}): ${c.description}`,
       );
     } else {
       // Fallback to top seeding careers
       const careers = await this.careerModel.find().limit(20).exec();
       candidateCareersList = careers.map(
-        (c) => `- ${c.name} (Code: ${c.career_code}): ${c.description}`
+        (c) => `- ${c.name} (Code: ${c.career_code}): ${c.description}`,
       );
     }
 
@@ -150,20 +195,31 @@ export class CounselorService {
       conversation,
       allMessages,
       profile,
-      messageText
+      messageText,
     );
     aiContext.candidate_careers = candidateCareersList.join('\n');
 
     // 5. Call AI Service Client (routed to Groq/Mistral)
     let promptName = 'counselor_chat';
-    let fallbackObj: any = { reply: '', recommended_links: [''], suggested_questions: [''] };
+    let fallbackObj: any = {
+      reply: '',
+      recommended_links: [''],
+      suggested_questions: [''],
+    };
 
     if (intent === 'roadmap_question') {
       promptName = 'roadmap_generation';
       fallbackObj = {
-        career_code: '', career_name: '', estimated_total_duration: '', overview: '',
-        phases: [], salary_progression: [], higher_studies: [],
-        alternative_paths: [], common_mistakes: [], final_checklist: [],
+        career_code: '',
+        career_name: '',
+        estimated_total_duration: '',
+        overview: '',
+        phases: [],
+        salary_progression: [],
+        higher_studies: [],
+        alternative_paths: [],
+        common_mistakes: [],
+        final_checklist: [],
         mermaid: { nodes: [], edges: [] },
       };
     }
@@ -171,7 +227,7 @@ export class CounselorService {
     const aiResponse = await this.aiServiceClient.run(
       promptName,
       aiContext,
-      fallbackObj
+      fallbackObj,
     );
 
     if (!aiResponse.success || !aiResponse.data) {
@@ -185,7 +241,7 @@ export class CounselorService {
     } else {
       replyText = aiResponse.data.reply || JSON.stringify(aiResponse.data);
     }
-    
+
     // 6. Post-process AI response with safety filter
     replyText = this.applySafetyFilter(replyText);
 
@@ -214,7 +270,8 @@ export class CounselorService {
 
     let md = `## 🗺️ Career Roadmap: ${data.career_name || data.career_code || ''}\n\n`;
 
-    if (data.estimated_total_duration) md += `**Total Duration:** ${data.estimated_total_duration}\n\n`;
+    if (data.estimated_total_duration)
+      md += `**Total Duration:** ${data.estimated_total_duration}\n\n`;
     if (data.overview) md += `${data.overview}\n\n`;
 
     data.phases.forEach((phase: any, index: number) => {
@@ -224,7 +281,7 @@ export class CounselorService {
 
       if (phase.action_items?.length) {
         md += `**Action Items:**\n`;
-        phase.action_items.forEach((item: string) => md += `- ${item}\n`);
+        phase.action_items.forEach((item: string) => (md += `- ${item}\n`));
         md += `\n`;
       }
       if (phase.skills_to_build?.length) {
@@ -235,27 +292,27 @@ export class CounselorService {
       }
       if (phase.certifications?.length) {
         md += `**Certifications:**\n`;
-        phase.certifications.forEach((c: string) => md += `- ${c}\n`);
+        phase.certifications.forEach((c: string) => (md += `- ${c}\n`));
         md += `\n`;
       }
       if (phase.projects?.length) {
         md += `**Projects:**\n`;
-        phase.projects.forEach((p: string) => md += `- ${p}\n`);
+        phase.projects.forEach((p: string) => (md += `- ${p}\n`));
         md += `\n`;
       }
       if (phase.internships?.length) {
         md += `**Internships:**\n`;
-        phase.internships.forEach((i: string) => md += `- ${i}\n`);
+        phase.internships.forEach((i: string) => (md += `- ${i}\n`));
         md += `\n`;
       }
       if (phase.recommended_resources?.length) {
         md += `**Resources:**\n`;
-        phase.recommended_resources.forEach((r: string) => md += `- ${r}\n`);
+        phase.recommended_resources.forEach((r: string) => (md += `- ${r}\n`));
         md += `\n`;
       }
       if (phase.checkpoints?.length) {
         md += `**Checkpoints:**\n`;
-        phase.checkpoints.forEach((c: string) => md += `- ${c}\n`);
+        phase.checkpoints.forEach((c: string) => (md += `- ${c}\n`));
         md += `\n`;
       }
       md += `---\n\n`;
@@ -277,29 +334,32 @@ export class CounselorService {
 
     if (data.higher_studies?.length) {
       md += `### 🎓 Higher Studies\n\n`;
-      data.higher_studies.forEach((h: string) => md += `- ${h}\n`);
+      data.higher_studies.forEach((h: string) => (md += `- ${h}\n`));
       md += `\n`;
     }
 
     if (data.alternative_paths?.length) {
       md += `### 🔀 Alternative Career Paths\n\n`;
-      data.alternative_paths.forEach((a: string) => md += `- ${a}\n`);
+      data.alternative_paths.forEach((a: string) => (md += `- ${a}\n`));
       md += `\n`;
     }
 
     if (data.common_mistakes?.length) {
       md += `### ⚠️ Common Mistakes to Avoid\n\n`;
-      data.common_mistakes.forEach((m: string) => md += `- ${m}\n`);
+      data.common_mistakes.forEach((m: string) => (md += `- ${m}\n`));
       md += `\n`;
     }
 
     if (data.final_checklist?.length) {
       md += `### ✅ Final Checklist\n\n`;
-      data.final_checklist.forEach((c: string) => md += `- [ ] ${c}\n`);
+      data.final_checklist.forEach((c: string) => (md += `- [ ] ${c}\n`));
       md += `\n`;
     }
 
-    const mermaidSyntax = this.buildMermaidSyntax(data.mermaid?.nodes, data.mermaid?.edges);
+    const mermaidSyntax = this.buildMermaidSyntax(
+      data.mermaid?.nodes,
+      data.mermaid?.edges,
+    );
     if (mermaidSyntax) {
       md += `### 🧭 Roadmap Flow\n\n\`\`\`mermaid\n${mermaidSyntax}\n\`\`\`\n`;
     }
@@ -307,9 +367,12 @@ export class CounselorService {
     return md;
   }
 
-  private buildMermaidSyntax(nodes: { id: string; label: string }[] | undefined, edges: { from: string; to: string }[] | undefined): string {
+  private buildMermaidSyntax(
+    nodes: { id: string; label: string }[] | undefined,
+    edges: { from: string; to: string }[] | undefined,
+  ): string {
     if (!nodes || nodes.length === 0) return '';
-    const nodeMap = new Map(nodes.map(n => [n.id, n]));
+    const nodeMap = new Map(nodes.map((n) => [n.id, n]));
     const lines = ['graph TD'];
     for (const node of nodes) {
       lines.push(`  ${node.id}["${node.label}"]`);
@@ -324,10 +387,20 @@ export class CounselorService {
 
   private classifyIntent(text: string): string {
     const lower = text.toLowerCase();
-    if (lower.includes('roadmap') || lower.includes('step') || lower.includes('path') || lower.includes('how to')) {
+    if (
+      lower.includes('roadmap') ||
+      lower.includes('step') ||
+      lower.includes('path') ||
+      lower.includes('how to')
+    ) {
       return 'roadmap_question';
     }
-    if (lower.includes('career') || lower.includes('salary') || lower.includes('job') || lower.includes('work')) {
+    if (
+      lower.includes('career') ||
+      lower.includes('salary') ||
+      lower.includes('job') ||
+      lower.includes('work')
+    ) {
       return 'career_question';
     }
     return 'general_chat';
@@ -337,7 +410,7 @@ export class CounselorService {
     // Simple filter to catch and moderate unwanted content
     let cleanText = text;
     const blockList = ['hack', 'kill', 'suicide', 'die', 'explode', 'bomb'];
-    
+
     for (const word of blockList) {
       const regex = new RegExp(`\\b${word}\\b`, 'gi');
       if (regex.test(cleanText)) {
@@ -350,16 +423,22 @@ export class CounselorService {
 
   private async pruneSessions(userId: string): Promise<void> {
     const thirtyMinutesAgo = new Date(Date.now() - 30 * 60 * 1000);
-    const expiredSessions = await this.conversationModel.find({
-      user_id: userId,
-      last_message_at: { $lt: thirtyMinutesAgo }
-    }).exec();
+    const expiredSessions = await this.conversationModel
+      .find({
+        user_id: userId,
+        last_message_at: { $lt: thirtyMinutesAgo },
+      })
+      .exec();
 
     if (expiredSessions.length > 0) {
-      this.logger.log(`Pruning ${expiredSessions.length} expired sessions for user: ${userId}`);
+      this.logger.log(
+        `Pruning ${expiredSessions.length} expired sessions for user: ${userId}`,
+      );
       for (const session of expiredSessions) {
         await this.conversationModel.findByIdAndDelete(session._id).exec();
-        await this.messageModel.deleteMany({ conversation_id: String(session._id) }).exec();
+        await this.messageModel
+          .deleteMany({ conversation_id: String(session._id) })
+          .exec();
       }
     }
   }

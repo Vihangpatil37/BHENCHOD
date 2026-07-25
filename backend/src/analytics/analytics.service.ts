@@ -1,7 +1,10 @@
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
-import { AnalyticsEvent, AnalyticsEventDocument } from './schemas/analytics-event.schema';
+import {
+  AnalyticsEvent,
+  AnalyticsEventDocument,
+} from './schemas/analytics-event.schema';
 import { AIRequestLog } from '../ai-service/ai-request-log.schema';
 import { SavedCareer } from '../careers/schemas/saved-career.schema';
 import { onboardingEvents } from '../onboarding/onboarding.service';
@@ -40,7 +43,11 @@ export class AnalyticsService implements OnModuleInit {
 
     // 4. Listen to AI Provider Fallback Triggers
     aiServiceEvents.on('AI_PROVIDER_FALLBACK_TRIGGERED', async (data) => {
-      await this.trackEvent(data.user_id || 'system', 'AI_PROVIDER_FALLBACK_TRIGGERED', data);
+      await this.trackEvent(
+        data.user_id || 'system',
+        'AI_PROVIDER_FALLBACK_TRIGGERED',
+        data,
+      );
     });
 
     // 5. Listen to AI Provider Unhealthy Detection
@@ -53,10 +60,16 @@ export class AnalyticsService implements OnModuleInit {
    * Tracks an event. Wrapped in try/catch to log and swallow all failures,
    * guaranteeing that analytics tracking never breaks user-facing requests.
    */
-  async trackEvent(userId: string | undefined, eventType: string, payload: Record<string, any>): Promise<void> {
+  async trackEvent(
+    userId: string | undefined,
+    eventType: string,
+    payload: Record<string, any>,
+  ): Promise<void> {
     try {
-      this.logger.log(`Logging analytics event: ${eventType} for user: ${userId || 'anonymous'}`);
-      
+      this.logger.log(
+        `Logging analytics event: ${eventType} for user: ${userId || 'anonymous'}`,
+      );
+
       const event = new this.eventModel({
         user_id: userId,
         event_type: eventType,
@@ -66,54 +79,75 @@ export class AnalyticsService implements OnModuleInit {
       await event.save();
     } catch (err: any) {
       // Log error but swallow it to protect calling thread
-      this.logger.error(`[Analytics Failure Swallowed] Failed to track event ${eventType}: ${err.message}`);
+      this.logger.error(
+        `[Analytics Failure Swallowed] Failed to track event ${eventType}: ${err.message}`,
+      );
     }
   }
 
   async getUserEvents(userId: string): Promise<AnalyticsEvent[]> {
-    return this.eventModel.find({ user_id: userId }).sort({ created_at: -1 }).exec();
+    return this.eventModel
+      .find({ user_id: userId })
+      .sort({ created_at: -1 })
+      .exec();
   }
 
   async getPlatformStats() {
-    const stats = await this.eventModel.aggregate([
-      { $group: { _id: '$event_type', count: { $sum: 1 } } },
-    ]).exec();
+    const stats = await this.eventModel
+      .aggregate([{ $group: { _id: '$event_type', count: { $sum: 1 } } }])
+      .exec();
 
-    return stats.reduce((acc, curr) => {
-      acc[curr._id] = curr.count;
-      return acc;
-    }, {} as Record<string, number>);
+    return stats.reduce(
+      (acc, curr) => {
+        acc[curr._id] = curr.count;
+        return acc;
+      },
+      {} as Record<string, number>,
+    );
   }
 
   async getCareersStats() {
     const savedCount = await this.savedCareerModel.countDocuments().exec();
-    const topSaved = await this.savedCareerModel.aggregate([
-      { $group: { _id: '$career_code', count: { $sum: 1 } } },
-      { $sort: { count: -1 } },
-      { $limit: 5 },
-    ]).exec();
+    const topSaved = await this.savedCareerModel
+      .aggregate([
+        { $group: { _id: '$career_code', count: { $sum: 1 } } },
+        { $sort: { count: -1 } },
+        { $limit: 5 },
+      ])
+      .exec();
 
     return {
       total_saved_bookmarks: savedCount,
-      top_bookmarked_careers: topSaved.map((t) => ({ career_code: t._id, count: t.count })),
+      top_bookmarked_careers: topSaved.map((t) => ({
+        career_code: t._id,
+        count: t.count,
+      })),
     };
   }
 
   async getAIStats() {
     const totalRequests = await this.aiLogModel.countDocuments().exec();
-    
+
     // Average Latency & Success rate
-    const aggregateData = await this.aiLogModel.aggregate([
-      {
-        $group: {
-          _id: null,
-          avg_latency: { $avg: '$latency_ms' },
-          total_tokens: { $sum: { $add: ['$input_tokens', '$output_tokens'] } },
-          success_count: { $sum: { $cond: [{ $eq: ['$success', true] }, 1, 0] } },
-          fallback_count: { $sum: { $cond: [{ $eq: ['$fallback_used', true] }, 1, 0] } },
+    const aggregateData = await this.aiLogModel
+      .aggregate([
+        {
+          $group: {
+            _id: null,
+            avg_latency: { $avg: '$latency_ms' },
+            total_tokens: {
+              $sum: { $add: ['$input_tokens', '$output_tokens'] },
+            },
+            success_count: {
+              $sum: { $cond: [{ $eq: ['$success', true] }, 1, 0] },
+            },
+            fallback_count: {
+              $sum: { $cond: [{ $eq: ['$fallback_used', true] }, 1, 0] },
+            },
+          },
         },
-      },
-    ]).exec();
+      ])
+      .exec();
 
     const stats = aggregateData[0] || {
       avg_latency: 0,
@@ -122,8 +156,10 @@ export class AnalyticsService implements OnModuleInit {
       fallback_count: 0,
     };
 
-    const successRate = totalRequests > 0 ? (stats.success_count / totalRequests) * 100 : 100;
-    const fallbackRate = totalRequests > 0 ? (stats.fallback_count / totalRequests) * 100 : 0;
+    const successRate =
+      totalRequests > 0 ? (stats.success_count / totalRequests) * 100 : 100;
+    const fallbackRate =
+      totalRequests > 0 ? (stats.fallback_count / totalRequests) * 100 : 0;
 
     // ponytail: query unhealthy provider events for a quick health summary
     const unhealthyEvents = await this.eventModel
