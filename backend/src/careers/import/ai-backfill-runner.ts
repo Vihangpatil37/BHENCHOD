@@ -30,17 +30,16 @@ import {
 } from '../schemas/career.schema';
 import { AIServiceClient } from '../../ai-service/ai-service.client';
 
+import { INestApplicationContext } from '@nestjs/common';
+
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
-async function bootstrap() {
+export async function runAIBackfill(app: INestApplicationContext) {
   console.log('\n============================================');
   console.log('  Phase 9 — AI Backfill Refinement');
   console.log('============================================\n');
 
-  const app = await NestFactory.createApplicationContext(AppModule, {
-    logger: ['log', 'error', 'warn'],
-  });
-  console.log('Application initialized.\n');
+  console.log('Starting Phase 9 AI Backfill Refinement...');
 
   const aiService = app.get(AIServiceClient);
   const careerModel = app.get<Model<CareerDocument>>(
@@ -234,7 +233,13 @@ async function bootstrap() {
   console.log(
     '\nAll draft fields written. Use Admin Panel (Phase 10) to review and publish.\n',
   );
+}
 
+async function bootstrap() {
+  const app = await NestFactory.createApplicationContext(AppModule, {
+    logger: ['log', 'error', 'warn'],
+  });
+  await runAIBackfill(app);
   await app.close();
 }
 
