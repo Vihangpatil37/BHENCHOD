@@ -29,6 +29,15 @@ export const CareerGallery: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCatalog, setSelectedCatalog] = useState('All');
   const [selectedCareer, setSelectedCareer] = useState<Career | null>(null);
+  
+  // Pagination / Load More state
+  const PAGE_SIZE = 24;
+  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
+
+  // Reset visible count when filters change
+  useEffect(() => {
+    setVisibleCount(PAGE_SIZE);
+  }, [searchQuery, selectedCatalog]);
 
   useEffect(() => {
     fetchCareers();
@@ -57,6 +66,9 @@ export const CareerGallery: React.FC = () => {
     const matchesCat = selectedCatalog === 'All' || catCode === selectedCatalog;
     return matchesSearch && matchesCat;
   });
+
+  const paginatedCareers = filteredCareers.slice(0, visibleCount);
+  const hasMore = visibleCount < filteredCareers.length;
 
   if (loading) {
     return (
@@ -132,7 +144,7 @@ export const CareerGallery: React.FC = () => {
       {/* Smoothly animated layout grid on filter changes */}
       <motion.div layout className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6 relative z-10">
         <AnimatePresence mode="popLayout">
-          {filteredCareers.map(c => {
+          {paginatedCareers.map(c => {
             const cat = catalogFor(c.category_code);
             return (
               <motion.div
@@ -154,7 +166,9 @@ export const CareerGallery: React.FC = () => {
                       {cat.label}
                     </span>
                     <h3 className="text-base font-bold text-text-primary group-hover:text-brand transition-colors">{c.name}</h3>
-                    <p className="text-xs text-text-secondary line-clamp-2 leading-relaxed">{c.description}</p>
+                    <p className="text-xs text-text-secondary line-clamp-2 leading-relaxed">
+                      {c.description === c.name ? "Explore this career pathway to view skills, salary data, and eligibility requirements." : c.description}
+                    </p>
                   </div>
                   <div className="flex items-center space-x-1.5 text-xs text-brand font-semibold pt-3 mt-3 border-t border-white/[0.06]">
                     <span>View details</span>
@@ -166,6 +180,19 @@ export const CareerGallery: React.FC = () => {
           })}
         </AnimatePresence>
       </motion.div>
+
+      {/* Load More Button */}
+      {hasMore && (
+        <div className="flex justify-center mt-8 relative z-10">
+          <Button
+            onClick={() => setVisibleCount(prev => prev + PAGE_SIZE)}
+            variant="secondary"
+            className="px-8 py-2.5 text-sm rounded-full bg-white/[0.02] border-white/[0.1] hover:bg-white/[0.06] transition-all"
+          >
+            Load More Careers
+          </Button>
+        </div>
+      )}
 
       {/* Detailed Modal/Drawer (GlassCard Elevation 4) */}
       <AnimatePresence>
@@ -204,7 +231,11 @@ export const CareerGallery: React.FC = () => {
                       <h3 className="text-xl font-bold text-text-primary mt-3">{selectedCareer.name}</h3>
                     </div>
 
-                    <p className="text-sm text-text-secondary leading-relaxed">{selectedCareer.description}</p>
+                    <p className="text-sm text-text-secondary leading-relaxed">
+                      {selectedCareer.description === selectedCareer.name
+                        ? "This career is part of our comprehensive database. Detailed skill requirements, salary estimates, and growth trajectories are continuously updated."
+                        : selectedCareer.description}
+                    </p>
 
                     {selectedCareer.entry_requirements && (
                       <div className="bg-white/[0.02] border border-solid border-white/[0.06] p-4 rounded-[18px]">
