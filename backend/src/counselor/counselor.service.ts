@@ -84,7 +84,7 @@ export class CounselorService {
     await conversation.save();
 
     // Seed initial greeting message
-    const greetingText = `Hello! I am your AI career counselor. I see you completed your onboarding and we have matched some careers for you. What would you like to discuss today?`;
+    const greetingText = `Good day. I am your academic and career counselor. I have reviewed your assessment profile and mapped several career pathways matched to your academic performance and interests. How may I assist you today?`;
 
     const message = new this.messageModel({
       conversation_id: String(conversation._id),
@@ -184,6 +184,28 @@ export class CounselorService {
       );
     }
 
+    // Build the Top-5 suggested careers shown in the student's career section
+    let suggestedCareersList: string[] = [];
+    if (latestRec && latestRec.final_recommendations?.length > 0) {
+      const recCodes = latestRec.final_recommendations.map(
+        (r) => r.career_code,
+      );
+      const careers = await this.careerModel
+        .find({ career_code: { $in: recCodes } })
+        .exec();
+      const careerMap = new Map(careers.map((c) => [c.career_code, c]));
+      suggestedCareersList = latestRec.final_recommendations.map((rec) => {
+        const career = careerMap.get(rec.career_code);
+        const name = career ? career.name : rec.career_code;
+        return (
+          `Rank ${rec.rank}: ${name} (Match: ${Math.round(rec.ai_score)}%)` +
+          (career ? `\n  Description: ${career.description}` : '') +
+          (rec.explanation ? `\n  Why recommended: ${rec.explanation}` : '') +
+          (rec.roadmap ? `\n  Roadmap summary: ${rec.roadmap}` : '')
+        );
+      });
+    }
+
     // 4. Load recent messages for history
     const allMessages = await this.messageModel
       .find({ conversation_id: sessionId })
@@ -198,6 +220,7 @@ export class CounselorService {
       messageText,
     );
     aiContext.candidate_careers = candidateCareersList.join('\n');
+    aiContext.suggested_careers = suggestedCareersList.join('\n\n');
 
     // 5. Call AI Service Client (routed to Groq/Mistral)
     let promptName = 'counselor_chat';

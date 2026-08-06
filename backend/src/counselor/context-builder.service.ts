@@ -28,6 +28,7 @@ export class ContextBuilderService {
     student_name: string;
     student_profile_summary: string;
     candidate_careers: string;
+    suggested_careers: string;
     conversation_history: string;
     message: string;
   }> {
@@ -136,6 +137,7 @@ export class ContextBuilderService {
       student_name: personal.name || 'Student',
       student_profile_summary: profileSummary,
       candidate_careers: '', // to be populated by caller (counselor service) with actual career lists
+      suggested_careers: '', // Top-5 recommended careers, populated by caller (counselor service)
       conversation_history: historyStr,
       message: latestUserMessage,
     };

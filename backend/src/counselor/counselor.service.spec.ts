@@ -124,6 +124,8 @@ describe('applySafetyFilter', () => {
 
 describe('sendMessage', () => {
   let service: CounselorService;
+  let mocks: Record<string, any>;
+  let aiRunMock: jest.Mock;
 
   beforeEach(async () => {
     const convModel = makeModel();
@@ -140,6 +142,7 @@ describe('sendMessage', () => {
       rec: recModel.findOne()!.exec,
       care: careModel.find()!.exec,
     };
+    mocks = execs;
 
     // trace: findById -> exec finds conversation
     execs.conv.mockResolvedValue({
@@ -165,6 +168,14 @@ describe('sendMessage', () => {
     // trace: find -> sort -> exec for messages
     execs.msg.mockResolvedValue([]);
 
+    aiRunMock = jest.fn().mockResolvedValue({
+      success: true,
+      data: { reply: 'Hello there' },
+      model: 'test-model',
+      cached: false,
+      latency_ms: 100,
+    });
+
     const module = await Test.createTestingModule({
       providers: [
         CounselorService,
@@ -179,15 +190,7 @@ describe('sendMessage', () => {
         },
         {
           provide: AIServiceClient,
-          useValue: {
-            run: jest.fn().mockResolvedValue({
-              success: true,
-              data: { reply: 'Hello there' },
-              model: 'test-model',
-              cached: false,
-              latency_ms: 100,
-            }),
-          },
+          useValue: { run: aiRunMock },
         },
       ],
     }).compile();
@@ -206,5 +209,34 @@ describe('sendMessage', () => {
     expect(result.model_used).toBe('test-model');
     expect(result.cached).toBe(false);
     expect(result.latency_ms).toBe(100);
+  });
+
+  it('passes suggested careers from final recommendations', async () => {
+    mocks.rec.mockResolvedValue({
+      user_id: 'user-1',
+      shortlist: [],
+      final_recommendations: [
+        {
+          career_code: 'software_engineer',
+          rank: 1,
+          ai_score: 92,
+          explanation: 'Strong analytical and technical aptitude.',
+          roadmap: 'PCM then B.Tech CSE.',
+        },
+      ],
+    });
+    mocks.care.mockResolvedValue([
+      {
+        career_code: 'software_engineer',
+        name: 'Software Engineer',
+        description: 'Builds software systems.',
+      },
+    ]);
+
+    await service.sendMessage('user-1', 'sid', 'Which career is best?');
+    const ctx = aiRunMock.mock.calls[0][1];
+    expect(ctx.suggested_careers).toContain('Rank 1');
+    expect(ctx.suggested_careers).toContain('Software Engineer');
+    expect(ctx.suggested_careers).toContain('92%');
   });
 });
