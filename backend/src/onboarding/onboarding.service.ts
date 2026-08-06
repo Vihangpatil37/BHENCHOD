@@ -203,10 +203,147 @@ export class OnboardingService {
       },
     };
 
-    const response = await this.aiClient.run('scenario_generation', context);
-    profile.pending_scenarios = response.data?.scenarios || [];
+    let scenarios: any[];
+    try {
+      const response = await this.aiClient.run('scenario_generation', context);
+      scenarios = response.data?.scenarios || [];
+    } catch (err: any) {
+      this.logger.warn(
+        `AI scenario generation failed (${err?.message || 'unknown'}), falling back to offline scenarios.`,
+      );
+      scenarios = this.buildOfflineScenarios();
+    }
+    profile.pending_scenarios = scenarios;
     await profile.save();
-    return response.data;
+    return { scenarios };
+  }
+
+  // ponytail: deterministic static scenarios so the step works with no AI keys/quota;
+  // swap with richer AI variants when a provider is configured
+  private buildOfflineScenarios(): any[] {
+    const templates: Array<{
+      trait: string;
+      question: string;
+      options: string[];
+    }> = [
+      {
+        trait: 'leadership',
+        question:
+          'Your class has been given a small budget to organize the annual day event. No one wants to lead. What do you do?',
+        options: [
+          'Step forward and take charge of assigning roles and running the event',
+          'Wait for someone else to volunteer first',
+          'Propose splitting the work with no single leader',
+          'Focus only on the tasks you are personally assigned',
+        ],
+      },
+      {
+        trait: 'analytical_thinking',
+        question:
+          'Your monthly pocket money is not enough after a few big spends. How do you figure out where it went?',
+        options: [
+          'List every expense and compare it against income to spot patterns',
+          'Decide to spend less from now on without checking past spending',
+          'Ask a friend what they normally do',
+          'Ignore it and hope next month is better',
+        ],
+      },
+      {
+        trait: 'business_acumen',
+        question:
+          'A small local shop wants to attract more students. What idea do you pitch?',
+        options: [
+          'A student-friendly offer that keeps customers coming back regularly',
+          'A one-time deep discount on everything',
+          'Better shop lighting and music',
+          'Nothing changes, the shop already does fine',
+        ],
+      },
+      {
+        trait: 'communication',
+        question:
+          'You need to explain a tricky science topic to a younger cousin. How do you start?',
+        options: [
+          'Break it into simple, everyday examples they can relate to',
+          'Repeat the textbook lines slowly',
+          'Show them the diagram and leave them to read it',
+          'Tell them to just memorise the topic',
+        ],
+      },
+      {
+        trait: 'empathy',
+        question:
+          'A classmate quietly tells you they are struggling to keep up. What do you do?',
+        options: [
+          'Listen properly and offer specific, private help',
+          'Give them a quick pep talk and move on',
+          'Mention it in front of the class for study groups',
+          'Say everyone struggles and change the topic',
+        ],
+      },
+      {
+        trait: 'creativity',
+        question:
+          'You have to present a topic the class has heard before. How do you make it interesting?',
+        options: [
+          'Invent a new story, analogy or visual twist to retell it',
+          'Repeat the standard slides with more details',
+          'Keep it short and quiet',
+          'Present through a long, direct question-session',
+        ],
+      },
+      {
+        trait: 'patience',
+        question:
+          'A robotics project keeps failing even after many tries. What do you do?',
+        options: [
+          'Stay focused and test one small change at a time',
+          'Try random big changes until one works',
+          'Take a break and abandon the project',
+          'Ask everyone to restart from scratch',
+        ],
+      },
+      {
+        trait: 'risk_tolerance',
+        question:
+          'You can either keep your safe weekly routine or try a new competitive opportunity. What now?',
+        options: [
+          'Weigh the upside and take a measured risk',
+          'Always stick with what is safe and known',
+          'Jump in only if it needs no extra effort',
+          'Try it only if everyone else does too',
+        ],
+      },
+      {
+        trait: 'technical_curiosity',
+        question:
+          'A tool or app at home breaks in an unfamiliar way. How do you react?',
+        options: [
+          'Try to understand how it works and tinker to fix it',
+          'Reset it and hope for the best',
+          'Unplug it and leave it for someone else',
+          'Use a different tool instead',
+        ],
+      },
+      {
+        trait: 'research',
+        question:
+          'You are asked to write on a new topic you know little about. How do you begin?',
+        options: [
+          'Look up several reliable sources and note what makes sense',
+          'Write from memory and keep it short',
+          'Ask one friend their thoughts and copy it',
+          'Rewrite an article you find',
+        ],
+      },
+    ];
+
+    return templates.map((t, i) => ({
+      id: i + 1,
+      question: t.question,
+      options: t.options,
+      trait: t.trait,
+    }));
   }
 
   async getDNA(userId: string): Promise<StudentDNA> {

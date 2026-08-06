@@ -12,7 +12,7 @@ export interface ProviderModels {
 // ponytail: all model identifiers live in one file; update here, not in 5 provider files
 export const providerModels: ProviderModels = {
   gemini: {
-    model: 'gemini-2.5-flash',
+    model: 'gemini-2.0-flash',
     api_version: 'v1',
   },
   glm: {

@@ -200,7 +200,12 @@ export const Onboarding: React.FC = () => {
       const res: any = await client.get('/onboarding/scenarios');
       setScenarios(res.scenarios || []);
     } catch (err: any) {
-      setErrorMessage(err.message || 'Failed to generate scenarios.');
+      if (err.status === 401) {
+        clearAuth();
+        navigate('/login');
+      } else {
+        setErrorMessage(err.status === 503 ? 'AI service is unavailable right now.' : (err.message || 'Failed to generate scenarios.'));
+      }
     } finally {
       setScenariosLoading(false);
     }
