@@ -104,6 +104,12 @@ export class Career {
   @Prop({ required: true, default: 'Standard progression' })
   career_progression: string;
 
+  @Prop({ required: false })
+  roadmap_mermaid?: string;
+
+  @Prop({ type: [String], required: false, default: [] })
+  roadmap_steps?: string[];
+
   // Active Live Configs
   @Prop({ type: CareerTraitProfileSchema, required: false })
   trait_weights?: CareerTraitProfile;

@@ -8,6 +8,7 @@ import { CATALOGS, catalogFor } from '../lib/catalogs';
 import { GlassCard } from '../components/ui/GlassCard';
 import { Button } from '../components/ui/Button';
 import { Skeleton } from '../components/ui/Skeleton';
+import { Mermaid } from '../components/ui/Mermaid';
 
 interface Career {
   career_code: string;
@@ -20,6 +21,8 @@ interface Career {
   entry_requirements: string;
   skills_required: string[];
   trait_weights: Record<string, number>;
+  roadmap_mermaid?: string;
+  roadmap_steps?: string[];
 }
 
 export const CareerGallery: React.FC = () => {
@@ -253,6 +256,15 @@ export const CareerGallery: React.FC = () => {
                               {skill}
                             </span>
                           ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {selectedCareer.roadmap_mermaid && (
+                      <div className="bg-white/[0.02] border border-solid border-white/[0.06] p-4 rounded-[18px]">
+                        <h4 className="text-xs font-bold text-text-secondary uppercase tracking-wider mb-2">Career Roadmap</h4>
+                        <div className="w-full">
+                          <Mermaid diagram={selectedCareer.roadmap_mermaid} />
                         </div>
                       </div>
                     )}

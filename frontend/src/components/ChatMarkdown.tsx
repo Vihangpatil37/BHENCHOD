@@ -1,35 +1,5 @@
-import { useEffect, useRef, useId } from 'react';
 import ReactMarkdown from 'react-markdown';
-import mermaid from 'mermaid';
-
-mermaid.initialize({
-  startOnLoad: false,
-  theme: 'dark',
-  themeVariables: {
-    primaryColor: '#5B7CFA', // Brand Blue
-    primaryTextColor: '#FFFFFF',
-    primaryBorderColor: '#5B7CFA',
-    lineColor: '#70E1FF', // AI Cyan
-    secondaryColor: '#0A0A0F', // bg-secondary
-    tertiaryColor: '#10131A', // bg-tertiary
-    fontSize: '14px',
-  },
-  flowchart: { useMaxWidth: true, htmlLabels: true },
-});
-
-function MermaidBlock({ diagram }: { diagram: string }) {
-  const ref = useRef<HTMLDivElement>(null);
-  const id = useId();
-
-  useEffect(() => {
-    if (!diagram || !ref.current) return;
-    mermaid.render(`mermaid-${id.replace(/[^a-zA-Z0-9]/g, '')}`, diagram).then(({ svg }) => {
-      if (ref.current) ref.current.innerHTML = svg;
-    });
-  }, [diagram, id]);
-
-  return <div ref={ref} className="my-4 flex justify-center w-full overflow-x-auto" />;
-}
+import { Mermaid } from './ui/Mermaid';
 
 export function ChatMarkdown({ content }: { content: string }) {
   // If the content is simple text, render it directly to avoid any ReactMarkdown/ESM compatibility layout bugs
@@ -46,7 +16,7 @@ export function ChatMarkdown({ content }: { content: string }) {
             code({ className, children, ...props }) {
               const match = /language-(\w+)/.exec(className || '');
               if (match && match[1] === 'mermaid') {
-                return <MermaidBlock diagram={String(children).replace(/\n$/, '')} />;
+                return <Mermaid diagram={String(children).replace(/\n$/, '')} />;
               }
               return <code className={className} {...props}>{children}</code>;
             },

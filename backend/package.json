@@ -20,7 +20,8 @@
     "test:e2e": "jest --config ./test/jest-e2e.json",
     "test:keys": "node --env-file=.env -r ts-node/register src/test-api-keys.ts",
     "seed": "ts-node src/careers/import/run-seed-all.ts",
-    "seed:prod": "node dist/careers/import/run-seed-all.js"
+    "seed:prod": "node dist/careers/import/run-seed-all.js",
+    "seed:roadmaps": "ts-node src/careers/import/import-roadmaps.ts"
   },
   "dependencies": {
     "@nestjs/common": "^11.0.1",

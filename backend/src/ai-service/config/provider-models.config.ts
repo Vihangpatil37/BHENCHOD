@@ -12,23 +12,24 @@ export interface ProviderModels {
 // ponytail: all model identifiers live in one file; update here, not in 5 provider files
 export const providerModels: ProviderModels = {
   gemini: {
-    model: 'gemini-2.0-flash',
+    model: 'gemini-3.5-flash',
+    fallback_model: 'gemini-2.5-flash',
     api_version: 'v1',
   },
   glm: {
-    model: 'GLM-4.7-Flash',
-    fallback_model: 'GLM-4.5-Flash',
+    model: 'GLM-4.5-Flash',
+    fallback_model: 'GLM-4.7-Flash',
     api_base: 'https://open.bigmodel.cn/api/paas/v4/chat/completions',
   },
   groq: {
-    model: 'llama-3.3-70b-versatile',
-    fallback_model: 'mixtral-8x7b-32768',
+    model: 'openai/gpt-oss-20b',
+    fallback_model: 'openai/gpt-oss-120b',
   },
   mistral: {
-    model: 'mistral-large-latest',
+    model: 'mistral-small-latest',
   },
   openrouter: {
-    model: 'nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free',
+    model: 'nvidia/nemotron-3-nano-30b-a3b',
     fallback_model: 'openrouter/free',
   },
 };
