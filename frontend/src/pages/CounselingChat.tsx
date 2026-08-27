@@ -17,6 +17,7 @@ import {
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChatMarkdown } from '../components/ChatMarkdown';
 import { fadeUp } from '../lib/motion';
+import { formatDateOnly, formatTimeOnly } from '../lib/formatDate';
 import { GlassCard } from '../components/ui/GlassCard';
 import { Button } from '../components/ui/Button';
 import { Skeleton } from '../components/ui/Skeleton';
@@ -248,7 +249,7 @@ export const CounselingChat: React.FC = () => {
                         </p>
                         <div className="flex justify-between items-center text-[10px] text-text-secondary">
                           <span>{c.messages_count} messages</span>
-                          <span>{new Date(c.last_message_at || c.updated_at).toLocaleDateString()}</span>
+                          <span>{formatDateOnly(c.last_message_at || c.updated_at)}</span>
                         </div>
                       </div>
                     </button>
@@ -337,7 +338,7 @@ export const CounselingChat: React.FC = () => {
                           {isUser ? 'You' : 'AI Counselor'}
                         </span>
                         <span>•</span>
-                        <span>{new Date(m.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                        <span>{formatTimeOnly(m.timestamp)}</span>
                         
                         {!isUser && m.feedback && (
                           <span className="text-brand font-bold bg-brand/10 border border-brand/20 px-1.5 py-0.5 rounded text-[8px]">
