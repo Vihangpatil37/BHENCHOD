@@ -22,30 +22,7 @@ export class ConstraintEngine extends BaseScoringEngine {
     const eligibility = career.eligibility;
 
     if (constraints) {
-      // 1. Budget Tier Match (Higher tier = more budget available)
-      const studentBudget = constraints.budget_tier ?? 4;
-      const careerMaxBudget = eligibility?.max_budget_tier ?? 4;
 
-      if (studentBudget < careerMaxBudget) {
-        const diff = careerMaxBudget - studentBudget;
-        if (diff === 1) {
-          penaltiesApplied.push({
-            label:
-              'Available budget tier is slightly below typical cost — government quota or scholarship pathways can help close this gap.',
-            points: 10,
-          });
-        } else {
-          penaltiesApplied.push({
-            label:
-              'Significant budget tier gap — government quota, education loans, or scholarship paths will be highly important to make this reachable.',
-            points: 25,
-          });
-        }
-      } else {
-        matchedFactors.push(
-          'Budget profile matches the cost tier of this career',
-        );
-      }
 
       // 2. Study Duration Match
       const studentMaxDuration = constraints.study_duration_max ?? 5;

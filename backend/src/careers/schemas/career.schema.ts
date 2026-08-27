@@ -53,9 +53,6 @@ export class CareerConstraints {
   @Prop({ required: true, default: 0, min: 0, max: 100 })
   min_english: number;
 
-  @Prop({ required: true, default: 4, min: 1, max: 4 })
-  max_budget_tier: number; // 1 to 4
-
   @Prop({ required: true, default: 3, min: 0 })
   min_study_duration_years: number;
 

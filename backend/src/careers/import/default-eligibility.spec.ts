@@ -36,7 +36,6 @@ describe('computeEligibility', () => {
       expect(eligibility.min_maths).toBe(40);
       expect(eligibility.required_stream).toBe('Commerce');
       expect(eligibility.min_study_duration_years).toBe(3);
-      expect(eligibility.max_budget_tier).toBe(3);
     });
 
     it('should return same for bba', () => {
@@ -54,7 +53,6 @@ describe('computeEligibility', () => {
       );
       expect(eligibility.required_stream).toBe('Arts');
       expect(eligibility.min_study_duration_years).toBe(3);
-      expect(eligibility.max_budget_tier).toBe(2);
     });
   });
 
@@ -68,7 +66,6 @@ describe('computeEligibility', () => {
       expect(eligibility.min_science).toBe(35);
       expect(eligibility.required_stream).toBe('any');
       expect(eligibility.min_study_duration_years).toBe(3);
-      expect(eligibility.max_budget_tier).toBe(2);
     });
   });
 
@@ -79,7 +76,6 @@ describe('computeEligibility', () => {
         'iti_electrician',
       );
       expect(eligibility.min_study_duration_years).toBe(1);
-      expect(eligibility.max_budget_tier).toBe(1);
       expect(eligibility.required_stream).toBe('any');
     });
   });
@@ -88,7 +84,6 @@ describe('computeEligibility', () => {
     it('should return vocational eligibility', () => {
       const { eligibility } = computeEligibility('vocational', 'healthcare');
       expect(eligibility.min_study_duration_years).toBe(0.5);
-      expect(eligibility.max_budget_tier).toBe(1);
     });
   });
 
@@ -149,7 +144,6 @@ describe('computeEligibility', () => {
       );
       expect(eligibility.min_maths).toBe(55);
       expect(eligibility.required_stream).toBe('PCM');
-      expect(eligibility.max_budget_tier).toBe(2);
     });
 
     it('should return relaxed eligibility for freelancing', () => {

@@ -13,7 +13,7 @@ describe('ConstraintEngine', () => {
   it('correctly scores matching constraints', () => {
     const student = {
       constraints: {
-        budget_tier: 3,
+
         study_duration_max: 4,
         willing_to_relocate: true,
         abroad_ok: false,
@@ -24,7 +24,7 @@ describe('ConstraintEngine', () => {
     const career = {
       category_code: 'science',
       eligibility: {
-        max_budget_tier: 3,
+
         min_study_duration_years: 3,
         abroad_required: false,
       },
@@ -39,7 +39,7 @@ describe('ConstraintEngine', () => {
   it('applies penalties for mismatches', () => {
     const student = {
       constraints: {
-        budget_tier: 1,
+
         study_duration_max: 2,
         willing_to_relocate: false,
         abroad_ok: false,
@@ -50,7 +50,7 @@ describe('ConstraintEngine', () => {
     const career = {
       category_code: 'science',
       eligibility: {
-        max_budget_tier: 3,
+
         min_study_duration_years: 4,
         abroad_required: false,
       },

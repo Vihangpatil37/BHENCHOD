@@ -150,7 +150,6 @@ export async function runAIBackfill(app: INestApplicationContext) {
             min_science: toNum(rawElig.min_science, 30),
             min_biology: toNum(rawElig.min_biology, 0),
             min_english: toNum(rawElig.min_english, 0),
-            max_budget_tier: toNum(rawElig.max_budget_tier, 2),
             min_study_duration_years: minStudyYears,
             max_study_duration_years: toNum(
               rawElig.max_study_duration_years,

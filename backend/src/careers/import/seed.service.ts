@@ -241,7 +241,6 @@ export class CareerSeedService {
             min_science: eligibility.min_science,
             min_biology: eligibility.min_biology,
             min_english: 0,
-            max_budget_tier: eligibility.max_budget_tier,
             min_study_duration_years: eligibility.min_study_duration_years,
             max_study_duration_years: eligibility.max_study_duration_years,
             required_stream: eligibility.required_stream || 'any',

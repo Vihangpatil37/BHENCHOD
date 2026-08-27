@@ -12,7 +12,6 @@ export interface EligibilityConstraints {
   required_stream: string; // 'PCM' | 'PCB' | 'PCMB' | 'Commerce' | 'Arts' | 'any'
   min_study_duration_years: number;
   max_study_duration_years: number;
-  max_budget_tier: number;
 }
 
 /** Generic eligibility for a category (applied as a fallback). */
@@ -36,7 +35,6 @@ export const ELIGIBILITY_RULES: Record<
       required_stream: 'any',
       min_study_duration_years: 4,
       max_study_duration_years: 6,
-      max_budget_tier: 3,
     },
     overrides: {
       science_pcm: {
@@ -67,7 +65,6 @@ export const ELIGIBILITY_RULES: Record<
     required_stream: 'Commerce',
     min_study_duration_years: 3,
     max_study_duration_years: 5,
-    max_budget_tier: 3,
   },
 
   arts_humanities: {
@@ -77,7 +74,6 @@ export const ELIGIBILITY_RULES: Record<
     required_stream: 'Arts',
     min_study_duration_years: 3,
     max_study_duration_years: 5,
-    max_budget_tier: 2,
   },
 
   diploma: {
@@ -87,7 +83,6 @@ export const ELIGIBILITY_RULES: Record<
     required_stream: 'any',
     min_study_duration_years: 3,
     max_study_duration_years: 3,
-    max_budget_tier: 2,
   },
 
   iti_polytechnic: {
@@ -97,7 +92,6 @@ export const ELIGIBILITY_RULES: Record<
     required_stream: 'any',
     min_study_duration_years: 1,
     max_study_duration_years: 2,
-    max_budget_tier: 1,
   },
 
   vocational: {
@@ -107,7 +101,6 @@ export const ELIGIBILITY_RULES: Record<
     required_stream: 'any',
     min_study_duration_years: 0.5,
     max_study_duration_years: 2,
-    max_budget_tier: 1,
   },
 
   // government_defence is special-cased — see computeGovernmentEligibility()
@@ -119,7 +112,6 @@ export const ELIGIBILITY_RULES: Record<
       required_stream: 'any',
       min_study_duration_years: 0,
       max_study_duration_years: 0,
-      max_budget_tier: 1,
     },
     overrides: {},
   },
@@ -132,7 +124,6 @@ export const ELIGIBILITY_RULES: Record<
       required_stream: 'PCM',
       min_study_duration_years: 4,
       max_study_duration_years: 6,
-      max_budget_tier: 2,
     },
     overrides: {
       creator_economy: {
@@ -142,7 +133,6 @@ export const ELIGIBILITY_RULES: Record<
         required_stream: 'any',
         min_study_duration_years: 0,
         max_study_duration_years: 2,
-        max_budget_tier: 1,
       },
       freelancing: {
         min_maths: 0,
@@ -151,7 +141,6 @@ export const ELIGIBILITY_RULES: Record<
         required_stream: 'any',
         min_study_duration_years: 0,
         max_study_duration_years: 2,
-        max_budget_tier: 1,
       },
       entrepreneurship_emerging: {
         min_maths: 0,
@@ -160,7 +149,6 @@ export const ELIGIBILITY_RULES: Record<
         required_stream: 'any',
         min_study_duration_years: 0,
         max_study_duration_years: 2,
-        max_budget_tier: 1,
       },
     },
   },
@@ -209,7 +197,6 @@ export function computeGovernmentEligibility(
       required_stream: 'any',
       min_study_duration_years: 0,
       max_study_duration_years: 1,
-      max_budget_tier: 1,
       needs_enrichment: false,
     };
   }
@@ -223,7 +210,6 @@ export function computeGovernmentEligibility(
       required_stream: 'any',
       min_study_duration_years: 0,
       max_study_duration_years: 1,
-      max_budget_tier: 1,
       needs_enrichment: false,
     };
   }
@@ -237,7 +223,6 @@ export function computeGovernmentEligibility(
       required_stream: 'any',
       min_study_duration_years: 3,
       max_study_duration_years: 5,
-      max_budget_tier: 2,
       needs_enrichment: true,
     };
   }
@@ -250,7 +235,6 @@ export function computeGovernmentEligibility(
     required_stream: 'any',
     min_study_duration_years: 0,
     max_study_duration_years: 3,
-    max_budget_tier: 2,
     needs_enrichment: false,
   };
 }
@@ -276,7 +260,6 @@ export function computeEligibility(
         required_stream: result.required_stream,
         min_study_duration_years: result.min_study_duration_years,
         max_study_duration_years: result.max_study_duration_years,
-        max_budget_tier: result.max_budget_tier,
       },
       needs_enrichment: result.needs_enrichment,
     };

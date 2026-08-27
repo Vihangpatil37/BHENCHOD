@@ -304,7 +304,7 @@ export class CareersService implements OnModuleInit {
             eligibility: {
               min_maths: 0,
               min_science: 0,
-              max_budget_tier: 0,
+
               min_study_duration_years: 0,
             },
           },
@@ -318,7 +318,7 @@ export class CareersService implements OnModuleInit {
             min_science: eligibility.min_science || 0,
             min_biology: 0,
             min_english: 0,
-            max_budget_tier: eligibility.max_budget_tier || 4,
+
             min_study_duration_years: eligibility.min_study_duration_years || 3,
             max_study_duration_years:
               (eligibility.min_study_duration_years || 3) + 2,
@@ -631,7 +631,7 @@ export class CareersService implements OnModuleInit {
       min_science: e.min_science ?? 0,
       min_biology: e.min_biology ?? 0,
       min_english: e.min_english ?? 0,
-      max_budget_tier: e.max_budget_tier ?? 4,
+
       min_study_duration_years: e.min_study_duration_years ?? 3,
       max_study_duration_years: e.max_study_duration_years ?? 5,
       required_stream: e.required_stream ?? 'any',
@@ -782,7 +782,7 @@ export class CareersService implements OnModuleInit {
           communication: 80,
           risk_tolerance: 75,
         }),
-        eligibility: makeEligibility({ min_maths: 75, max_budget_tier: 4 }),
+        eligibility: makeEligibility({ min_maths: 75 }),
       },
       {
         career_code: 'financial_analyst',
@@ -867,7 +867,7 @@ export class CareersService implements OnModuleInit {
           risk_tolerance: 90,
           communication: 80,
         }),
-        eligibility: makeEligibility({ max_budget_tier: 4 }),
+        eligibility: makeEligibility({}),
       },
       {
         career_code: 'medical_doctor',

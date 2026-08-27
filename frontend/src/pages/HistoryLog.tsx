@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { fadeUp } from '../lib/motion';
+import { formatDateTime } from '../lib/formatDate';
 
 interface HistoryItem {
   type: 'onboarding' | 'recommendation' | 'saved_career';
@@ -121,7 +122,7 @@ export const HistoryLog: React.FC = () => {
             <div className="absolute left-[21px] top-6 bottom-6 w-0.5 bg-white/[0.03] pointer-events-none" />
 
             {historyItems.map((item, index) => {
-              const formattedDate = new Date(item.timestamp).toLocaleString();
+              const formattedDate = formatDateTime(item.timestamp);
               let Icon = History;
               let dotColor = 'border-white/10 bg-bg text-text-muted/60';
               
