@@ -24,6 +24,8 @@ import { GlassCard } from '../components/ui/GlassCard';
 import { Button } from '../components/ui/Button';
 import { Skeleton } from '../components/ui/Skeleton';
 import confetti from 'canvas-confetti';
+import { INDIA_STATES_CITIES } from '../lib/indiaStatesCities';
+import { NATIONAL_BOARDS, STATE_BOARDS, ALL_BOARDS } from '../lib/indiaSchoolBoards';
 
 const STEPS = [
   { key: 'personal', label: 'Personal', icon: User },
@@ -73,6 +75,7 @@ export const Onboarding: React.FC = () => {
   const [saving, setSaving] = useState(false);
   const [profile, setProfile] = useState<any>(null);
   const [errorMessage, setErrorMessage] = useState('');
+  const [isOtherCity, setIsOtherCity] = useState(false);
 
   // AI Reacting Transition States
   const [isAiReacting, setIsAiReacting] = useState(false);
@@ -97,6 +100,7 @@ export const Onboarding: React.FC = () => {
   };
 
   const [academic, setAcademic] = useState({
+    postClass10Path: 'none',
     class10: {
       status: 'pursuing',
       percentage: 80,
@@ -112,22 +116,30 @@ export const Onboarding: React.FC = () => {
       favorite_subjects: [] as string[],
       weak_subjects: [] as string[],
     },
+    diploma: {
+      status: '',
+      course: '',
+      percentage: 80,
+      subjects: {} as Record<string, number>,
+      favorite_subjects: [] as string[],
+      weak_subjects: [] as string[],
+    },
   });
   const [interests, setInterests] = useState<Record<string, number>>(
-    INTEREST_FIELDS.reduce((acc, f) => ({ ...acc, [f]: 50 }), {})
+    INTEREST_FIELDS.reduce((acc, f) => ({ ...acc, [f]: 0 }), {})
   );
   const [skills, setSkills] = useState<Record<string, number>>(
-    SKILL_FIELDS.reduce((acc, f) => ({ ...acc, [f]: 3 }), {})
+    SKILL_FIELDS.reduce((acc, f) => ({ ...acc, [f]: 0 }), {})
   );
   const [goals, setGoals] = useState<string[]>([]);
   const [workPreferences, setWorkPreferences] = useState<string[]>([]);
   const [constraints, setConstraints] = useState({
     govt_vs_private: 'any',
-    budget_tier: 3,
     study_duration_max: 4,
     willing_to_relocate: true,
     abroad_ok: false,
-    preferred_location: '',
+    preferred_state: '',
+    preferred_city: '',
   });
   const [scenarioResponses, setScenarioResponses] = useState<Record<string, string>>({});
   const [scenarios, setScenarios] = useState<any[]>([]);
@@ -150,7 +162,15 @@ export const Onboarding: React.FC = () => {
       const res: any = await client.get('/onboarding/resume');
       setProfile(res);
       
-      if (res.personal) setPersonal({ ...personal, ...res.personal });
+      if (res.personal) {
+        setPersonal({ ...personal, ...res.personal });
+        if (res.personal.state && res.personal.city) {
+          const stateCities = INDIA_STATES_CITIES[res.personal.state];
+          if (stateCities && !stateCities.includes(res.personal.city)) {
+            setIsOtherCity(true);
+          }
+        }
+      }
       if (res.academic) {
         const hasNew = res.academic.class10 || res.academic.class12;
         if (hasNew) {
@@ -219,7 +239,14 @@ export const Onboarding: React.FC = () => {
       case 'skills': return skills;
       case 'goals': return { goals };
       case 'work_preferences': return { work_preferences: workPreferences };
-      case 'constraints': return constraints;
+      case 'constraints': {
+        const { preferred_state, preferred_city, ...rest } = constraints as any;
+        const location = preferred_city ? `${preferred_city}, ${preferred_state}` : preferred_state;
+        return {
+          ...rest,
+          preferred_location: location
+        };
+      }
       case 'scenarios':
         return {
           scenario_responses: Object.entries(scenarioResponses).map(([qId, opt]) => {
@@ -420,17 +447,25 @@ export const Onboarding: React.FC = () => {
                     type="date"
                     value={personal.dob ? personal.dob.split('T')[0] : ''}
                     onChange={(e) => setPersonal({ ...personal, dob: e.target.value })}
-                    className="w-full bg-white/[0.05] border border-solid border-white/[0.08] rounded-[18px] px-4 py-3 text-sm text-text-primary placeholder-white/30 focus:outline-none focus:border-ai-cyan/50 focus:ring-1 focus:ring-ai-cyan/50 transition-all duration-180"
+                    onClick={(e) => {
+                      try { e.currentTarget.showPicker(); } catch (err) {}
+                    }}
+                    onKeyDown={(e) => e.preventDefault()}
+                    max={new Date().toISOString().split('T')[0]}
+                    className="w-full bg-white/[0.05] border border-solid border-white/[0.08] rounded-[18px] px-4 py-3 text-sm text-text-primary placeholder-white/30 focus:outline-none focus:border-ai-cyan/50 focus:ring-1 focus:ring-ai-cyan/50 transition-all duration-180 cursor-pointer"
                   />
                 </div>
                 <div className="space-y-2">
                   <label className="text-xs font-semibold uppercase tracking-wider text-text-secondary">Age</label>
-                  <input
-                    type="number"
+                  <select
                     value={personal.age}
                     onChange={(e) => setPersonal({ ...personal, age: parseInt(e.target.value, 10) || 16 })}
-                    className="w-full bg-white/[0.05] border border-solid border-white/[0.08] rounded-[18px] px-4 py-3 text-sm text-text-primary placeholder-white/30 focus:outline-none focus:border-ai-cyan/50 focus:ring-1 focus:ring-ai-cyan/50 transition-all duration-180"
-                  />
+                    className="w-full bg-white/[0.05] border border-solid border-white/[0.08] rounded-[18px] px-4 py-3 text-sm text-text-primary focus:outline-none focus:border-ai-cyan/50 focus:ring-1 focus:ring-ai-cyan/50 transition-all duration-180"
+                  >
+                    {Array.from({ length: 26 }, (_, i) => i + 15).map(age => (
+                      <option key={age} value={age}>{age}</option>
+                    ))}
+                  </select>
                 </div>
                 <div className="space-y-2">
                   <label className="text-xs font-semibold uppercase tracking-wider text-text-secondary">Gender</label>
@@ -445,34 +480,75 @@ export const Onboarding: React.FC = () => {
                   </select>
                 </div>
                 <div className="space-y-2">
-                  <label className="text-xs font-semibold uppercase tracking-wider text-text-secondary">City</label>
-                  <input
-                    type="text"
-                    value={personal.city}
-                    onChange={(e) => setPersonal({ ...personal, city: e.target.value })}
-                    placeholder="e.g. Pune"
-                    className="w-full bg-white/[0.05] border border-solid border-white/[0.08] rounded-[18px] px-4 py-3 text-sm text-text-primary placeholder-white/30 focus:outline-none focus:border-ai-cyan/50 focus:ring-1 focus:ring-ai-cyan/50 transition-all duration-180"
-                  />
+                  <label className="text-xs font-semibold uppercase tracking-wider text-text-secondary">State</label>
+                  <select
+                    value={personal.state}
+                    onChange={(e) => {
+                      const selectedState = e.target.value;
+                      const newBoard = STATE_BOARDS[selectedState] || personal.board;
+                      setPersonal({ ...personal, state: selectedState, city: '', board: newBoard });
+                      setIsOtherCity(false);
+                    }}
+                    className="w-full bg-white/[0.05] border border-solid border-white/[0.08] rounded-[18px] px-4 py-3 text-sm text-text-primary placeholder-white/30 focus:outline-none focus:border-ai-cyan/50 focus:ring-1 focus:ring-ai-cyan/50 transition-all duration-180 appearance-none cursor-pointer"
+                  >
+                    <option value="" disabled>Select State</option>
+                    {Object.keys(INDIA_STATES_CITIES).map(state => (
+                      <option key={state} value={state}>{state}</option>
+                    ))}
+                  </select>
                 </div>
                 <div className="space-y-2">
-                  <label className="text-xs font-semibold uppercase tracking-wider text-text-secondary">State</label>
-                  <input
-                    type="text"
-                    value={personal.state}
-                    onChange={(e) => setPersonal({ ...personal, state: e.target.value })}
-                    placeholder="e.g. Maharashtra"
-                    className="w-full bg-white/[0.05] border border-solid border-white/[0.08] rounded-[18px] px-4 py-3 text-sm text-text-primary placeholder-white/30 focus:outline-none focus:border-ai-cyan/50 focus:ring-1 focus:ring-ai-cyan/50 transition-all duration-180"
-                  />
+                  <label className="text-xs font-semibold uppercase tracking-wider text-text-secondary">City</label>
+                  <select
+                    value={isOtherCity ? 'Other' : personal.city}
+                    onChange={(e) => {
+                      if (e.target.value === 'Other') {
+                        setIsOtherCity(true);
+                        setPersonal({ ...personal, city: '' });
+                      } else {
+                        setIsOtherCity(false);
+                        setPersonal({ ...personal, city: e.target.value });
+                      }
+                    }}
+                    disabled={!personal.state}
+                    className="w-full bg-white/[0.05] border border-solid border-white/[0.08] rounded-[18px] px-4 py-3 text-sm text-text-primary placeholder-white/30 focus:outline-none focus:border-ai-cyan/50 focus:ring-1 focus:ring-ai-cyan/50 transition-all duration-180 appearance-none cursor-pointer disabled:opacity-50"
+                  >
+                    <option value="" disabled>Select City</option>
+                    {personal.state && INDIA_STATES_CITIES[personal.state]?.map(city => (
+                      <option key={city} value={city}>{city}</option>
+                    ))}
+                    <option value="Other">Other (Type manually)</option>
+                  </select>
+                  
+                  {isOtherCity && (
+                    <input
+                      type="text"
+                      value={personal.city}
+                      onChange={(e) => setPersonal({ ...personal, city: e.target.value })}
+                      placeholder="Enter your city name"
+                      className="w-full mt-2 bg-white/[0.05] border border-solid border-white/[0.08] rounded-[18px] px-4 py-3 text-sm text-text-primary placeholder-white/30 focus:outline-none focus:border-ai-cyan/50 focus:ring-1 focus:ring-ai-cyan/50 transition-all duration-180"
+                    />
+                  )}
                 </div>
                 <div className="space-y-2 md:col-span-2">
                   <label className="text-xs font-semibold uppercase tracking-wider text-text-secondary">Education Board</label>
-                  <input
-                    type="text"
+                  <select
                     value={personal.board}
                     onChange={(e) => setPersonal({ ...personal, board: e.target.value })}
-                    placeholder="e.g. CBSE / ICSE"
-                    className="w-full bg-white/[0.05] border border-solid border-white/[0.08] rounded-[18px] px-4 py-3 text-sm text-text-primary placeholder-white/30 focus:outline-none focus:border-ai-cyan/50 focus:ring-1 focus:ring-ai-cyan/50 transition-all duration-180"
-                  />
+                    className="w-full bg-white/[0.05] border border-solid border-white/[0.08] rounded-[18px] px-4 py-3 text-sm text-text-primary focus:outline-none focus:border-ai-cyan/50 focus:ring-1 focus:ring-ai-cyan/50 transition-all duration-180 appearance-none cursor-pointer"
+                  >
+                    <option value="" disabled>Select Education Board</option>
+                    <optgroup label="State Boards (Auto-selected by State)">
+                      {Object.values(STATE_BOARDS).map(board => (
+                        <option key={board} value={board}>{board}</option>
+                      ))}
+                    </optgroup>
+                    <optgroup label="National Boards">
+                      {NATIONAL_BOARDS.map(board => (
+                        <option key={board} value={board}>{board}</option>
+                      ))}
+                    </optgroup>
+                  </select>
                 </div>
               </div>
             </div>
@@ -506,9 +582,13 @@ export const Onboarding: React.FC = () => {
 
                 <div className="space-y-2">
                   <label className="text-xs font-semibold uppercase tracking-wider text-text-secondary">Class 10 Overall Percentage</label>
-                  <input type="number" min="0" max="100"
+                  <input type="text"
                     value={academic.class10.percentage}
-                    onChange={(e) => setAcademic({ ...academic, class10: { ...academic.class10, percentage: parseFloat(e.target.value) || 0 } })}
+                    onChange={(e) => {
+                      const val = e.target.value.replace(/\D/g, '');
+                      const parsed = val === '' ? '' : Math.min(100, parseInt(val, 10));
+                      setAcademic({ ...academic, class10: { ...academic.class10, percentage: parsed as any } });
+                    }}
                     className="w-full bg-white/[0.05] border border-solid border-white/[0.08] rounded-[18px] px-4 py-3 text-sm text-text-primary focus:outline-none focus:border-ai-cyan/50 transition-all" />
                   <span className="text-[10px] text-text-secondary/60">Enter a value between 0 and 100</span>
                 </div>
@@ -519,12 +599,16 @@ export const Onboarding: React.FC = () => {
                     {Object.entries(academic.class10.subjects).map(([subj, score]) => (
                       <div key={subj} className="bg-white/[0.03] border border-white/[0.06] p-3 rounded-[18px] flex flex-col space-y-1 items-center">
                         <span className="text-xs font-bold text-text-secondary uppercase text-center leading-tight">{subj === 'maths' ? 'Mathematics' : subj === 'sst' ? 'SST' : subj}</span>
-                        <input type="number" min="0" max="100"
+                        <input type="text"
                           value={score}
-                          onChange={(e) => setAcademic({
-                            ...academic,
-                            class10: { ...academic.class10, subjects: { ...academic.class10.subjects, [subj]: parseInt(e.target.value) || 0 } }
-                          })}
+                          onChange={(e) => {
+                            const val = e.target.value.replace(/\D/g, '');
+                            const parsed = val === '' ? '' : Math.min(100, parseInt(val, 10));
+                            setAcademic({
+                              ...academic,
+                              class10: { ...academic.class10, subjects: { ...academic.class10.subjects, [subj]: parsed as any } }
+                            });
+                          }}
                           className="w-full bg-transparent text-center text-sm font-semibold text-text-primary focus:outline-none border-b border-transparent focus:border-ai-cyan/50" />
                       </div>
                     ))}
@@ -534,37 +618,90 @@ export const Onboarding: React.FC = () => {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <label className="text-xs font-semibold uppercase tracking-wider text-text-secondary">Favorite Subjects</label>
-                    <input type="text"
-                      value={academic.class10.favorite_subjects.join(', ')}
-                      onChange={(e) => setAcademic({ ...academic, class10: { ...academic.class10, favorite_subjects: e.target.value.split(',').map(s => s.trim().toLowerCase()).filter(Boolean) } })}
-                      placeholder="e.g. maths, computer"
-                      className="w-full bg-white/[0.05] border border-solid border-white/[0.08] rounded-[18px] px-4 py-3 text-sm text-text-primary focus:outline-none focus:border-ai-cyan/50 transition-all" />
+                    <div className="flex flex-wrap gap-2">
+                      {Object.keys(academic.class10.subjects).map((subj) => {
+                        const isFav = academic.class10.favorite_subjects.includes(subj);
+                        const isWeak = academic.class10.weak_subjects.includes(subj);
+                        return (
+                          <button key={subj} type="button"
+                            disabled={isWeak}
+                            onClick={() => {
+                              if (isFav) {
+                                setAcademic({ ...academic, class10: { ...academic.class10, favorite_subjects: academic.class10.favorite_subjects.filter(s => s !== subj) } });
+                              } else {
+                                setAcademic({
+                                  ...academic,
+                                  class10: {
+                                    ...academic.class10,
+                                    favorite_subjects: [...academic.class10.favorite_subjects, subj],
+                                    weak_subjects: academic.class10.weak_subjects.filter(s => s !== subj)
+                                  }
+                                });
+                              }
+                            }}
+                            className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-all border ${isFav ? 'bg-ai-cyan/20 border-ai-cyan text-white' : 'bg-white/[0.03] border-white/[0.08] text-text-secondary hover:bg-white/[0.08]'} ${isWeak ? 'opacity-50 cursor-not-allowed' : ''}`}>
+                            {subj === 'maths' ? 'Mathematics' : subj === 'sst' ? 'SST' : subj}
+                          </button>
+                        );
+                      })}
+                    </div>
                   </div>
                   <div className="space-y-2">
                     <label className="text-xs font-semibold uppercase tracking-wider text-text-secondary">Weak Subjects</label>
-                    <input type="text"
-                      value={academic.class10.weak_subjects.join(', ')}
-                      onChange={(e) => setAcademic({ ...academic, class10: { ...academic.class10, weak_subjects: e.target.value.split(',').map(s => s.trim().toLowerCase()).filter(Boolean) } })}
-                      placeholder="e.g. sst, english"
-                      className="w-full bg-white/[0.05] border border-solid border-white/[0.08] rounded-[18px] px-4 py-3 text-sm text-text-primary focus:outline-none focus:border-ai-cyan/50 transition-all" />
+                    <div className="flex flex-wrap gap-2">
+                      {Object.keys(academic.class10.subjects).map((subj) => {
+                        const isFav = academic.class10.favorite_subjects.includes(subj);
+                        const isWeak = academic.class10.weak_subjects.includes(subj);
+                        return (
+                          <button key={subj} type="button"
+                            disabled={isFav}
+                            onClick={() => {
+                              if (isWeak) {
+                                setAcademic({ ...academic, class10: { ...academic.class10, weak_subjects: academic.class10.weak_subjects.filter(s => s !== subj) } });
+                              } else {
+                                setAcademic({
+                                  ...academic,
+                                  class10: {
+                                    ...academic.class10,
+                                    weak_subjects: [...academic.class10.weak_subjects, subj],
+                                    favorite_subjects: academic.class10.favorite_subjects.filter(s => s !== subj)
+                                  }
+                                });
+                              }
+                            }}
+                            className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-all border ${isWeak ? 'bg-error/20 border-error text-white' : 'bg-white/[0.03] border-white/[0.08] text-text-secondary hover:bg-white/[0.08]'} ${isFav ? 'opacity-50 cursor-not-allowed' : ''}`}>
+                            {subj === 'maths' ? 'Mathematics' : subj === 'sst' ? 'SST' : subj}
+                          </button>
+                        );
+                      })}
+                    </div>
                   </div>
                 </div>
               </div>
 
-              {/* Section 2: Class 12 */}
+              {/* Section 2: Post-Class 10 Path */}
               <div className="bg-white/[0.02] border border-white/[0.06] rounded-[24px] p-5 space-y-4">
-                <h3 className="text-xs font-bold text-text-secondary uppercase tracking-wider">Class 12 Academic Details</h3>
+                <h3 className="text-xs font-bold text-text-secondary uppercase tracking-wider">What did you pursue after Class 10?</h3>
+                
+                <div className="flex gap-4">
+                  {[
+                    { val: 'class12', label: 'Class 12' },
+                    { val: 'diploma', label: 'Diploma' },
+                    { val: 'none', label: 'Nothing Yet' }
+                  ].map((opt) => (
+                    <label key={opt.val} className="flex items-center space-x-2 text-sm text-text-primary cursor-pointer select-none">
+                      <input type="radio" name="postClass10" value={opt.val}
+                        checked={academic.postClass10Path === opt.val}
+                        onChange={(e) => setAcademic({ ...academic, postClass10Path: e.target.value })}
+                        className="text-brand focus:ring-0" />
+                      <span>{opt.label}</span>
+                    </label>
+                  ))}
+                </div>
 
-                <label className="flex items-center space-x-3 text-sm text-text-primary cursor-pointer select-none">
-                  <input type="checkbox"
-                    checked={!!academic.class12.status}
-                    onChange={(e) => setAcademic({ ...academic, class12: { ...academic.class12, status: e.target.checked ? 'pursuing' : '', stream: '', subjects: {} } })}
-                    className="rounded text-brand focus:ring-0" />
-                  <span>I am studying / have completed Class 12</span>
-                </label>
-
-                {academic.class12.status && (
-                  <>
+                {academic.postClass10Path === 'class12' && (
+                  <div className="mt-4 pt-4 border-t border-white/[0.06] space-y-4">
+                    <h3 className="text-xs font-bold text-text-secondary uppercase tracking-wider">Class 12 Academic Details</h3>
                     <div className="space-y-2">
                       <label className="text-xs font-semibold uppercase tracking-wider text-text-secondary block">Status</label>
                       <div className="flex gap-4">
@@ -574,7 +711,7 @@ export const Onboarding: React.FC = () => {
                               checked={academic.class12.status === opt}
                               onChange={(e) => setAcademic({ ...academic, class12: { ...academic.class12, status: e.target.value } })}
                               className="text-brand focus:ring-0" />
-                            <span className="capitalize">{opt} Class 12</span>
+                            <span className="capitalize">{opt}</span>
                           </label>
                         ))}
                       </div>
@@ -592,21 +729,24 @@ export const Onboarding: React.FC = () => {
                         <option value="pcb">Science (PCB)</option>
                         <option value="commerce">Commerce</option>
                         <option value="arts">Arts</option>
-                        <option value="diploma">Diploma</option>
                         <option value="other">Other</option>
                       </select>
                     </div>
 
                     <div className="space-y-2">
-                      <label className="text-xs font-semibold uppercase tracking-wider text-text-secondary">Class 12 Overall Percentage</label>
-                      <input type="number" min="0" max="100"
+                      <label className="text-xs font-semibold uppercase tracking-wider text-text-secondary">Overall Percentage</label>
+                      <input type="text"
                         value={academic.class12.percentage}
-                        onChange={(e) => setAcademic({ ...academic, class12: { ...academic.class12, percentage: parseFloat(e.target.value) || 0 } })}
+                        onChange={(e) => {
+                          const val = e.target.value.replace(/\D/g, '');
+                          const parsed = val === '' ? '' : Math.min(100, parseInt(val, 10));
+                          setAcademic({ ...academic, class12: { ...academic.class12, percentage: parsed as any } });
+                        }}
                         className="w-full bg-white/[0.05] border border-solid border-white/[0.08] rounded-[18px] px-4 py-3 text-sm text-text-primary focus:outline-none focus:border-ai-cyan/50" />
                       <span className="text-[10px] text-text-secondary/60">Enter a value between 0 and 100</span>
                     </div>
 
-                    {academic.class12.stream && !['diploma', 'other'].includes(academic.class12.stream) && (
+                    {academic.class12.stream && academic.class12.stream !== 'other' && (
                       <div className="space-y-3">
                         <span className="text-xs font-bold text-text-secondary block border-b border-white/[0.06] pb-2">Subject Performance (0 - 100)</span>
                         <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
@@ -615,12 +755,16 @@ export const Onboarding: React.FC = () => {
                             return (
                               <div key={key} className="bg-white/[0.03] border border-white/[0.06] p-3 rounded-[18px] flex flex-col space-y-1 items-center">
                                 <span className="text-xs font-bold text-text-secondary uppercase text-center leading-tight">{subj}</span>
-                                <input type="number" min="0" max="100"
-                                  value={academic.class12.subjects[key] || 0}
-                                  onChange={(e) => setAcademic({
-                                    ...academic,
-                                    class12: { ...academic.class12, subjects: { ...academic.class12.subjects, [key]: parseInt(e.target.value) || 0 } }
-                                  })}
+                                <input type="text"
+                                  value={academic.class12.subjects[key] ?? ''}
+                                  onChange={(e) => {
+                                    const val = e.target.value.replace(/\D/g, '');
+                                    const parsed = val === '' ? '' : Math.min(100, parseInt(val, 10));
+                                    setAcademic({
+                                      ...academic,
+                                      class12: { ...academic.class12, subjects: { ...academic.class12.subjects, [key]: parsed as any } }
+                                    });
+                                  }}
                                   className="w-full bg-transparent text-center text-sm font-semibold text-text-primary focus:outline-none border-b border-transparent focus:border-ai-cyan/50" />
                               </div>
                             );
@@ -629,7 +773,7 @@ export const Onboarding: React.FC = () => {
                       </div>
                     )}
 
-                    {['diploma', 'other'].includes(academic.class12.stream) && (
+                    {academic.class12.stream === 'other' && (
                       <div className="space-y-3">
                         <span className="text-xs font-bold text-text-secondary block border-b border-white/[0.06] pb-2">Subject Performance (0 - 100)</span>
                         <div className="space-y-2">
@@ -643,11 +787,15 @@ export const Onboarding: React.FC = () => {
                                 }}
                                 placeholder="Subject name"
                                 className="flex-1 bg-white/[0.05] border border-solid border-white/[0.08] rounded-[18px] px-3 py-2 text-sm text-text-primary focus:outline-none focus:border-ai-cyan/50" />
-                              <input type="number" min="0" max="100" value={score}
-                                onChange={(e) => setAcademic({
-                                  ...academic,
-                                  class12: { ...academic.class12, subjects: { ...academic.class12.subjects, [subj]: parseInt(e.target.value) || 0 } }
-                                })}
+                              <input type="text" value={score}
+                                onChange={(e) => {
+                                  const val = e.target.value.replace(/\D/g, '');
+                                  const parsed = val === '' ? '' : Math.min(100, parseInt(val, 10));
+                                  setAcademic({
+                                    ...academic,
+                                    class12: { ...academic.class12, subjects: { ...academic.class12.subjects, [subj]: parsed as any } }
+                                  });
+                                }}
                                 className="w-20 bg-white/[0.05] border border-solid border-white/[0.08] rounded-[18px] px-3 py-2 text-sm text-text-primary focus:outline-none focus:border-ai-cyan/50" />
                               <button onClick={() => {
                                 const entries = Object.entries(academic.class12.subjects).filter(([k]) => k !== subj);
@@ -668,22 +816,221 @@ export const Onboarding: React.FC = () => {
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div className="space-y-2">
                         <label className="text-xs font-semibold uppercase tracking-wider text-text-secondary">Favorite Subjects</label>
-                        <input type="text"
-                          value={academic.class12.favorite_subjects.join(', ')}
-                          onChange={(e) => setAcademic({ ...academic, class12: { ...academic.class12, favorite_subjects: e.target.value.split(',').map(s => s.trim().toLowerCase()).filter(Boolean) } })}
-                          placeholder="e.g. physics, maths"
-                          className="w-full bg-white/[0.05] border border-solid border-white/[0.08] rounded-[18px] px-4 py-3 text-sm text-text-primary focus:outline-none focus:border-ai-cyan/50 transition-all" />
+                        <div className="flex flex-wrap gap-2">
+                          {(STREAM_SUBJECTS[academic.class12.stream] ? STREAM_SUBJECTS[academic.class12.stream].map(s => SUBJECT_KEY[s]) : Object.keys(academic.class12.subjects)).map((subj) => {
+                            if (!subj) return null;
+                            let display = subj;
+                            if (STREAM_SUBJECTS[academic.class12.stream]) {
+                              display = Object.keys(SUBJECT_KEY).find(k => SUBJECT_KEY[k] === subj) || subj;
+                            }
+                            const isFav = academic.class12.favorite_subjects.includes(subj);
+                            const isWeak = academic.class12.weak_subjects.includes(subj);
+                            return (
+                              <button key={subj} type="button"
+                                disabled={isWeak}
+                                onClick={() => {
+                                  if (isFav) {
+                                    setAcademic({ ...academic, class12: { ...academic.class12, favorite_subjects: academic.class12.favorite_subjects.filter(s => s !== subj) } });
+                                  } else {
+                                    setAcademic({
+                                      ...academic,
+                                      class12: {
+                                        ...academic.class12,
+                                        favorite_subjects: [...academic.class12.favorite_subjects, subj],
+                                        weak_subjects: academic.class12.weak_subjects.filter(s => s !== subj)
+                                      }
+                                    });
+                                  }
+                                }}
+                                className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-all border ${isFav ? 'bg-ai-cyan/20 border-ai-cyan text-white' : 'bg-white/[0.03] border-white/[0.08] text-text-secondary hover:bg-white/[0.08]'} ${isWeak ? 'opacity-50 cursor-not-allowed' : ''}`}>
+                                {display}
+                              </button>
+                            );
+                          })}
+                        </div>
                       </div>
                       <div className="space-y-2">
                         <label className="text-xs font-semibold uppercase tracking-wider text-text-secondary">Weak Subjects</label>
-                        <input type="text"
-                          value={academic.class12.weak_subjects.join(', ')}
-                          onChange={(e) => setAcademic({ ...academic, class12: { ...academic.class12, weak_subjects: e.target.value.split(',').map(s => s.trim().toLowerCase()).filter(Boolean) } })}
-                          placeholder="e.g. chemistry, english"
-                          className="w-full bg-white/[0.05] border border-solid border-white/[0.08] rounded-[18px] px-4 py-3 text-sm text-text-primary focus:outline-none focus:border-ai-cyan/50 transition-all" />
+                        <div className="flex flex-wrap gap-2">
+                          {(STREAM_SUBJECTS[academic.class12.stream] ? STREAM_SUBJECTS[academic.class12.stream].map(s => SUBJECT_KEY[s]) : Object.keys(academic.class12.subjects)).map((subj) => {
+                            if (!subj) return null;
+                            let display = subj;
+                            if (STREAM_SUBJECTS[academic.class12.stream]) {
+                              display = Object.keys(SUBJECT_KEY).find(k => SUBJECT_KEY[k] === subj) || subj;
+                            }
+                            const isFav = academic.class12.favorite_subjects.includes(subj);
+                            const isWeak = academic.class12.weak_subjects.includes(subj);
+                            return (
+                              <button key={subj} type="button"
+                                disabled={isFav}
+                                onClick={() => {
+                                  if (isWeak) {
+                                    setAcademic({ ...academic, class12: { ...academic.class12, weak_subjects: academic.class12.weak_subjects.filter(s => s !== subj) } });
+                                  } else {
+                                    setAcademic({
+                                      ...academic,
+                                      class12: {
+                                        ...academic.class12,
+                                        weak_subjects: [...academic.class12.weak_subjects, subj],
+                                        favorite_subjects: academic.class12.favorite_subjects.filter(s => s !== subj)
+                                      }
+                                    });
+                                  }
+                                }}
+                                className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-all border ${isWeak ? 'bg-error/20 border-error text-white' : 'bg-white/[0.03] border-white/[0.08] text-text-secondary hover:bg-white/[0.08]'} ${isFav ? 'opacity-50 cursor-not-allowed' : ''}`}>
+                                {display}
+                              </button>
+                            );
+                          })}
+                        </div>
                       </div>
                     </div>
-                  </>
+                  </div>
+                )}
+
+                {academic.postClass10Path === 'diploma' && (
+                  <div className="mt-4 pt-4 border-t border-white/[0.06] space-y-4">
+                    <h3 className="text-xs font-bold text-text-secondary uppercase tracking-wider">Diploma Academic Details</h3>
+                    <div className="space-y-2">
+                      <label className="text-xs font-semibold uppercase tracking-wider text-text-secondary block">Status</label>
+                      <div className="flex gap-4">
+                        {['pursuing', 'completed'].map((opt) => (
+                          <label key={opt} className="flex items-center space-x-2 text-sm text-text-primary cursor-pointer select-none">
+                            <input type="radio" name="diplomastatus" value={opt}
+                              checked={academic.diploma.status === opt}
+                              onChange={(e) => setAcademic({ ...academic, diploma: { ...academic.diploma, status: e.target.value } })}
+                              className="text-brand focus:ring-0" />
+                            <span className="capitalize">{opt}</span>
+                          </label>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <label className="text-xs font-semibold uppercase tracking-wider text-text-secondary">Course / Branch Name</label>
+                      <input type="text"
+                        value={academic.diploma.course}
+                        onChange={(e) => setAcademic({ ...academic, diploma: { ...academic.diploma, course: e.target.value } })}
+                        placeholder="e.g. Diploma in Mechanical Engineering"
+                        className="w-full bg-white/[0.05] border border-solid border-white/[0.08] rounded-[18px] px-4 py-3 text-sm text-text-primary focus:outline-none focus:border-ai-cyan/50 transition-all" />
+                    </div>
+
+                    <div className="space-y-2">
+                      <label className="text-xs font-semibold uppercase tracking-wider text-text-secondary">Overall Percentage</label>
+                      <input type="text"
+                        value={academic.diploma.percentage}
+                        onChange={(e) => {
+                          const val = e.target.value.replace(/\D/g, '');
+                          const parsed = val === '' ? '' : Math.min(100, parseInt(val, 10));
+                          setAcademic({ ...academic, diploma: { ...academic.diploma, percentage: parsed as any } });
+                        }}
+                        className="w-full bg-white/[0.05] border border-solid border-white/[0.08] rounded-[18px] px-4 py-3 text-sm text-text-primary focus:outline-none focus:border-ai-cyan/50 transition-all" />
+                      <span className="text-[10px] text-text-secondary/60">Enter a value between 0 and 100</span>
+                    </div>
+
+                    <div className="space-y-3">
+                      <span className="text-xs font-bold text-text-secondary block border-b border-white/[0.06] pb-2">Subject Performance (0 - 100)</span>
+                      <div className="space-y-2">
+                        {Object.entries(academic.diploma.subjects).map(([subj, score], idx) => (
+                          <div key={idx} className="flex gap-2 items-center">
+                            <input type="text" value={subj}
+                              onChange={(e) => {
+                                const entries = Object.entries(academic.diploma.subjects);
+                                entries[idx] = [e.target.value, entries[idx][1]];
+                                setAcademic({ ...academic, diploma: { ...academic.diploma, subjects: Object.fromEntries(entries) } });
+                              }}
+                              placeholder="Subject name"
+                              className="flex-1 bg-white/[0.05] border border-solid border-white/[0.08] rounded-[18px] px-3 py-2 text-sm text-text-primary focus:outline-none focus:border-ai-cyan/50 transition-all" />
+                            <input type="text" value={score}
+                              onChange={(e) => {
+                                const val = e.target.value.replace(/\D/g, '');
+                                const parsed = val === '' ? '' : Math.min(100, parseInt(val, 10));
+                                setAcademic({
+                                  ...academic,
+                                  diploma: { ...academic.diploma, subjects: { ...academic.diploma.subjects, [subj]: parsed as any } }
+                                });
+                              }}
+                              className="w-20 bg-white/[0.05] border border-solid border-white/[0.08] rounded-[18px] px-3 py-2 text-sm text-text-primary focus:outline-none focus:border-ai-cyan/50 transition-all" />
+                            <button onClick={() => {
+                              const entries = Object.entries(academic.diploma.subjects).filter(([k]) => k !== subj);
+                              setAcademic({ ...academic, diploma: { ...academic.diploma, subjects: Object.fromEntries(entries) } });
+                            }}
+                              className="text-text-secondary hover:text-error text-lg px-2">&times;</button>
+                          </div>
+                        ))}
+                        <button onClick={() => setAcademic({
+                          ...academic,
+                          diploma: { ...academic.diploma, subjects: { ...academic.diploma.subjects, '': 0 } }
+                        })}
+                          className="text-xs text-brand font-semibold">+ Add Subject</button>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <label className="text-xs font-semibold uppercase tracking-wider text-text-secondary">Favorite Subjects</label>
+                        <div className="flex flex-wrap gap-2">
+                          {Object.keys(academic.diploma.subjects).map((subj) => {
+                            if (!subj) return null;
+                            const isFav = academic.diploma.favorite_subjects.includes(subj);
+                            const isWeak = academic.diploma.weak_subjects.includes(subj);
+                            return (
+                              <button key={subj} type="button"
+                                disabled={isWeak}
+                                onClick={() => {
+                                  if (isFav) {
+                                    setAcademic({ ...academic, diploma: { ...academic.diploma, favorite_subjects: academic.diploma.favorite_subjects.filter(s => s !== subj) } });
+                                  } else {
+                                    setAcademic({
+                                      ...academic,
+                                      diploma: {
+                                        ...academic.diploma,
+                                        favorite_subjects: [...academic.diploma.favorite_subjects, subj],
+                                        weak_subjects: academic.diploma.weak_subjects.filter(s => s !== subj)
+                                      }
+                                    });
+                                  }
+                                }}
+                                className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-all border ${isFav ? 'bg-ai-cyan/20 border-ai-cyan text-white' : 'bg-white/[0.03] border-white/[0.08] text-text-secondary hover:bg-white/[0.08]'} ${isWeak ? 'opacity-50 cursor-not-allowed' : ''}`}>
+                                {subj}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-xs font-semibold uppercase tracking-wider text-text-secondary">Weak Subjects</label>
+                        <div className="flex flex-wrap gap-2">
+                          {Object.keys(academic.diploma.subjects).map((subj) => {
+                            if (!subj) return null;
+                            const isFav = academic.diploma.favorite_subjects.includes(subj);
+                            const isWeak = academic.diploma.weak_subjects.includes(subj);
+                            return (
+                              <button key={subj} type="button"
+                                disabled={isFav}
+                                onClick={() => {
+                                  if (isWeak) {
+                                    setAcademic({ ...academic, diploma: { ...academic.diploma, weak_subjects: academic.diploma.weak_subjects.filter(s => s !== subj) } });
+                                  } else {
+                                    setAcademic({
+                                      ...academic,
+                                      diploma: {
+                                        ...academic.diploma,
+                                        weak_subjects: [...academic.diploma.weak_subjects, subj],
+                                        favorite_subjects: academic.diploma.favorite_subjects.filter(s => s !== subj)
+                                      }
+                                    });
+                                  }
+                                }}
+                                className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-all border ${isWeak ? 'bg-error/20 border-error text-white' : 'bg-white/[0.03] border-white/[0.08] text-text-secondary hover:bg-white/[0.08]'} ${isFav ? 'opacity-50 cursor-not-allowed' : ''}`}>
+                                {subj}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
                 )}
               </div>
             </div>
@@ -741,7 +1088,7 @@ export const Onboarding: React.FC = () => {
                         >
                           <Star
                             className={`h-5 w-5 ${
-                              star <= (skills[f] || 3) ? 'fill-warning text-warning' : 'text-text-disabled'
+                              star <= (skills[f] || 0) ? 'fill-warning text-warning' : 'text-text-disabled'
                             }`}
                           />
                         </button>
@@ -835,38 +1182,51 @@ export const Onboarding: React.FC = () => {
                 </div>
 
                 <div className="space-y-2">
-                  <label className="text-xs font-semibold uppercase tracking-wider text-text-secondary">Budget Tier (Annual Fees)</label>
+                  <label className="text-xs font-semibold uppercase tracking-wider text-text-secondary">Max Study Duration (Years)</label>
                   <select
-                    value={constraints.budget_tier}
-                    onChange={(e) => setConstraints({ ...constraints, budget_tier: parseInt(e.target.value, 10) || 3 })}
+                    value={constraints.study_duration_max}
+                    onChange={(e) => setConstraints({ ...constraints, study_duration_max: parseInt(e.target.value, 10) || 4 })}
                     className="w-full bg-white/[0.05] border border-solid border-white/[0.08] rounded-[18px] px-4 py-3 text-sm text-text-primary focus:outline-none focus:border-ai-cyan/50"
                   >
-                    <option value="1">Tier 1: Under ₹50,000 / year</option>
-                    <option value="2">Tier 2: ₹50,000 - ₹2,00,000 / year</option>
-                    <option value="3">Tier 3: ₹2,00,000 - ₹5,00,000 / year</option>
-                    <option value="4">Tier 4: Above ₹5,00,000 / year</option>
+                    {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(year => (
+                      <option key={year} value={year}>{year} {year === 1 ? 'Year' : 'Years'}</option>
+                    ))}
                   </select>
                 </div>
 
                 <div className="space-y-2">
-                  <label className="text-xs font-semibold uppercase tracking-wider text-text-secondary">Max Study Duration (Years)</label>
-                  <input
-                    type="number"
-                    value={constraints.study_duration_max}
-                    onChange={(e) => setConstraints({ ...constraints, study_duration_max: parseInt(e.target.value, 10) || 4 })}
+                  <label className="text-xs font-semibold uppercase tracking-wider text-text-secondary">Preferred State</label>
+                  <select
+                    value={constraints.preferred_state}
+                    onChange={(e) => {
+                      setConstraints({ 
+                        ...constraints, 
+                        preferred_state: e.target.value,
+                        preferred_city: '' // Reset city when state changes
+                      })
+                    }}
                     className="w-full bg-white/[0.05] border border-solid border-white/[0.08] rounded-[18px] px-4 py-3 text-sm text-text-primary focus:outline-none focus:border-ai-cyan/50"
-                  />
+                  >
+                    <option value="">Any State</option>
+                    {Object.keys(INDIA_STATES_CITIES).map(state => (
+                      <option key={state} value={state}>{state}</option>
+                    ))}
+                  </select>
                 </div>
 
                 <div className="space-y-2">
-                  <label className="text-xs font-semibold uppercase tracking-wider text-text-secondary">Preferred State/City</label>
-                  <input
-                    type="text"
-                    value={constraints.preferred_location}
-                    onChange={(e) => setConstraints({ ...constraints, preferred_location: e.target.value })}
-                    placeholder="e.g. Pune, Mumbai, Bangalore"
-                    className="w-full bg-white/[0.05] border border-solid border-white/[0.08] rounded-[18px] px-4 py-3 text-sm text-text-primary placeholder-white/30 focus:outline-none focus:border-ai-cyan/50"
-                  />
+                  <label className="text-xs font-semibold uppercase tracking-wider text-text-secondary">Preferred City</label>
+                  <select
+                    value={constraints.preferred_city}
+                    onChange={(e) => setConstraints({ ...constraints, preferred_city: e.target.value })}
+                    disabled={!constraints.preferred_state}
+                    className="w-full bg-white/[0.05] border border-solid border-white/[0.08] rounded-[18px] px-4 py-3 text-sm text-text-primary focus:outline-none focus:border-ai-cyan/50 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <option value="">{constraints.preferred_state ? 'Any City' : 'Select a State first'}</option>
+                    {constraints.preferred_state && INDIA_STATES_CITIES[constraints.preferred_state]?.map(city => (
+                      <option key={city} value={city}>{city}</option>
+                    ))}
+                  </select>
                 </div>
 
                 <div className="space-y-4 md:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
@@ -964,7 +1324,39 @@ export const Onboarding: React.FC = () => {
           )}
 
           {/* Pagination Actions */}
-          <div className="flex justify-between items-center pt-6 border-t border-white/[0.06] mt-6">
+          {currentStep.key === 'interests' && Object.values(interests).filter(v => v > 0).length < 3 && (
+            <div className="flex justify-end pt-4">
+              <span className="text-error text-xs font-semibold bg-error/10 px-3 py-1.5 rounded-full border border-error/20">
+                Please adjust at least 3 dimensions above 0 to proceed. ({Object.values(interests).filter(v => v > 0).length}/3)
+              </span>
+            </div>
+          )}
+          
+          {currentStep.key === 'skills' && Object.values(skills).filter(v => v > 0).length < 3 && (
+            <div className="flex justify-end pt-4">
+              <span className="text-error text-xs font-semibold bg-error/10 px-3 py-1.5 rounded-full border border-error/20">
+                Please rate at least 3 skills to proceed. ({Object.values(skills).filter(v => v > 0).length}/3)
+              </span>
+            </div>
+          )}
+
+          {currentStep.key === 'goals' && goals.length < 1 && (
+            <div className="flex justify-end pt-4">
+              <span className="text-error text-xs font-semibold bg-error/10 px-3 py-1.5 rounded-full border border-error/20">
+                Please select at least 1 goal to proceed. ({goals.length}/1)
+              </span>
+            </div>
+          )}
+
+          {currentStep.key === 'work_preferences' && workPreferences.length < 1 && (
+            <div className="flex justify-end pt-4">
+              <span className="text-error text-xs font-semibold bg-error/10 px-3 py-1.5 rounded-full border border-error/20">
+                Please select at least 1 work preference to proceed. ({workPreferences.length}/1)
+              </span>
+            </div>
+          )}
+          
+          <div className="flex justify-between items-center pt-6 border-t border-white/[0.06] mt-4">
             <button
               onClick={() => {
                 if (currentStepIndex > 0) setCurrentStepIndex(currentStepIndex - 1);
@@ -978,7 +1370,14 @@ export const Onboarding: React.FC = () => {
 
             <Button
               onClick={() => saveCurrentStep(true)}
-              disabled={saving || (currentStep.key === 'scenarios' && scenarios.length > 0 && Object.keys(scenarioResponses).length < scenarios.length)}
+              disabled={
+                saving || 
+                (currentStep.key === 'scenarios' && scenarios.length > 0 && Object.keys(scenarioResponses).length < scenarios.length) ||
+                (currentStep.key === 'interests' && Object.values(interests).filter(v => v > 0).length < 3) ||
+                (currentStep.key === 'skills' && Object.values(skills).filter(v => v > 0).length < 3) ||
+                (currentStep.key === 'goals' && goals.length < 1) ||
+                (currentStep.key === 'work_preferences' && workPreferences.length < 1)
+              }
               className="flex items-center space-x-2 px-6 py-2.5 text-sm"
               loading={saving}
             >
