@@ -3,9 +3,9 @@
 
 ---
 
-**Last Updated:** 2026-07-14
-**Project Version:** v1
-**Status:** Backend 100% Complete | Frontend 100% Migrated | Testing Pending
+**Last Updated:** 2026-08-24
+**Project Version:** v2 (Recommendation Engine V2 Live)
+**Status:** Backend 100% Complete | Frontend 100% Complete | V2 Engine Deployed | Testing In Progress
 
 ---
 
@@ -19,42 +19,57 @@
 6. [Data Flow & Workflow Diagrams](#6-data-flow--workflow-diagrams)
 7. [Technical Stack](#7-technical-stack)
 8. [Domain Model](#8-domain-model)
-9. [Recommendation Pipeline](#9-recommendation-pipeline)
-10. [AI Service Architecture](#10-ai-service-architecture)
-11. [API Surface](#11-api-surface)
-12. [Frontend Architecture](#12-frontend-architecture)
-13. [Engineering Rules & Principles](#13-engineering-rules--principles)
-14. [Career Catalog Import](#14-career-catalog-import)
-15. [Project Status & Progress](#15-project-status--progress)
-16. [Known Issues & Open Items](#16-known-issues--open-items)
-17. [File Structure](#17-file-structure)
-18. [Summary & Next Steps](#18-summary--next-steps)
+9. [Recommendation Pipeline V1 (Legacy)](#9-recommendation-pipeline-v1-legacy)
+10. [Recommendation Engine V2 (Active)](#10-recommendation-engine-v2-active)
+11. [AI Service Architecture](#11-ai-service-architecture)
+12. [API Surface](#12-api-surface)
+13. [Frontend Architecture](#13-frontend-architecture)
+14. [Design System (Liquid Glass)](#14-design-system-liquid-glass)
+15. [Engineering Rules & Principles](#15-engineering-rules--principles)
+16. [Career Catalog Import](#16-career-catalog-import)
+17. [Docker & Deployment](#17-docker--deployment)
+18. [Environment Configuration](#18-environment-configuration)
+19. [Testing & Quality](#19-testing--quality)
+20. [Project Status & Progress](#20-project-status--progress)
+21. [Known Issues & Open Items](#21-known-issues--open-items)
+22. [Complete File Structure](#22-complete-file-structure)
+23. [Codebase Metrics](#23-codebase-metrics)
+24. [Detailed File-by-File Analysis](#24-detailed-file-by-file-analysis)
+25. [Summary & Next Steps](#25-summary--next-steps)
 
 ---
 
 ## 1. Executive Summary
 
-SCPR (Smart Career Path Recommendation System) is a production-grade, AI-powered career counseling platform designed specifically for Class 10 students in India. The system uniquely combines **deterministic computation** (for eligibility filtering and trait matching) with **LLM personalization** (for explanations and roadmaps), ensuring every recommendation is transparent, traceable, and defensible.
+SCPR (Smart Career Path Recommendation System) is a production-grade, AI-powered career counseling platform designed specifically for Class 10 students in India. The system uniquely combines **deterministic computation** (for eligibility filtering, multi-engine scoring, and hybrid ranking) with **LLM personalization** (for explanations and roadmaps), ensuring every recommendation is transparent, traceable, and defensible.
 
 ### Key Metrics
 
 | Metric | Value |
 |--------|-------|
-| Backend Modules | 11 (NestJS) |
-| Frontend Pages | 9 (React 19) |
+| Backend Modules | 11 (NestJS 11) |
+| Frontend Pages | 10 (React 19) |
 | Career Catalog | 742 distinct careers across 8 sectors |
 | AI Backfill Completion | 89.5% (628/702) |
-| API Endpoints | 45+ |
-| MongoDB Collections | 11 |
-| LLM Providers | 5 (Gemini, Groq, Mistral, DeepSeek, GLM) |
-| Total Build Phases | 10 (Phases 0-7 complete, Phase 8 pending) |
+| API Endpoints | 50+ |
+| MongoDB Collections | 12 |
+| LLM Providers | 5 (Gemini, Groq, Mistral, DeepSeek, GLM) + OpenRouter |
+| V2 Scoring Engines | 10 (Academic, Interest, Skill, Personality, Constraint, Opportunity, Hybrid Ranking, Diversity, Confidence, Explainability) |
+| Backend Source Files | 117 (excl. tests) |
+| Frontend Source Files | 38 (excl. tests) |
+| Backend Source Lines | ~10,741 |
+| Frontend Source Lines | ~5,831 |
+| Test Files | 26 backend + 2 frontend = 28 total |
+| Test Lines | ~2,707 |
+| Total Build Phases | P0–P7 complete, P8 in progress |
 
 ### Key Design Decisions
 
-1. **LLM as Co-Pilot, Not Decision-Maker**: The LLM never decides eligibility or invents careers — it only ranks, explains, and personalizes a shortlist the backend already computed
-2. **Three-Stage Pipeline**: Eligibility Engine (MongoDB query) → Trait Matching (cosine similarity) → AI Personalization (single LLM call)
-3. **Architectural Fix for Classification Failure**: Previous Random Forest + XGBoost approach collapsed onto the same 1-2 careers; the new deterministic architecture solves this
-4. **Provider Abstraction**: Swap LLM providers with one-line config changes
+1. **LLM as Co-Pilot, Not Decision-Maker**: The LLM never decides eligibility or invents careers — it only explains and personalizes a shortlist the backend already computed
+2. **V2 Multi-Engine Pipeline**: 6 scoring engines (Academic, Interest, Skill, Personality, Constraint, Opportunity) → Hybrid Ranking → Diversity Re-ranking → AI Personalization
+3. **Architectural Fix for Classification Failure**: Previous Random Forest + XGBoost approach collapsed onto the same 1–2 careers; the deterministic architecture solves this
+4. **Provider Abstraction**: Swap LLM providers with one-line config changes via centralized `provider-models.config.ts`
+5. **Engine Version Toggle**: `RECOMMENDATION_ENGINE_VERSION` environment variable toggles between `v1` (3-stage legacy) and `v2` (10-engine pipeline) at runtime
 
 ---
 
@@ -71,12 +86,15 @@ SCPR is an AI-powered career counseling platform that guides Class 10 students t
 ### Key Features
 
 - **8-Step Natural Onboarding**: Personal → Academic → Interests → Skills → Goals → Work Preferences → Constraints → Scenarios
-- **Deterministic Recommendation Engine**: 3-stage pipeline (Eligibility → Trait Matching → AI Personalization)
-- **Multi-LLM Orchestration**: 5 providers with automatic fallback and retry
-- **AI Counselor Chat**: Context-aware conversation with rolling summary
-- **PDF Report Generation**: Career reports via pdfmake
+- **V2 Recommendation Engine**: 10-engine pipeline with ScoreBreakdown transparency per career per engine
+- **Multi-LLM Orchestration**: 5+ providers with automatic fallback, key pool rotation, and retry
+- **AI Counselor Chat**: Context-aware conversation with rolling summary compression (>10 messages)
+- **PDF Report Generation**: Career reports via pdfmake (no Puppeteer dependency)
 - **Admin Panel**: Career catalog management with draft publish/reject workflow
+- **Career Gallery**: Visual career browsing with category-based exploration
 - **742 Career Catalog**: Imported across 8 sectors with AI-refined trait weights
+- **Liquid Glass Design**: Premium dark UI with glassmorphism, animated orbs, and scroll-reveal animations
+- **Docker Deployment**: Full docker-compose stack (backend + frontend + MongoDB 7)
 
 ---
 
@@ -101,10 +119,10 @@ SCPR is an AI-powered career counseling platform that guides Class 10 students t
 │  │  ┌──────────┐ ┌──────────────┐ ┌──────────────┐ ┌────────────┐ │  │
 │  │  │Dashboard │ │  Counselor   │ │   Reports    │ │  Analytics  │ │  │
 │  │  └──────────┘ └──────────────┘ └──────────────┘ └────────────┘ │  │
-│  │  ┌──────────────┐ ┌──────────────┐                              │  │
-│  │  │  AI Service   │ │   History    │                              │  │
-│  │  │(Multi-LLM)   │ │              │                              │  │
-│  │  └──────────────┘ └──────────────┘                              │  │
+│  │  ┌──────────────┐ ┌──────────────┐ ┌──────────┐                │  │
+│  │  │  AI Service   │ │   History    │ │  Health  │                │  │
+│  │  │(Multi-LLM)   │ │              │ │          │                │  │
+│  │  └──────────────┘ └──────────────┘ └──────────┘                │  │
 │  └─────────────────────────────────────────────────────────────────┘  │
 │                                           │                            │
 │                                           ▼                            │
@@ -127,21 +145,32 @@ SCPR is an AI-powered career counseling platform that guides Class 10 students t
 
 ```mermaid
 flowchart TD
-    subgraph Frontend["React 19 Frontend\nTypeScript + Vite"]
+    subgraph Frontend["React 19 Frontend - TypeScript + Vite"]
         A1[Login/Register] -->|JWT Auth| A2[Dashboard]
         A2 --> A3[Onboarding Wizard]
         A2 --> A4[Career Explorer]
+        A2 --> A4b[Career Gallery]
         A2 --> A5[Counselor Chat]
         A2 --> A6[Recommendations]
         A2 --> A7[Reports]
         A2 --> A8[History]
     end
 
-    subgraph Backend["NestJS 11 Backend\nTypeScript"]
+    subgraph Backend["NestJS 11 Backend - TypeScript"]
         B1[Auth Module] -->|JWT Guard| B2[Health Module]
         B3[Onboarding Module] --> B4[Trait Engine]
         B5[Careers Module] --> B6[Eligibility Engine]
-        B7[Recommendation Module] --> B8[Trait Matching Engine]
+        B7[Recommendation Module] --> B8[V2 Engine Pipeline]
+        B8 --> B8a[Academic Engine]
+        B8 --> B8b[Interest Engine]
+        B8 --> B8c[Skill Engine]
+        B8 --> B8d[Personality Engine]
+        B8 --> B8e[Constraint Engine]
+        B8 --> B8f[Opportunity Engine]
+        B8 --> B8g[Hybrid Ranking Engine]
+        B8 --> B8h[Diversity Engine]
+        B8 --> B8i[Confidence Engine]
+        B8 --> B8j[Explainability Engine]
         B9[AI Service Module] --> B10[Provider Adapters]
         B11[Counselor Module] --> B9
         B12[Dashboard Module] --> B3 & B5 & B7
@@ -164,17 +193,19 @@ flowchart TD
         C2 --> D5[GLM Provider]
     end
 
-    subgraph Data["MongoDB Atlas"]
+    subgraph Data["MongoDB Atlas / Local"]
         E1[User Collection]
         E2[StudentProfile Collection]
         E3[StudentDNAHistory Collection]
         E4[Career Collection]
         E5[SavedCareer Collection]
         E6[Recommendation Collection]
-        E7[AIRequestLog Collection]
-        E8[Conversation Collection]
-        E9[AnalyticsEvent Collection]
-        E10[Report Collection]
+        E7[RecommendationFeedback Collection]
+        E8[AIRequestLog Collection]
+        E9[Conversation Collection]
+        E10[ConversationMessage Collection]
+        E11[AnalyticsEvent Collection]
+        E12[Report Collection]
     end
 
     Frontend -->|API Calls| Backend
@@ -189,25 +220,27 @@ flowchart TD
 C4Context
     title SCPR System Context Diagram
 
-    Person(student, "Class 10 Student", "Completes onboarding\nReceives recommendations")
-    Person(admin, "Administrator", "Manages career catalog\nReviews AI backfills")
+    Person(student, "Class 10 Student", "Completes onboarding, receives recommendations")
+    Person(admin, "Administrator", "Manages career catalog, reviews AI backfills")
 
-    System(scpod, "SCPR System", "Smart Career Path Recommendation")
-    System(mongodb, "MongoDB Atlas", "Document Database")
+    System(scpr, "SCPR System", "Smart Career Path Recommendation")
+    System(mongodb, "MongoDB Atlas / Local", "Document Database")
     System(gemini, "Gemini API", "Google LLM Provider")
     System(groq, "Groq API", "LLM Provider")
     System(mistral, "Mistral API", "LLM Provider")
     System(deepseek, "DeepSeek API", "LLM Provider")
     System(glm, "GLM API", "LLM Provider")
+    System(openrouter, "OpenRouter API", "LLM Aggregator")
 
-    Rel(student, scpod, "Uses", "HTTPS/REST")
-    Rel(admin, scpod, "Administers", "HTTPS/REST")
-    Rel(scpod, mongodb, "Stores data", "Mongoose/ODM")
-    Rel(scpod, gemini, "Calls LLM", "HTTPS/REST")
-    Rel(scpod, groq, "Calls LLM", "HTTPS/REST")
-    Rel(scpod, mistral, "Calls LLM", "HTTPS/REST")
-    Rel(scpod, deepseek, "Calls LLM", "HTTPS/REST")
-    Rel(scpod, glm, "Calls LLM", "HTTPS/REST")
+    Rel(student, scpr, "Uses", "HTTPS/REST")
+    Rel(admin, scpr, "Administers", "HTTPS/REST")
+    Rel(scpr, mongodb, "Stores data", "Mongoose/ODM")
+    Rel(scpr, gemini, "Calls LLM", "HTTPS/REST")
+    Rel(scpr, groq, "Calls LLM", "HTTPS/REST")
+    Rel(scpr, mistral, "Calls LLM", "HTTPS/REST")
+    Rel(scpr, deepseek, "Calls LLM", "HTTPS/REST")
+    Rel(scpr, glm, "Calls LLM", "HTTPS/REST")
+    Rel(scpr, openrouter, "Calls LLM", "HTTPS/REST")
 ```
 
 ### 4.3 ERD (Entity Relationship Diagram)
@@ -249,31 +282,32 @@ erDiagram
 
 | Module | Responsibility | Dependencies | Key Features |
 |--------|---------------|--------------|--------------|
-| `auth` | Authentication & Authorization | None | JWT issuance, register/login/refresh, password hashing, failed attempt lockout (5→15min) |
-| `health` | System Health Checks | None | Public `/health` endpoint, backend status |
-| `ai-service` | Multi-LLM Orchestration | None | 5 provider adapters, key pool rotation, retry with cross-provider fallback, prompt management, JSON validation, caching, token logging |
-| `careers` | Career Catalog Management | `ai-service` | Career CRUD, trait weights, eligibility constraints, AI backfill with draft→promote workflow, admin endpoints |
-| `onboarding` | Student Onboarding Flow | None | 8-step resumable wizard, profile management, StudentDNA computation (10-dim vector), append-only DNA history |
-| `recommendation` | Career Recommendation Engine | `ai-service`, `careers`, `onboarding` | Eligibility engine (MongoDB query), trait matching (cosine similarity), AI personalization (single LLM call), staleness tracking |
-| `counselor` | AI Chat & Guidance | `ai-service` | Conversation management, rolling summary (compresses beyond 10 messages), intent classification, safety filter |
-| `dashboard` | User Dashboard | `onboarding`, `recommendation`, `careers` | Server-side state machine (`next_action`), progress tracking, insights |
-| `reports` | PDF Report Generation | `onboarding`, `recommendation` | pdfmake PDF generation (no Puppeteer), status tracking: QUEUED→GENERATING→READY→DOWNLOADED→FAILED |
-| `analytics` | Event Tracking | None | Fire-and-forget logging (never throws), admin dashboards, provider health visibility |
-| `history` | Unified Timeline | `onboarding`, `recommendation`, `counselor` | Chronological feed, pagination, type filter |
+| `auth` | Authentication & Authorization | None | JWT issuance, register/login/refresh/logout/me, password hashing (bcrypt), failed attempt lockout (5 attempts → 15min lock), role-based access (student/admin) |
+| `health` | System Health Checks | None | Public `/health` endpoint, returns `{ status: 'ok', timestamp }` |
+| `ai-service` | Multi-LLM Orchestration | None | 5 provider adapters + OpenRouter keys, key pool rotation, retry with cross-provider fallback, prompt management (.md templates), JSON validation (ajv), caching (SHA-256 + TTL), token logging |
+| `careers` | Career Catalog Management | `ai-service` | Career CRUD, trait weights, eligibility constraints, AI backfill with draft→promote workflow, admin endpoints (paginated list, bulk publish, toggle active, import audit), seed on startup |
+| `onboarding` | Student Onboarding Flow | `ai-service` | 8-step resumable wizard, profile management, StudentDNA computation (10-dim vector), append-only DNA history, scenario generation via AI, event emitter for ONBOARDING_COMPLETED / PROFILE_UPDATED |
+| `recommendation` | Career Recommendation Engine | `ai-service`, `careers`, `onboarding` | V1: Eligibility→Trait Matching→AI; V2: 6 scoring engines + Hybrid Ranking + Diversity + Confidence + Explainability + AI personalization; staleness tracking; event-driven auto-generation on onboarding completion |
+| `counselor` | AI Chat & Guidance | `ai-service` | Conversation management, rolling summary (compresses beyond 10 messages), intent classification (career/roadmap/general), safety filter (blocklist), context builder with student profile injection, mermaid roadmap rendering |
+| `dashboard` | User Dashboard | `onboarding`, `recommendation`, `careers` | Server-side state machine (`next_action`), progress tracking, insights (top traits), recent saved careers, top 3 recommendations |
+| `reports` | PDF Report Generation | `onboarding`, `recommendation` | pdfmake PDF generation (no Puppeteer), async generation with status tracking: QUEUED→GENERATING→READY→DOWNLOADED→FAILED, file-based storage in `reports_output/` |
+| `analytics` | Event Tracking | None | Fire-and-forget logging (never throws), event listeners (ONBOARDING_STARTED/STEP_COMPLETED/COMPLETED, AI_PROVIDER_FALLBACK_TRIGGERED, AI_PROVIDER_UNHEALTHY_DETECTED), admin dashboards (platform, careers, AI usage) |
+| `history` | Unified Timeline | `onboarding`, `recommendation`, `counselor` | Chronological feed combining onboarding snapshots + recommendations + saved career bookmarks, pagination, type filter |
 
-### 5.2 Frontend Pages
+### 5.2 Frontend Pages (10 Pages)
 
-| Page | Route | Auth | Purpose |
-|------|-------|------|---------|
-| Landing | `/` | Public | Marketing page with hero, career orbit, assessment preview, AI chat preview, student stories |
-| Login | `/login` | Public | Email/password login |
-| Register | `/register` | Public | User registration |
-| Dashboard | `/` (auth) | Auth | Journey state, recommendations overview, saved careers, PDF report generation |
-| Onboarding | `/onboarding` | Auth | 8-step profile wizard with confetti completion |
-| Career Explorer | `/careers` | Auth | Browse/search careers, save/unsave, view recommendations |
-| Counseling Chat | `/chat` | Auth | AI counselor chat interface |
-| History Log | `/history` | Auth | Unified activity timeline |
-| Admin Careers | `/admin/careers` | Admin | Career catalog management, draft review, import audit |
+| Page | Route | Auth | Size (bytes) | Purpose |
+|------|-------|------|:------------:|---------|
+| Landing | `/` (unauth) | Public | 52,673 | Marketing page with hero, career orbit animation, journey preview, AI chat preview, student stories, auto-scroll ticker |
+| Login | `/login` | Public | 3,864 | Email/password login with ambient orbs background |
+| Register | `/register` | Public | 4,445 | User registration with validation |
+| Dashboard | `/` (auth) | Auth | 10,797 | Journey state, recommendations overview, saved careers, PDF report generation |
+| Onboarding | `/onboarding` | Auth | 52,900 | 8-step profile wizard with progress indicator and confetti completion |
+| Career Explorer | `/careers` | Auth | 22,196 | Browse/search careers, save/unsave, view recommendations |
+| Career Gallery | `/gallery` | Auth | 13,679 | Visual gallery-style career browsing with category filtering |
+| Counseling Chat | `/chat` | Auth | 22,627 | AI counselor chat interface with markdown + mermaid rendering |
+| History Log | `/history` | Auth | 10,835 | Unified activity timeline with type filtering |
+| Admin Careers | `/admin/careers` | Admin | 36,200 | Career catalog management, draft review, import audit, bulk operations |
 
 ---
 
@@ -297,56 +331,82 @@ journey
       Constraints: 5: User
       Scenarios: 5: User
     section Recommendations
-      Generate Recommendations: 4: System
+      Auto-Generate on Complete: 4: System
       View Top 5 Careers: 5: User
     section Exploration
       Explore Careers: 5: User
+      Browse Gallery: 5: User
       Save Careers: 5: User
       Chat with Counselor: 5: User
       Generate Report: 5: User
       View History: 5: User
 ```
 
-### 6.2 Recommendation Pipeline
+### 6.2 Recommendation Pipeline V2
 
 ```mermaid
 flowchart TD
     subgraph Input["Student Input"]
         A[StudentProfile] -->|Contains| B[Academic Data]
-        A --> C[Interests]
-        A --> D[Skills]
-        A --> E[Goals]
+        A --> C[Interests - 12 sliders]
+        A --> D[Skills - 10 self-ratings]
+        A --> E[Goals - ranked list]
         A --> F[Constraints]
         A --> G[Scenario Responses]
     end
 
     subgraph TraitComputation["Trait Engine"]
-        B & C & D & E & F & G --> H[StudentDNA\n10-dimensional vector]
+        B & C & D & E & F & G --> H["StudentDNA\n10-dimensional vector\n(0-100 per trait)"]
     end
 
-    subgraph Engine["Recommendation Engine"]
-        H --> I[Eligibility Engine\nMongoDB Query]
-        I -->|Eligible Careers| J[Trait Matching Engine\nCosine Similarity]
-        J -->|Top 20 Candidates| K[AI Personalization\nSingle LLM Call]
-        K -->|Top 5 Ranked| L[Final Recommendations]
+    subgraph Eligibility["Stage 1: Eligibility"]
+        H --> I["Eligibility Engine\n(MongoDB Query)\n→ ~50-100 careers"]
+    end
+
+    subgraph Scoring["Stage 2: Multi-Engine Scoring"]
+        I --> J1[Academic Engine]
+        I --> J2[Interest Engine]
+        I --> J3[Skill Engine]
+        I --> J4[Personality Engine]
+        I --> J5[Constraint Engine]
+        I --> J6[Opportunity Engine]
+    end
+
+    subgraph Ranking["Stage 3: Hybrid Ranking"]
+        J1 & J2 & J3 & J4 & J5 & J6 --> K["Hybrid Ranking Engine\n(Weighted aggregation)"]
+        K --> L["Diversity Engine\n(Category spread)"]
+    end
+
+    subgraph AI["Stage 4: AI Personalization"]
+        L -->|Top 20 Candidates| M["AI Personalization\n(Single LLM Call)"]
+        M -->|Top 5 Ranked| N[Final Recommendations]
+    end
+
+    subgraph PostProcess["Stage 5: Post-Processing"]
+        N --> O[Confidence Engine]
+        N --> P[Explainability Engine]
+        O & P --> Q[Recommendation Document]
     end
 
     subgraph Output["Output"]
-        L --> M[Recommendation Document]
-        L --> N[Explanations & Roadmaps]
-        L --> O[Dashboard Display]
-        L --> P[PDF Report]
+        Q --> R[Dashboard Display]
+        Q --> S[PDF Report]
+        Q --> T[Counselor Context]
     end
 
     subgraph Careers["Career Catalog"]
-        Q[Career Collection\n~742 careers] -->|Trait Weights| J
-        Q -->|Eligibility Rules| I
+        U["Career Collection\n~742 careers"] -->|Trait Weights| J1 & J2 & J3 & J4 & J5 & J6
+        U -->|Eligibility Rules| I
     end
 
     style Input fill:#e1f5fe
     style TraitComputation fill:#fff3e0
-    style Engine fill:#e8f5e9
-    style Output fill:#f3e5f5
+    style Eligibility fill:#e8f5e9
+    style Scoring fill:#f3e5f5
+    style Ranking fill:#fff9c4
+    style AI fill:#ffecb3
+    style PostProcess fill:#fce4ec
+    style Output fill:#e0f2f1
     style Careers fill:#fce4ec
 ```
 
@@ -355,46 +415,40 @@ flowchart TD
 ```mermaid
 flowchart TD
     subgraph Request["AI Service Request"]
-        A[aiService.run\n(taskType, context)] --> B[Router Service]
+        A["aiService.run\n(taskType, context)"] --> B[Router Service]
     end
 
     subgraph Routing["Provider Selection"]
-        B --> C[Get Provider List\nfrom taskType]
+        B --> C["Get Provider List\nfrom taskType"]
         C --> D[Primary Provider]
         D -->|Success| E[Return Response]
         D -->|Failure| F[Retry Manager]
         F --> G[Next Key in Pool]
         G -->|Success| E
-        G -->|Exhausted| H[Next Provider\nin Fallback Chain]
+        G -->|Exhausted| H["Next Provider\nin Fallback Chain"]
         H --> D
     end
 
     subgraph Processing["Request Processing"]
-        D --> I[Key Pool Service\nGet Next Key]
-        I --> J[Prompt Builder\nLoad & Interpolate Template]
-        J --> K[Provider Adapter\nCall LLM API]
-        K --> L[Cache Service\nCheck/Store]
-        K --> M[Token Logger\nLog AIRequestLog]
-        K --> N[JSON Validator\nValidate & Repair]
-    end
-
-    subgraph Response["Standardized Response"]
-        N --> O[Normalize to\nStandard Shape]
-        O --> E
+        D --> I["Key Pool Service\nGet Next Key (round-robin)"]
+        I --> J["Prompt Builder\nLoad .md + Interpolate"]
+        J --> K["Provider Adapter\nCall LLM API"]
+        K --> L["Cache Service\nSHA-256 + TTL Check/Store"]
+        K --> M["Token Logger\nLog AIRequestLog to MongoDB"]
+        K --> N["JSON Validator\najv + Bounded Repair"]
     end
 
     subgraph Providers["LLM Providers"]
-        P1[Gemini] --> K
-        P2[Groq] --> K
-        P3[Mistral] --> K
-        P4[DeepSeek] --> K
-        P5[GLM] --> K
+        P1[Gemini 2.5 Flash] --> K
+        P2[Groq LLaMA 3.3-70B] --> K
+        P3[Mistral Large] --> K
+        P4[DeepSeek Chat] --> K
+        P5[GLM 4 Plus] --> K
     end
 
     style Request fill:#bbdefb
     style Routing fill:#c8e6c9
     style Processing fill:#ffecb3
-    style Response fill:#ffcdd2
     style Providers fill:#f8bbd0
 ```
 
@@ -413,13 +467,13 @@ flowchart LR
     end
 
     subgraph Engine["Trait Engine"]
-        H --> I[Compute StudentDNA\n10 traits: 0-100]
+        H --> I["Compute StudentDNA\n10 traits: 0-100"]
     end
 
     subgraph Storage["Data Storage"]
-        A & B & C & D & E & F & G & H --> J[StudentProfile\nMongoDB]
-        I --> K[StudentDNA\nEmbedded in Profile]
-        I --> L[StudentDNAHistory\nAppend-only Log]
+        A & B & C & D & E & F & G & H --> J["StudentProfile\nMongoDB"]
+        I --> K["StudentDNA\nEmbedded in Profile"]
+        I --> L["StudentDNAHistory\nAppend-only Log"]
     end
 
     subgraph Trigger["Auto-Trigger"]
@@ -448,42 +502,37 @@ flowchart TD
         D -->|No| F[Use Full History]
         E --> F
         F --> G[Add User Message]
-        G --> H[Build Context Payload]
-    end
-
-    subgraph Intent["Intent Classification"]
-        H --> I[Classify Intent\ncareer/roadmap/general]
-        I --> J[Shape Prompt\nBased on Intent]
+        G --> H["Build Context Payload\n(profile + interests + skills + goals + careers)"]
     end
 
     subgraph AI["AI Processing"]
-        J --> K[aiService.run\n('counselor_chat')]
-        K --> L[Get AI Response]
+        H --> I["Classify Intent\n(career/roadmap/general)"]
+        I --> J["aiService.run\n('counselor_chat')"]
+        J --> K[Get AI Response]
     end
 
     subgraph PostProcess["Response Handling"]
-        L --> M[Safety Filter]
-        M --> N{Valid JSON?}
-        N -->|Yes| O[Parse Structured Response]
-        N -->|No| P[Render as Markdown]
-        O --> P
-        P --> Q[Save Message]
+        K --> L[Safety Filter]
+        L --> M{Contains roadmap data?}
+        M -->|Yes| N["Build Mermaid Roadmap\n(nodes + edges)"]
+        M -->|No| O[Render as Markdown]
+        N --> O
+        O --> P[Save Message]
     end
 
     subgraph Storage["Storage"]
-        Q --> R[ConversationMessage\nCollection]
-        Q --> S[Update Conversation\nSummary if needed]
+        P --> Q["ConversationMessage\nCollection"]
+        P --> R["Update Conversation\nSummary if needed"]
     end
 
     style UserInput fill:#e1f5fe
     style Context fill:#fff3e0
-    style Intent fill:#e8f5e9
     style AI fill:#ffecb3
     style PostProcess fill:#f3e5f5
     style Storage fill:#fce4ec
 ```
 
-### 6.6 Sequence Diagram: Recommendation Generation
+### 6.6 Sequence Diagram: Recommendation Generation (V2)
 
 ```mermaid
 sequenceDiagram
@@ -491,43 +540,48 @@ sequenceDiagram
     participant Frontend
     participant Backend
     participant Onboarding
-    participant Recommendation
+    participant RecommendationService
     participant EligibilityEngine
-    participant TraitMatching
+    participant ScoringEngines
+    participant HybridRanking
+    participant DiversityEngine
     participant AIService
-    participant CareerCatalog
+    participant ConfidenceEngine
+    participant ExplainabilityEngine
     participant MongoDB
 
     User->>Frontend: Complete Onboarding
     Frontend->>Backend: POST /onboarding/complete
-    Backend->>Onboarding: Complete Profile
-    Onboarding->>MongoDB: Save StudentProfile + StudentDNA
-    Onboarding->>Recommendation: Emit onboarding_complete
+    Backend->>Onboarding: Complete Profile + Compute DNA
+    Onboarding->>MongoDB: Save StudentProfile + StudentDNA + DNAHistory
+    Onboarding->>RecommendationService: Emit ONBOARDING_COMPLETED
 
-    Recommendation->>CareerCatalog: Get All Careers
-    CareerCatalog->>MongoDB: Query Careers
-    MongoDB-->>CareerCatalog: Career Documents
-
-    Recommendation->>EligibilityEngine: Filter Eligible
+    RecommendationService->>MongoDB: Get StudentProfile
+    RecommendationService->>EligibilityEngine: Filter Eligible Careers
     EligibilityEngine->>MongoDB: Query with Eligibility Rules
     MongoDB-->>EligibilityEngine: ~50-100 Eligible Careers
 
-    Recommendation->>TraitMatching: Compute Match Scores
-    TraitMatching->>MongoDB: Get StudentDNA
-    MongoDB-->>TraitMatching: StudentDNA Vector
-    TraitMatching->>TraitMatching: Cosine Similarity Calculation
-    TraitMatching-->>Recommendation: Top 20 Careers with Scores
+    loop For Each Eligible Career
+        RecommendationService->>ScoringEngines: Calculate 6 ScoreBreakdowns
+        Note over ScoringEngines: Academic + Interest + Skill +<br/>Personality + Constraint + Opportunity
+    end
 
-    Recommendation->>AIService: Personalize & Rank
-    AIService->>AIService: Build Payload (Top 20 + StudentDNA)
-    AIService->>AIService: Load Prompt Template
-    AIService->>AIService: Route to Primary Provider
-    AIService->>AIService: Execute LLM Call
+    RecommendationService->>HybridRanking: Rank by Weighted Scores
+    HybridRanking-->>RecommendationService: Sorted Results
+
+    RecommendationService->>DiversityEngine: Apply Category Diversity
+    DiversityEngine-->>RecommendationService: Diversified Top 20
+
+    RecommendationService->>AIService: Personalize & Explain (Top 20)
+    AIService->>AIService: Build Prompt + Route to Provider
     AIService->>MongoDB: Log AIRequestLog
-    AIService-->>Recommendation: Top 5 with Explanations
+    AIService-->>RecommendationService: Top 5 with Explanations
 
-    Recommendation->>MongoDB: Save Recommendation
-    Recommendation-->>Backend: Return Success
+    RecommendationService->>ConfidenceEngine: Calculate Confidence
+    RecommendationService->>ExplainabilityEngine: Generate Reasons
+
+    RecommendationService->>MongoDB: Save Recommendation
+    RecommendationService-->>Backend: Return Success
     Backend-->>Frontend: Return Recommendations
     Frontend-->>User: Display Top 5 Careers
 ```
@@ -543,41 +597,60 @@ sequenceDiagram
 | Framework | NestJS | 11.x | Modular backend framework with DI |
 | Runtime | Node.js | LTS | JavaScript runtime |
 | Language | TypeScript | 5.7+ | Type-safe development |
-| ODM | Mongoose | 9.x | MongoDB object modeling |
-| Database | MongoDB Atlas | Latest | Cloud document database |
-| Validation | class-validator / class-transformer | Latest | DTO validation at controller boundary |
+| ODM | Mongoose | 9.7.x | MongoDB object modeling |
+| Database | MongoDB | 7.x (Docker) / Atlas | Cloud or local document database |
+| Validation | class-validator / class-transformer | 0.15.x / 0.5.x | DTO validation at controller boundary |
 | Auth | Passport.js | 0.7.x | Authentication middleware (passport-jwt, passport-local) |
 | JWT | @nestjs/jwt | 11.x | Token generation/verification |
-| Hashing | bcrypt | 6.x | Password hashing |
-| PDF | pdfmake | 0.3.x | PDF generation (no Puppeteer) |
+| Hashing | bcrypt | 6.x | Password hashing (10 salt rounds) |
+| Config | @nestjs/config | 4.x | Environment variable management |
+| PDF | pdfmake | (require-based) | PDF generation (no Puppeteer) |
 | Vector Math | Custom `vector-math.ts` | N/A | Cosine similarity calculations |
-| JSON Schema | ajv | 8.x | AI response validation |
+| JSON Schema | ajv | 8.17.x | AI response validation + bounded repair |
+| HTTP Client | axios | 1.18.x | External API calls (AI providers) |
+| Events | Node.js EventEmitter | Built-in | Cross-module event communication |
+| Testing | Jest + ts-jest | 30.x / 29.x | Unit + e2e testing |
 
 ### 7.2 Frontend Stack
 
 | Category | Technology | Version | Purpose |
 |----------|------------|---------|---------|
-| Framework | React | 19.x | UI framework |
-| Build Tool | Vite | 8.x | Fast development server & bundler |
-| Language | TypeScript | 6.x | Type-safe development |
-| Styling | Tailwind CSS | 4.x | Utility-first CSS (CSS-first, no config file) |
-| State Management | Zustand | 5.x | Client state (JWT in memory only) |
-| Server Cache | TanStack Query | 5.x | Server state caching & management |
-| Routing | React Router | 7.x | Client-side routing (lazy-loaded) |
-| HTTP Client | Axios | 1.x | HTTP requests with interceptors |
-| Animation | Framer Motion | 12.x | UI animations with reduced-motion support |
-| Icons | lucide-react | 1.x | Icon library |
-| Utilities | clsx, tailwind-merge | Latest | Class merging helpers |
+| Framework | React | 19.2.x | UI framework |
+| Build Tool | Vite | 8.1.x | Fast development server & bundler |
+| Language | TypeScript | 6.0.x | Type-safe development |
+| Styling | Tailwind CSS | 4.3.x | Utility-first CSS (CSS-first, no config file) |
+| State Management | Zustand | 5.0.x | Client state (JWT in memory only) |
+| Server Cache | TanStack Query | 5.101.x | Server state caching & management |
+| Routing | React Router DOM | 7.18.x | Client-side routing (lazy-loaded) |
+| HTTP Client | Axios | 1.18.x | HTTP requests with interceptors |
+| Animation | Framer Motion | 12.42.x | UI animations with reduced-motion support |
+| Icons | lucide-react | 1.24.x | Icon library |
+| Confetti | canvas-confetti | 1.9.x | Celebration effect on onboarding completion |
+| Markdown | react-markdown | 10.1.x | Chat message rendering |
+| Diagrams | mermaid | 11.16.x | Roadmap diagram rendering in chat |
+| Utilities | clsx + tailwind-merge | 2.1.x / 3.6.x | Class merging helpers |
+| Linting | oxlint | 1.71.x | Fast linter |
+| Testing | Vitest | 3.2.x | Unit testing |
 
 ### 7.3 AI Providers
 
-| Provider | Models | Primary Use Case | Status |
-|----------|--------|------------------|--------|
-| Gemini | gemini-2.5-flash | Career ranking, roadmap generation | ✅ Healthy (v1 API) |
-| Groq | llama-3.3-70b-versatile, llama-3.1-8b-instant | Counselor chat (low-latency) | ⚠️ TPD-limited |
-| Mistral | mistral-large-latest | Report summary | ✅ Healthy |
-| DeepSeek | deepseek-chat | Fallback for ranking | ❌ Insufficient balance |
-| GLM | glm-4-plus | Configured, not in routing | ⚙️ Available |
+| Provider | Models | API Keys in Pool | Primary Use Case | Status |
+|----------|--------|:----------------:|------------------|--------|
+| Gemini | gemini-2.5-flash | 8 | Career ranking, roadmap generation, trait backfill | ✅ Healthy (v1 API) |
+| Groq | llama-3.3-70b-versatile, llama-3.1-8b-instant | 8 | Counselor chat (low-latency), fallback for ranking | ⚠️ TPD-limited |
+| Mistral | mistral-large-latest | 2 | Report summary | ✅ Healthy |
+| DeepSeek | deepseek-chat | 0 (no keys configured) | Fallback for ranking | ❌ Insufficient balance |
+| GLM | glm-4-plus | 2 | Configured, not in routing | ⚙️ Available |
+| OpenRouter | Various | 1 | Configured in env | ⚙️ Available |
+
+### 7.4 DevOps & Infrastructure
+
+| Category | Technology | Purpose |
+|----------|------------|---------|
+| Containerization | Docker | Multi-stage builds for backend + frontend |
+| Orchestration | docker-compose | Full stack orchestration (backend + frontend + MongoDB) |
+| Frontend Server | nginx | Static file serving + SPA routing in production container |
+| Database | MongoDB 7 | Docker volume-backed persistent storage |
 
 ---
 
@@ -589,14 +662,14 @@ sequenceDiagram
 ```typescript
 {
   user_id: string;           // UUID, hyphens stripped — stable external id
-  email: string;
+  email: string;             // lowercase, unique
   email_verified: boolean;
-  password_hash: string;
-  provider: 'local';        // Future: 'google', etc.
+  password_hash: string;     // bcrypt (10 rounds)
+  provider: 'local';         // Future: 'google', etc.
   role: 'student' | 'admin';
   full_name: string;
-  failed_login_attempts: number;
-  locked_until: Date;
+  failed_login_attempts: number;  // 0–5, locks at 5
+  locked_until: Date;             // 15min lockout
   last_login: Date;
   created_at: Date;
   updated_at: Date;
@@ -607,8 +680,8 @@ sequenceDiagram
 ```typescript
 {
   user_id: string;
-  onboarding_step: string;  // Current step key for resume
-  completion_percentage: number;
+  onboarding_step: string;  // Current step key for resume ('personal'|'academic'|...|'complete')
+  completion_percentage: number;  // 0–100
   personal: {
     name: string;
     dob: Date;
@@ -619,21 +692,30 @@ sequenceDiagram
     board: string;
   };
   academic: {
-    status: string;
-    class10_percent: number;
-    class12_percent: number;
-    subjects: {
-      maths: number;
-      science: number;
-      english: number;
-      sst: number;
-      computer: number;
+    class10: {
+      status: string;
+      percentage: number;
+      subjects: {
+        maths: number;       // 0–100
+        science: number;
+        english: number;
+        sst: number;
+        computer: number;
+      };
+      favorite_subjects: string[];
+      weak_subjects: string[];
     };
-    favorite_subjects: string[];
-    weak_subjects: string[];
+    class12: {
+      status: string;
+      stream: string;
+      percentage: number;
+      subjects: Record<string, number>;
+      favorite_subjects: string[];
+      weak_subjects: string[];
+    };
     stream_interest: string;
   };
-  interests: {              // 0-100 sliders
+  interests: {              // 0–100 sliders (12 dimensions)
     technology: number;
     business: number;
     helping_people: number;
@@ -647,7 +729,7 @@ sequenceDiagram
     finance: number;
     machines: number;
   };
-  skills: {                 // 1-5 self-rated
+  skills: {                 // 1–5 self-rated (10 dimensions)
     communication: number;
     leadership: number;
     problem_solving: number;
@@ -663,7 +745,7 @@ sequenceDiagram
   work_preferences: string[];
   constraints: {
     govt_vs_private: string;
-    budget_tier: number;
+    budget_tier: number;     // 1–4
     study_duration_max: number;
     willing_to_relocate: boolean;
     abroad_ok: boolean;
@@ -672,29 +754,30 @@ sequenceDiagram
   scenario_responses: [{
     question_id: string;
     selected_option: string;
-    trait_weights: object;
+    trait_weights: Map<string, number>;
   }];
-  current_dna: StudentDNA;  // Embedded
+  generated_scenarios: any;  // AI-generated scenario questions
+  current_dna: StudentDNA;   // Embedded
   created_at: Date;
   updated_at: Date;
 }
 ```
 
-#### StudentDNA Schema (Embedded)
+#### StudentDNA Schema (Embedded — 10 Dimensions)
 ```typescript
 {
-  analytical_thinking: number;      // 0-100
-  creativity: number;               // 0-100
-  communication: number;            // 0-100
-  leadership: number;               // 0-100
-  research: number;                 // 0-100
-  business_acumen: number;          // 0-100
-  technical_curiosity: number;      // 0-100
-  empathy: number;                  // 0-100
-  patience: number;                 // 0-100
-  risk_tolerance: number;           // 0-100
+  analytical_thinking: number;      // 0–100
+  creativity: number;               // 0–100
+  communication: number;            // 0–100
+  leadership: number;               // 0–100
+  research: number;                 // 0–100
+  business_acumen: number;          // 0–100
+  technical_curiosity: number;      // 0–100
+  empathy: number;                  // 0–100
+  patience: number;                 // 0–100
+  risk_tolerance: number;           // 0–100
   computed_at: Date;
-  source_version: string;           // Trait-weight config version
+  source_version: string;           // 'v1' — trait-weight config version
 }
 ```
 
@@ -713,12 +796,12 @@ sequenceDiagram
   future_scope: string;
   career_progression: string;
   pathway_tags: string[];
-  source_catalog_parts: string[];
+  source_catalog_parts: string[];   // Which catalog part(s) this career came from
   backfill_status: 'rule_based' | 'ai_refined' | 'published';
   needs_enrichment: boolean;
   is_active: boolean;
   imported_at: Date;
-  trait_weights: {                  // Live weights
+  trait_weights: {                  // Live weights (10 dimensions matching StudentDNA)
     analytical_thinking: number;
     creativity: number;
     communication: number;
@@ -730,7 +813,7 @@ sequenceDiagram
     patience: number;
     risk_tolerance: number;
   };
-  eligibility: {                   // Hard gates
+  eligibility: {                   // Hard gates for eligibility filtering
     min_maths: number;
     min_science: number;
     min_biology: number;
@@ -741,17 +824,17 @@ sequenceDiagram
     required_stream: string;
     abroad_required: boolean;
   };
-  trait_weights_draft: object;      // Staging for LLM backfill
-  eligibility_draft: object;       // Staging for LLM backfill
+  trait_weights_draft: object;      // Staging for LLM backfill (before publish)
+  eligibility_draft: object;        // Staging for LLM backfill (before publish)
 }
 ```
 
-#### Recommendation Schema
+#### Recommendation Schema (V2)
 ```typescript
 {
   user_id: string;
   onboarding_session_ref: string;
-  pipeline_version: string;
+  pipeline_version: string;         // 'v1' | 'v2'
   eligible_count: number;
   shortlist: [{
     career_code: string;
@@ -765,12 +848,39 @@ sequenceDiagram
     roadmap: string;
     suggested_colleges: string[];
     suggested_certifications: string[];
+    // V2 additions:
+    score_breakdown: {
+      academic: ScoreBreakdown;
+      interest: ScoreBreakdown;
+      skill: ScoreBreakdown;
+      personality: ScoreBreakdown;
+      constraint: ScoreBreakdown;
+      opportunity: ScoreBreakdown;
+    };
+    reasons: string[];              // Human-readable explanation array
   }];
+  confidence_score: number;         // 0–100 (V2)
+  processing_time_ms: number;       // V2
   ai_provider_used: string;
   ai_model_used: string;
   fallback_used: boolean;
   generated_at: Date;
-  stale: boolean;
+  stale: boolean;                   // Marked when profile is updated after generation
+}
+```
+
+#### ScoreBreakdown Interface (V2 Engine Output)
+```typescript
+{
+  score: number;           // 0–100, normalized
+  weight: number;          // 0–1, this engine's contribution weight
+  weightedScore: number;   // score * weight
+  confidence: number;      // 0–100, this engine's confidence in its inputs
+  bonuses: number;         // total bonus points applied (post-cap)
+  penalties: number;       // total penalty points applied (post-cap)
+  matchedFactors: string[];
+  missingFactors: string[];
+  reasoning: string[];     // Human-readable reasoning array
 }
 ```
 
@@ -779,171 +889,159 @@ sequenceDiagram
 | Collection | Records | Purpose |
 |------------|---------|---------|
 | User | ~few | Authentication & identity |
-| StudentProfile | ~few | Onboarding data + StudentDNA |
+| StudentProfile | ~few | Onboarding data + StudentDNA (embedded) |
 | StudentDNAHistory | ~few | Append-only DNA snapshots |
 | Career | 742 | Career catalog with traits & eligibility |
 | SavedCareer | ~few | Career bookmarks per user |
-| Recommendation | ~few | Generated recommendations |
+| Recommendation | ~few | Generated recommendations (V1 or V2) |
 | RecommendationFeedback | ~few | User feedback on recommendations |
 | Conversation | ~few | Counselor chat sessions |
 | ConversationMessage | ~few | Individual chat messages |
-| AIRequestLog | ~hundreds | Per-call AI provider logging |
+| AIRequestLog | ~hundreds | Per-call AI provider logging (tokens, latency, provider, success/fail) |
 | AnalyticsEvent | ~thousands | Fire-and-forget events |
-| Report | ~few | PDF report generation status |
+| Report | ~few | PDF report generation status & file path |
 
 ---
 
-## 9. Recommendation Pipeline
+## 9. Recommendation Pipeline V1 (Legacy)
 
 ### 9.1 Three-Stage Architecture
 
 ```
-┌─────────────────────────────────────────────────────────────────────┐
-│                      RECOMMENDATION PIPELINE                        │
-├─────────────────────────────────────────────────────────────────────┤
-│                                                                       │
-│  Student Input ──► Eligibility Engine ──► Trait Matching Engine     │
-│                    │                       │                           │
-│                    ▼                       ▼                           │
-│           ~50-100 Eligible Careers     Top 20 Candidates             │
-│                    │                       │                           │
-│                    └───────────┬───────────┘                           │
-│                                     ▼                                  │
-│                            AI Personalization                         │
-│                                     │                                  │
-│                                     ▼                                  │
-│                            Top 5 Final Recommendations                │
-│                                                                       │
-└─────────────────────────────────────────────────────────────────────┘
+Student Input ──► Eligibility Engine ──► Trait Matching Engine ──► AI Personalization
+                  │                       │                         │
+                  ▼                       ▼                         ▼
+         ~50-100 Eligible Careers     Top 20 Candidates     Top 5 Final Recommendations
 ```
 
-### 9.2 Stage 1: Eligibility Engine
+- **Stage 1 — Eligibility Engine**: Deterministic MongoDB Query (`$lte`, `$gte` operators). AI: **NONE**
+- **Stage 2 — Trait Matching Engine**: Cosine similarity between StudentDNA vector and career trait vectors. AI: **NONE**
+- **Stage 3 — AI Personalization**: Single LLM call to rank and explain top 20 → top 5. AI: **YES** (ranking + explanation only)
 
-- **Type**: Deterministic MongoDB Query
-- **Input**: Full career catalog + StudentProfile constraints
-- **Output**: ~50-100 careers that pass hard constraints
-- **Mechanism**: MongoDB query with `$lte`, `$gte` operators
-- **AI Involvement**: **NONE** — Pure database filtering
-
-```typescript
-// Example Eligibility Query
-this.careerModel.find({
-  'eligibility.min_maths': { $lte: student.academic.subjects.maths },
-  'eligibility.min_science': { $lte: student.academic.subjects.science },
-  'eligibility.max_budget_tier': { $gte: student.constraints.budget_tier },
-  'eligibility.min_study_duration_years': { $lte: student.constraints.study_duration_max },
-});
-```
-
-### 9.3 Stage 2: Trait Matching Engine
-
-- **Type**: Deterministic Vector Similarity
-- **Input**: Eligible careers + StudentDNA vector
-- **Output**: Top 20 careers ranked by match score
-- **Mechanism**: Weighted cosine similarity between vectors
-- **AI Involvement**: **NONE** — Pure TypeScript math
-
-```typescript
-// Cosine Similarity Calculation
-function cosineSimilarity(a: number[], b: number[]): number {
-  let dotProduct = 0, normA = 0, normB = 0;
-  for (let i = 0; i < a.length; i++) {
-    dotProduct += a[i] * b[i];
-    normA += a[i] * a[i];
-    normB += b[i] * b[i];
-  }
-  return dotProduct / (Math.sqrt(normA) * Math.sqrt(normB));
-}
-
-// Match Score
-match_score = cosineSimilarity(studentDnaVector, careerTraitVector) * 100;
-```
-
-### 9.4 Stage 3: AI Personalization
-
-- **Type**: Single LLM Call
-- **Input**: Top 20 candidates + StudentDNA + StudentProfile
-- **Output**: Top 5 careers with rankings, explanations, roadmaps
-- **AI Involvement**: **YES** — But only for ranking and explanation
-
-```json
-{
-  "student_profile": { "academic": {...}, "interests": {...}, "goals": [...] },
-  "student_dna": { "analytical_thinking": 92, "technical_curiosity": 96, ... },
-  "candidate_careers": [
-    { "career_code": "SE", "name": "Software Engineer", "match_score": 96 },
-    { "career_code": "AI", "name": "AI Engineer", "match_score": 94 }
-  ]
-}
-```
-
-**Critical Rule**: The LLM must **NEVER** invent a career outside the provided candidate list. It can only rank, explain, and personalize from the top 20 already determined by the backend.
+V1 is activated when `RECOMMENDATION_ENGINE_VERSION=v1` (the default).
 
 ---
 
-## 10. AI Service Architecture
+## 10. Recommendation Engine V2 (Active)
 
-### 10.1 Provider Orchestration Layer
+### 10.1 Architecture Overview
 
-```
-┌─────────────────────────────────────────────────────────────────────┐
-│                        AI SERVICE MODULE                            │
-├─────────────────────────────────────────────────────────────────────┤
-│                                                                       │
-│  ┌─────────────────────────────────────────────────────────────────┐ │
-│  │                  ai-service.client.ts                            │ │
-│  │               (Single Public Entrypoint)                         │ │
-│  │             aiService.run(taskType, context)                     │ │
-│  └─────────────────────────────────────────────────────────────────┘ │
-│                                     │                                 │
-│                                     ▼                                 │
-│  ┌─────────────────────────────────────────────────────────────────┐ │
-│  │                  router.service.ts                               │ │
-│  │  Task Type → [Primary, Fallback1, Fallback2]                     │ │
-│  │  career_recommendation → [Gemini, DeepSeek, Groq]                │ │
-│  │  counselor_chat → [Groq, Groq, Gemini Flash]                     │ │
-│  │  career_trait_backfill → [GLM, Gemini, Groq]                     │ │
-│  └─────────────────────────────────────────────────────────────────┘ │
-│                                     │                                 │
-│                     ┌───────────────┴───────────────┐                │
-│                     ▼                               ▼                │
-│  ┌─────────────────────────┐       ┌─────────────────────────┐     │
-│  │  key-pool.service.ts    │       │ retry-manager.service    │     │
-│  │  - Load keys from env   │       │  - Rotate within         │     │
-│  │  - Round-robin rotation │       │    provider first        │     │
-│  │  - Track key usage      │       │  - Escalate to           │     │
-│  └─────────────────────────┘       │    fallback provider     │     │
-│                                     └─────────────────────────┘     │
-│                                     │                                 │
-│                     ┌───────────────┴───────────────┐                │
-│                     ▼                               ▼                │
-│  ┌─────────────────────────┐       ┌─────────────────────────┐     │
-│  │ prompt-builder.ts       │       │ cache.service.ts         │     │
-│  │  - Load .md templates   │       │  - SHA-256 hashing       │     │
-│  │  - Variable interp.     │       │  - TTL-based cache       │     │
-│  └─────────────────────────┘       └─────────────────────────┘     │
-│                                     │                                 │
-│                     ┌───────────────┴───────────────┐                │
-│                     ▼                               ▼                │
-│  ┌─────────────────────────┐       ┌─────────────────────────┐     │
-│  │ json-validator.ts       │       │ token-logger.ts          │     │
-│  │  - ajv-backed valid.    │       │  - Log to MongoDB        │     │
-│  │  - Bounded JSON repair  │       │  - Track usage           │     │
-│  └─────────────────────────┘       └─────────────────────────┘     │
-│                                     │                                 │
-│                                     ▼                                 │
-│  ┌─────────────────────────────────────────────────────────────────┐ │
-│  │                    providers/                                    │ │
-│  │  ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────┐ │ │
-│  │  │ Gemini   │ │  Groq    │ │ Mistral  │ │DeepSeek  │ │ GLM  │ │ │
-│  │  │ Provider │ │ Provider │ │ Provider │ │ Provider │ │Provid│ │ │
-│  │  └──────────┘ └──────────┘ └──────────┘ └──────────┘ └──────┘ │ │
-│  └─────────────────────────────────────────────────────────────────┘ │
-│                                                                       │
-└─────────────────────────────────────────────────────────────────────┘
+V2 replaces V1's simple 3-stage pipeline with a 10-engine architecture. Activated when `RECOMMENDATION_ENGINE_VERSION=v2`.
+
+### 10.2 Weight Configuration
+
+```json
+{
+  "academic": 0.25,
+  "interest": 0.20,
+  "skill": 0.20,
+  "personality": 0.15,
+  "constraint": 0.10,
+  "opportunity": 0.10
+}
 ```
 
-### 10.2 Routing Table
+**Constraint**: Weights must sum to 1.0. Opportunity weight has a hard ceiling of 0.15 (`THRESHOLDS.OPPORTUNITY_WEIGHT_HARD_CEILING`).
+
+### 10.3 Scoring Engines
+
+| Engine | Class | Purpose | Input | Output |
+|--------|-------|---------|-------|--------|
+| Academic | `AcademicEngine` | Score career-academic alignment | Student subjects + career min requirements | ScoreBreakdown (bonuses for exceeding requirements, penalties for near-minimum) |
+| Interest | `InterestEngine` | Score career-interest alignment | Student 12-dim interest sliders + career trait mapping | ScoreBreakdown (weighted interest overlap) |
+| Skill | `SkillEngine` | Score career-skill alignment | Student 10-dim skill self-ratings + career required skills | ScoreBreakdown (matched vs missing skills) |
+| Personality | `PersonalityEngine` | Score StudentDNA-career trait match | StudentDNA 10-dim vector + career trait weights | ScoreBreakdown (cosine-like weighted match) |
+| Constraint | `ConstraintEngine` | Score constraint satisfaction | Student budget/duration/location prefs + career eligibility rules | ScoreBreakdown (penalties for mismatches) |
+| Opportunity | `OpportunityEngine` | Score market opportunity | Career market_demand + future_scope fields | ScoreBreakdown (market signals) |
+
+### 10.4 Post-Scoring Engines
+
+| Engine | Class | Purpose |
+|--------|-------|---------|
+| Hybrid Ranking | `HybridRankingEngine` | Weighted aggregation of 6 engine scores; tie-breaking (0.5 threshold) |
+| Diversity | `DiversityEngine` | Ensures category diversity in top recommendations (avoids all-engineering, etc.) |
+| Confidence | `ConfidenceEngine` | Calculates overall recommendation confidence (0–100) based on input completeness |
+| Explainability | `ExplainabilityEngine` | Generates human-readable reason arrays for each recommendation |
+
+### 10.5 BaseScoringEngine Abstract Class
+
+All 6 scoring engines extend `BaseScoringEngine` which provides:
+- `normalize(value, min, max)` → 0–100
+- `clamp(value, min, max)` → bounded
+- `applyBonuses(base, bonuses[], cap=15)` → capped bonus application
+- `applyPenalties(base, penalties[], cap=40)` → capped penalty application
+
+### 10.6 Thresholds Configuration
+
+```typescript
+const THRESHOLDS = {
+  OPPORTUNITY_WEIGHT_HARD_CEILING: 0.15,
+  ENGINE_BONUS_CAP: 15,
+  ENGINE_PENALTY_CAP: 40,
+  HYBRID_RANKING_BONUS_CAP: 15,
+  HYBRID_RANKING_PENALTY_CAP: 40,
+  TIE_BREAK_DIFFERENCE: 0.5,
+  EXCELLENT_MATCH_MIN: 90,
+  STRONG_MATCH_MIN: 80,
+  GOOD_MATCH_MIN: 70,
+  MODERATE_MATCH_MIN: 60,
+  CONFIDENCE_LOW_THRESHOLD: 60,
+};
+```
+
+### 10.7 V2 Engine Pipeline Diagram
+
+```mermaid
+flowchart TD
+    subgraph Input["Inputs"]
+        SP[StudentProfile]
+        DNA[StudentDNA]
+        CC["Career Catalog\n(742 careers)"]
+    end
+
+    subgraph Stage1["Stage 1: Eligibility"]
+        EE["EligibilityEngine\n(MongoDB Query)"]
+        SP --> EE
+        CC --> EE
+        EE --> EC["~50-100 Eligible Careers"]
+    end
+
+    subgraph Stage2["Stage 2: Multi-Engine Scoring"]
+        EC --> AE["AcademicEngine\n(weight: 0.25)"]
+        EC --> IE["InterestEngine\n(weight: 0.20)"]
+        EC --> SE["SkillEngine\n(weight: 0.20)"]
+        EC --> PE["PersonalityEngine\n(weight: 0.15)"]
+        EC --> CE["ConstraintEngine\n(weight: 0.10)"]
+        EC --> OE["OpportunityEngine\n(weight: 0.10)"]
+    end
+
+    subgraph Stage3["Stage 3: Ranking"]
+        AE & IE & SE & PE & CE & OE --> HR["HybridRankingEngine\n(weighted aggregation + tie-break)"]
+        HR --> DE["DiversityEngine\n(category spread enforcement)"]
+    end
+
+    subgraph Stage4["Stage 4: AI"]
+        DE -->|Top 20| AI["AI Personalization\n(Single LLM Call)"]
+        AI -->|Top 5| FR[Final Recommendations]
+    end
+
+    subgraph Stage5["Stage 5: Post"]
+        FR --> CON["ConfidenceEngine\n(0-100 score)"]
+        FR --> EXP["ExplainabilityEngine\n(reason arrays)"]
+    end
+
+    style Stage1 fill:#e8f5e9
+    style Stage2 fill:#f3e5f5
+    style Stage3 fill:#fff9c4
+    style Stage4 fill:#ffecb3
+    style Stage5 fill:#e1f5fe
+```
+
+---
+
+## 11. AI Service Architecture
+
+### 11.1 Routing Table
 
 | Task Type | Primary | Fallback 1 | Fallback 2 | Use Case |
 |-----------|---------|------------|------------|----------|
@@ -952,25 +1050,26 @@ match_score = cosineSimilarity(studentDnaVector, careerTraitVector) * 100;
 | counselor_chat | Groq LLaMA 3.3-70B | Groq Mixtral 8x7B | Gemini Flash | Low-latency chat |
 | career_trait_backfill | Gemini Flash | Groq LLaMA 3.3-70B | Groq LLaMA 3.1-8B | LLM-assisted catalog building |
 | report_summary | Mistral Large | Gemini Flash | Groq LLaMA 3.3-70B | PDF report content |
+| scenario_generation | Gemini Flash | Groq | — | Dynamic scenario questions |
 
-### 10.3 Fallback Flow
+### 11.2 Fallback Flow
 
-1. **Primary Provider**: Try all available keys in pool
+1. **Primary Provider**: Try all available keys in pool (round-robin)
 2. **Within Provider**: Rotate through keys, retry on rate limit/timeout
 3. **Cross Provider**: After exhausting all keys for primary, escalate to Fallback 1
 4. **Final Fallback**: After exhausting Fallback 1, escalate to Fallback 2
 5. **Failure**: If all providers fail, throw typed error
-6. **Quota Fail-Fast**: Billing/rate-limit errors skip remaining keys immediately
+6. **Quota Fail-Fast**: Billing/rate-limit errors (`insufficient_balance`, `429`, `402`) skip remaining keys immediately
 
-### 10.4 Standard Response Shape
+### 11.3 Standard Response Shape
 
 ```typescript
-interface AIResponse {
+interface AIResponse<T = any> {
   provider: string;           // e.g., "gemini"
   model: string;              // e.g., "gemini-2.5-flash"
   task: string;               // e.g., "career_recommendation"
   success: boolean;
-  data: any;                  // Task-specific JSON
+  data: T;                    // Task-specific JSON (validated by ajv schema)
   usage: {
     input_tokens: number;
     output_tokens: number;
@@ -981,314 +1080,339 @@ interface AIResponse {
 }
 ```
 
-### 10.5 Prompt Management
+### 11.4 Prompt Templates
 
-All prompts are stored as `.md` files in `ai-service/prompts/`:
-- `career-recommendation.md`
-- `roadmap-generation.md`
-- `counselor-chat.md`
-- `career-trait-backfill.md`
-- `report-summary.md`
-- `test-task.md`
+All prompts stored as `.md` files in `ai-service/prompts/`:
 
-Prompts are loaded and interpolated at runtime using `prompt-builder.service.ts`.
+| File | Lines | Purpose |
+|------|:-----:|---------|
+| `career-recommendation.md` | 57 | Rank and explain top 20 candidates |
+| `roadmap-generation.md` | 237 | Generate detailed career roadmap with mermaid nodes/edges |
+| `counselor-chat.md` | 31 | AI counselor response generation |
+| `career-trait-backfill.md` | 52 | Generate trait weights + eligibility for careers |
+| `report-summary.md` | 15 | PDF report content summary |
+| `scenario-generation.md` | 44 | Generate scenario-based questions |
+| `test-task.md` | 14 | Health check test prompt |
 
-### 10.6 AI Service File Structure
+### 11.5 JSON Schema Registry
 
-```
-ai-service/
-├── config/
-│   └── provider-models.config.ts       # Centralized model identifiers + API versions
-├── schemas/
-│   └── json-schemas/
-│       ├── index.ts                    # TaskType → JSONSchema map
-│       ├── career-recommendation.schema.ts
-│       ├── counselor-chat.schema.ts
-│       ├── career-trait-backfill.schema.ts
-│       ├── report-summary.schema.ts
-│       └── roadmap-generation.schema.ts
-├── prompts/
-│   ├── career-recommendation.md
-│   ├── career-trait-backfill.md
-│   ├── counselor-chat.md
-│   ├── report-summary.md
-│   ├── roadmap-generation.md
-│   └── test-task.md
-├── providers/
-│   ├── provider.interface.ts
-│   ├── gemini.provider.ts
-│   ├── groq.provider.ts
-│   ├── mistral.provider.ts
-│   ├── deepseek.provider.ts
-│   └── glm.provider.ts
-├── ai-request-log.schema.ts
-├── ai-service.client.ts              # SINGLE public entrypoint
-├── ai-service.controller.ts          # GET /ai-service/health
-├── ai-service.module.ts
-├── ai-service.schemas.ts
-├── cache.service.ts
-├── json-validator.service.ts         # ajv-backed + bounded repair
-├── key-pool.service.ts
-├── prompt-builder.service.ts
-├── retry-manager.service.ts
-├── router.service.ts
-└── token-logger.service.ts
-```
+Each task type has a corresponding ajv-compiled JSON schema:
+
+| Schema File | Validates |
+|-------------|-----------|
+| `career-recommendation.schema.ts` | AI ranking response (career_code, rank, explanation, roadmap) |
+| `counselor-chat.schema.ts` | Chat response (content field) |
+| `career-trait-backfill.schema.ts` | Trait weights + eligibility objects |
+| `report-summary.schema.ts` | Report summary content |
+| `roadmap-generation.schema.ts` | Roadmap with nodes, edges, skills, exams |
+| `scenario-generation.schema.ts` | Scenario question objects |
 
 ---
 
-## 11. API Surface
+## 12. API Surface
 
-### 11.1 Global Configuration
+### 12.1 Global Configuration
 
 - **Base Path**: `/api`
-- **Authentication**: JWT Bearer (default), with `@Public()` decorator for exceptions
+- **Authentication**: JWT Bearer (global `JwtAuthGuard`), with `@Public()` decorator for exceptions
 - **Response Envelope**: All success responses wrapped in `{ data, timestamp, requestId }`
-- **Error Shape**: Consistent error format across all endpoints
+- **Error Shape**: `{ statusCode, message, detail?, errors?: FieldError[], timestamp, path, requestId }`
+- **Validation**: `class-validator` with `whitelist: true, transform: true, forbidNonWhitelisted: true`
+- **CORS**: Enabled for all origins (dev mode)
 
-### 11.2 Module Endpoints
+### 12.2 Module Endpoints
 
 #### Auth Module (`/api/auth`)
 
 | Method | Endpoint | Description | Auth |
 |--------|----------|-------------|------|
-| POST | `/register` | Register new user | Public |
-| POST | `/login` | Login with credentials | Public |
+| POST | `/register` | Register new user (email, password, full_name) | Public |
+| POST | `/login` | Login with credentials → returns access_token + refresh_token | Public |
 | POST | `/logout` | Invalidate refresh token | Auth |
-| POST | `/refresh` | Get new access token | Public |
-| GET | `/me` | Get current user info | Auth |
-| GET | `/verify-email/:token` | Verify email | Public |
-| POST | `/forgot-password` | Request password reset | Public |
-| POST | `/reset-password` | Reset password | Public |
+| POST | `/refresh` | Get new access token using refresh token | Public |
+| GET | `/me` | Get current user info (sanitized — no password_hash) | Auth |
 
 #### Health Module (`/api/health`)
 
 | Method | Endpoint | Description | Auth |
 |--------|----------|-------------|------|
-| GET | `/` | System health check | Public |
+| GET | `/` | System health check → `{ status: 'ok', timestamp }` | Public |
 
 #### AI Service Module (`/api/ai-service`)
 
 | Method | Endpoint | Description | Auth |
 |--------|----------|-------------|------|
-| GET | `/health` | Live per-provider health check (5-min cache) | Public |
+| GET | `/health` | Live per-provider health check (5-min cache, actual API pings) | Public |
 
 #### Onboarding Module (`/api/onboarding`)
 
 | Method | Endpoint | Description | Auth |
 |--------|----------|-------------|------|
-| POST | `/start` | Initialize onboarding | Auth |
-| PUT | `/step/:stepKey` | Save step data | Auth |
-| GET | `/resume` | Get current step & saved data | Auth |
-| POST | `/complete` | Mark onboarding complete | Auth |
-| GET | `/student-dna` | Get StudentDNA | Auth |
+| POST | `/start` | Initialize onboarding profile | Auth |
+| PUT | `/step/:stepKey` | Save step data (validates DTO per step) | Auth |
+| GET | `/resume` | Get current step & all saved data for resume | Auth |
+| POST | `/complete` | Mark onboarding complete, compute DNA, trigger recommendations | Auth |
+| GET | `/scenarios` | Get AI-generated scenario questions | Auth |
+| GET | `/student-dna` | Get computed StudentDNA vector | Auth |
 
 #### Careers Module (`/api/careers`)
 
 | Method | Endpoint | Description | Auth |
 |--------|----------|-------------|------|
-| GET | `/` | List all careers | Public |
-| GET | `/categories` | List all categories | Public |
-| GET | `/search` | Search careers | Public |
-| GET | `/suggest` | Get career suggestions | Public |
-| GET | `/filter` | Filter careers | Public |
+| GET | `/` | List all careers (optional category/search filter) | Public |
+| GET | `/categories` | List all career categories | Public |
+| GET | `/by-codes?codes=X,Y` | Get multiple careers by codes | Public |
+| GET | `/related/:careerCode` | Get related careers (same category, limit 5) | Public |
 | GET | `/:careerCode` | Get career by code | Public |
-| GET | `/related/:careerCode` | Get related careers | Public |
-| GET | `/roadmap/:careerCode` | Get career roadmap | Public |
-| POST | `/by-codes` | Get multiple careers by codes | Public |
-| POST | `/save/:careerId` | Save career bookmark | Auth |
-| GET | `/saved` | Get saved careers | Auth |
-| GET | `/saved/status/:careerId` | Check save status | Auth |
-| GET | `/admin/careers` | Paginated list with filters | Admin |
+| POST | `/save` | Save career bookmark | Auth |
+| DELETE | `/save/:careerCode` | Remove career bookmark | Auth |
+| GET | `/saved` | Get all saved careers | Auth |
+| GET | `/saved/status/:careerCode` | Check save status for a career | Auth |
+| GET | `/admin/careers` | Paginated list with filters (category, backfill_status, needs_enrichment, is_active, search, sort) | Admin |
 | GET | `/admin/careers/:careerCode` | Full detail with draft comparison | Admin |
 | PUT | `/admin/careers/:careerCode` | Manual inline edit | Admin |
-| POST | `/admin/careers/:careerCode/publish-draft` | Publish draft → live | Admin |
-| POST | `/admin/careers/:careerCode/reject-draft` | Reject draft | Admin |
-| POST | `/admin/careers/bulk-publish` | Bulk publish drafts | Admin |
-| GET | `/admin/careers/import-audit` | Import audit summary | Admin |
-| PATCH | `/admin/careers/:careerCode/toggle-active` | Soft enable/disable | Admin |
+| POST | `/admin/careers/:careerCode/publish-draft` | Publish draft → live weights | Admin |
+| POST | `/admin/careers/:careerCode/reject-draft` | Reject draft, clear staging | Admin |
+| POST | `/admin/careers/bulk-publish` | Bulk publish drafts matching filter | Admin |
+| GET | `/admin/careers/import-audit` | Import audit summary (counts by category, backfill status, enrichment) | Admin |
+| PATCH | `/admin/careers/:careerCode/toggle-active` | Soft enable/disable career | Admin |
 
 #### Recommendation Module (`/api/recommendations`)
 
 | Method | Endpoint | Description | Auth |
 |--------|----------|-------------|------|
-| POST | `/generate` | Generate recommendations | Auth |
+| POST | `/generate` | Generate recommendations (V1 or V2 based on env) | Auth |
 | GET | `/latest` | Get latest recommendations | Auth |
-| POST | `/regenerate` | Regenerate recommendations | Auth |
-| POST | `/feedback` | Submit feedback | Auth |
+| POST | `/regenerate` | Force regenerate recommendations | Auth |
+| POST | `/feedback` | Submit feedback (recommendation_id, career_code, rating 1-5, comment) | Auth |
 
 #### Counselor Module (`/api/counselor`)
 
 | Method | Endpoint | Description | Auth |
 |--------|----------|-------------|------|
-| POST | `/chat` | Send chat message | Auth |
-| GET | `/conversations` | List conversations | Auth |
-| GET | `/conversations/:id` | Get conversation by ID | Auth |
+| POST | `/chat` | Send chat message (auto-creates session if needed) | Auth |
+| GET | `/conversations` | List all conversations | Auth |
+| GET | `/conversations/:id` | Get conversation messages by ID | Auth |
 | POST | `/feedback` | Submit chat feedback | Auth |
-| POST | `/regenerate` | Regenerate last response | Auth |
+| POST | `/regenerate` | Regenerate last AI response | Auth |
 
 #### Dashboard Module (`/api/dashboard`)
 
 | Method | Endpoint | Description | Auth |
 |--------|----------|-------------|------|
-| GET | `/` | Get dashboard data | Auth |
+| GET | `/` | Get full dashboard data (profile, recommendations, insights, next_action) | Auth |
 
-#### Reports Module (`/api/report`)
+#### Reports Module (`/api/reports`)
 
 | Method | Endpoint | Description | Auth |
 |--------|----------|-------------|------|
-| POST | `/generate` | Generate PDF report | Auth |
-| GET | `/status/:reportId` | Get report status | Auth |
-| GET | `/download/:reportId` | Download report | Auth |
-| GET | `/history` | Get report history | Auth |
+| POST | `/generate` | Start async PDF report generation | Auth |
+| GET | `/status/:reportId` | Get report generation status | Auth |
+| GET | `/download/:reportId` | Download report PDF (Content-Type: application/pdf) | Auth |
+| GET | `/history` | Get report generation history | Auth |
 
 #### Analytics Module (`/api/analytics`)
 
 | Method | Endpoint | Description | Auth |
 |--------|----------|-------------|------|
-| GET | `/me` | User analytics | Auth |
+| GET | `/me` | User's own analytics events | Auth |
 | GET | `/platform` | Platform-wide analytics | Admin |
-| GET | `/careers` | Career analytics | Admin |
-| GET | `/ai` | AI usage analytics | Admin |
-| POST | `/event` | Log analytics event | Auth |
+| GET | `/careers` | Career analytics (bookmarks, popular careers) | Admin |
+| GET | `/ai` | AI usage analytics (tokens, latency, success rate, fallback rate) | Admin |
+| POST | `/event` | Log custom analytics event | Auth |
 
 #### History Module (`/api/history`)
 
 | Method | Endpoint | Description | Auth |
 |--------|----------|-------------|------|
-| GET | `/?type=all\|careers\|recommendations\|onboarding` | Get history | Auth |
-
-### 11.3 Response Envelope Contract
-
-**Success Response:**
-```typescript
-{
-  data: any;              // Actual response payload
-  timestamp: string;      // ISO timestamp
-  requestId: string;      // Unique request identifier
-}
-```
-
-**Error Response:**
-```typescript
-{
-  statusCode: number;     // HTTP status code
-  message: string;        // Error message
-  detail?: string;        // Optional detail
-  errors?: FieldError[];  // Optional field-level errors
-  timestamp: string;      // ISO timestamp
-  path: string;           // Request path
-  requestId: string;      // Unique request identifier
-}
-```
+| GET | `/?type=all\|careers\|recommendations\|onboarding&page=1&limit=10` | Get paginated history | Auth |
 
 ---
 
-## 12. Frontend Architecture
+## 13. Frontend Architecture
 
-### 12.1 Directory Structure
+### 13.1 Directory Structure
 
 ```
 frontend/src/
-├── main.tsx                    # Entry point
-├── App.tsx                     # Router + Suspense + ErrorBoundary
-├── App.css                     # (minimal)
-├── index.css                   # Tailwind v4 @theme + utilities + animations
+├── main.tsx                    # Entry point (React 19 root + StrictMode)
+├── App.tsx                     # Router + Suspense + ErrorBoundary + QueryClient
+├── App.css                     # Minimal (17 bytes)
+├── index.css                   # Tailwind v4 @theme + utilities + animations (154 lines)
 ├── api/
-│   ├── client.ts               # Axios with JWT interceptor + refresh queue
-│   └── adminCareers.ts         # Admin career API functions
+│   ├── client.ts               # Axios with JWT interceptor + refresh queue (105 lines)
+│   ├── client.test.ts          # Axios interceptor tests
+│   └── adminCareers.ts         # Admin career API functions (68 lines)
 ├── store/
-│   └── authStore.ts            # Zustand: user, accessToken, refreshToken (memory only)
+│   ├── authStore.ts            # Zustand: user, accessToken, refreshToken (memory only, 31 lines)
+│   └── authStore.test.ts       # Auth store tests
+├── design/
+│   ├── index.ts                # Design token exports
+│   └── tokens/
+│       ├── colors.ts           # Full color palette (73 lines)
+│       ├── blur.ts             # Blur values
+│       ├── glass.ts            # Glass surface definitions (28 lines)
+│       ├── lighting.ts         # Glow/lighting effects
+│       ├── motion.ts           # Animation durations/easings
+│       ├── radius.ts           # Border radius tokens
+│       ├── shadow.ts           # Shadow tokens
+│       ├── spacing.ts          # Spacing scale
+│       └── typography.ts       # Font families & sizes
 ├── lib/
 │   ├── utils.ts                # cn() helper (clsx + tailwind-merge)
-│   └── motion.ts               # Framer Motion variants (fadeUp, fadeIn, scaleIn, staggerContainer)
+│   ├── motion.ts               # Framer Motion variants (fadeUp, fadeIn, scaleIn, staggerContainer)
+│   └── catalogs.ts             # Career catalog constants
 ├── components/
 │   ├── layout/
-│   │   ├── AppShell.tsx        # Sidebar + main content + floating AI button
-│   │   └── AuthLayout.tsx      # Centered card layout + AmbientOrbs
+│   │   ├── AppShell.tsx        # Sidebar + main content + floating AI button (103 lines)
+│   │   └── AuthLayout.tsx      # Centered card layout + AmbientOrbs (18 lines)
 │   ├── shared/
-│   │   ├── AmbientOrbs.tsx     # Animated background orbs
-│   │   ├── ErrorBoundary.tsx   # React error boundary with retry
-│   │   └── SectionReveal.tsx   # Scroll-in animation wrapper
+│   │   ├── AmbientOrbs.tsx     # Animated background orbs (19 lines)
+│   │   ├── ErrorBoundary.tsx   # React error boundary with retry (52 lines)
+│   │   └── SectionReveal.tsx   # Scroll-in animation wrapper (36 lines)
 │   ├── ui/
-│   │   ├── Button.tsx          # Variants: primary, secondary, ghost, destructive
+│   │   ├── Button.tsx          # Variants: primary, secondary, ghost, destructive; size: sm/md/lg
 │   │   └── GlassCard.tsx       # Glassmorphism card component
-│   └── OnboardingProgress.tsx  # Step progress indicator
+│   ├── ChatMarkdown.tsx        # Markdown + Mermaid renderer for counselor chat (56 lines)
+│   └── OnboardingProgress.tsx  # Step progress indicator (96 lines)
 └── pages/
-    ├── Landing.tsx             # Public landing page (hero, orbit, journey, careers, CTA)
-    ├── Login.tsx               # Login form → POST /auth/login
-    ├── Register.tsx            # Register form → POST /auth/register
+    ├── Landing.tsx             # Public landing page — hero, orbit, journey, CTA (52,673 bytes)
+    ├── Login.tsx               # Login form
+    ├── Register.tsx            # Register form
     ├── Dashboard.tsx           # Dashboard with reports, recommendations, PDF gen
-    ├── Onboarding.tsx          # 8-step wizard: personal → academic → interests → skills → goals
+    ├── Onboarding.tsx          # 8-step wizard (52,900 bytes — largest page)
     ├── CareerExplorer.tsx      # Browse/search careers, save/unsave, recommendations
+    ├── CareerGallery.tsx       # Visual gallery-style career browsing
     ├── CounselingChat.tsx      # AI counselor chat interface
     ├── HistoryLog.tsx          # Unified activity timeline
     └── AdminCareers.tsx        # Admin career catalog management panel
 ```
 
-### 12.2 Routing
+### 13.2 Routing
 
 | Route | Component | Auth | Notes |
 |-------|-----------|------|-------|
-| `/` | Landing or Dashboard | Public → Auth | Unauthenticated: Landing; authenticated: Dashboard |
+| `/` | Landing or Dashboard | Public → Auth | Unauthenticated: Landing; authenticated: AppShell + Dashboard |
 | `/login` | Login | Public | Redirects to `/` if already authenticated |
 | `/register` | Register | Public | Redirects to `/` if already authenticated |
-| `/onboarding` | Onboarding | Auth | 8-step profile wizard |
+| `/onboarding` | Onboarding | Auth | 8-step profile wizard (wrapped in AppShell) |
 | `/careers` | CareerExplorer | Auth | Career catalog + recommendations |
+| `/gallery` | CareerGallery | Auth | Visual career gallery |
 | `/chat` | CounselingChat | Auth | AI counselor |
 | `/history` | HistoryLog | Auth | Activity timeline |
-| `/admin/careers` | AdminCareers | Admin | Admin career management |
+| `/admin/careers` | AdminCareers | Admin | Admin career management (role check: `user?.role === 'admin'`) |
 | `*` | Navigate to `/` | — | Catch-all redirect |
 
-### 12.3 Key Frontend Design Decisions
+### 13.3 Key Frontend Design Decisions
 
-- **JWT in memory only**: Zustand store, never localStorage/sessionStorage
-- **Silent token refresh**: Axios interceptor queues failed 401 requests, refreshes token, retries
+- **JWT in memory only**: Zustand store, never localStorage/sessionStorage — immune to XSS token theft
+- **Silent token refresh**: Axios interceptor queues failed 401 requests, refreshes token, retries all queued
 - **Response envelope unwrap**: Axios interceptor extracts `response.data.data` automatically
-- **Lazy-loaded routes**: All page components use `React.lazy()` + `Suspense`
-- **Tailwind v4 CSS-first**: Design tokens via `@theme` directive in `index.css`
-- **Dark theme**: Deep purple/black background (`#150E22`), accent purple (`#B583F0`), gold CTA (`#F0A83E`)
-- **Glassmorphism**: `glass-card` utility with backdrop blur and translucent backgrounds
-- **Reduced motion**: Respects `prefers-reduced-motion` — animations disabled
-- **Accessibility**: Focus rings (`focus-ring` utility), keyboard navigation, semantic HTML
-
-### 12.4 Design System (Tailwind v4 Theme)
-
-```css
-@theme {
-  --color-bg: #150E22;
-  --color-surface: #201735;
-  --color-text: #FFFFFF;
-  --color-text-muted: #C3B8D9;
-  --color-accent: #B583F0;
-  --color-accent-2: #4FE0B0;
-  --color-muted: #9686B5;
-  --color-cta: #F0A83E;
-  --color-cta-text: #1A1330;
-  --color-destructive: #EF4444;
-  --font-jakarta: "Plus Jakarta Sans", sans-serif;
-  --font-anton: "Anton", sans-serif;
-}
-```
-
-### 12.5 Component Library
-
-| Component | Purpose | Variants/Features |
-|-----------|---------|-------------------|
-| `Button` | Primary action button | primary, secondary, ghost, destructive; size: sm/md/lg |
-| `GlassCard` | Glassmorphism container | backdrop-blur, translucent background, border |
-| `AppShell` | Authenticated layout | Sidebar + main content + floating AI button |
-| `AuthLayout` | Unauthenticated layout | Centered card + AmbientOrbs |
-| `ErrorBoundary` | React error boundary | Retry button, fallback UI |
-| `SectionReveal` | Scroll-in animation | IntersectionObserver + Framer Motion |
-| `AmbientOrbs` | Background decoration | Animated gradient orbs |
-| `OnboardingProgress` | Step indicator | 8-step progress bar with icons |
+- **Lazy-loaded routes**: All page components use `React.lazy()` + `Suspense` with spinner fallback
+- **QueryClient configuration**: `retry: 1`, `refetchOnWindowFocus: false`
+- **Reduced motion**: Respects `prefers-reduced-motion` — all animations disabled
+- **Accessibility**: Focus rings via `*:focus-visible`, keyboard navigation, semantic HTML
 
 ---
 
-## 13. Engineering Rules & Principles
+## 14. Design System (Liquid Glass)
 
-### 13.1 Non-Negotiable Rules
+### 14.1 Color Palette
+
+```css
+/* Backgrounds */
+--color-bg-primary: #05070D;      /* Near-black */
+--color-bg-secondary: #0A0A0F;
+--color-bg-tertiary: #10131A;
+
+/* Brand */
+--color-brand: #5B7CFA;           /* Primary blue */
+--color-brand-hover: #4F6FF0;
+--color-brand-pressed: #4565DA;
+
+/* Feature Accents */
+--color-ai-cyan: #70E1FF;          /* AI/chat features */
+--color-recommendation-purple: #8B5CF6;  /* Recommendation features */
+
+/* Glass Surfaces */
+--color-glass-surface: rgba(255, 255, 255, 0.05);
+--color-glass-elevated: rgba(255, 255, 255, 0.08);
+--color-glass-modal: rgba(255, 255, 255, 0.10);
+--color-glass-hover: rgba(255, 255, 255, 0.12);
+--color-glass-pressed: rgba(255, 255, 255, 0.16);
+
+/* Text Hierarchy */
+--color-text-primary: #FFFFFF;
+--color-text-secondary: rgba(255, 255, 255, 0.72);
+--color-text-muted: rgba(255, 255, 255, 0.45);
+--color-text-disabled: rgba(255, 255, 255, 0.25);
+
+/* Career Category Accents (10 categories) */
+--color-cat-engineering: #3B82F6;
+--color-cat-medical: #22C55E;
+--color-cat-business: #F59E0B;
+--color-cat-arts: #EC4899;
+--color-cat-law: #64748B;
+--color-cat-defence: #DC2626;
+--color-cat-agriculture: #84CC16;
+--color-cat-research: #8B5CF6;
+--color-cat-teaching: #14B8A6;
+--color-cat-design: #F97316;
+```
+
+### 14.2 Typography
+
+```css
+--font-geist: "Geist", "Inter", sans-serif;    /* Primary font */
+--font-inter: "Inter", sans-serif;               /* Fallback */
+--font-mono: "JetBrains Mono", monospace;        /* Code blocks */
+```
+
+### 14.3 Glass Utilities
+
+```css
+.glass-card {
+  backdrop-filter: blur(30px);
+  background-color: var(--color-glass-surface);
+  border: 1px solid var(--color-border-default);
+}
+
+.glass-orb {
+  filter: blur(120px);
+  opacity: 0.18;
+}
+```
+
+### 14.4 Design Token System
+
+The design system is codified in TypeScript under `frontend/src/design/tokens/`:
+
+| Token File | Contents |
+|------------|----------|
+| `colors.ts` | Full color palette: bg, brand, ai, recommendation, status, glass, border, text, categories, charts, shadows, glows |
+| `blur.ts` | Blur values for different glass levels |
+| `glass.ts` | Glass surface definitions with blur + background + border combinations |
+| `lighting.ts` | Glow effect definitions (ai glow, recommendation glow) |
+| `motion.ts` | Animation durations and easing curves |
+| `radius.ts` | Border radius tokens |
+| `shadow.ts` | Shadow tokens (default, floating, dialog) |
+| `spacing.ts` | Spacing scale |
+| `typography.ts` | Font families, sizes, weights, line heights |
+
+### 14.5 Custom Animations
+
+| Animation | Purpose |
+|-----------|---------|
+| `shimmer` | Loading skeleton effect (1.8s infinite translateX) |
+| `orbit` / `orbit-reverse` | Career orbit on landing page (18s/28s linear infinite) |
+| `scroll` | Auto-scrolling ticker on landing page (30s linear, md+ only) |
+| Framer Motion variants | `fadeUp`, `fadeIn`, `scaleIn`, `staggerContainer` for page transitions |
+
+---
+
+## 15. Engineering Rules & Principles
+
+### 15.1 Non-Negotiable Rules
 
 1. **Mongoose Only**: Never use raw MongoDB driver calls unless Mongoose cannot express the operation
 2. **Thin Controllers**: All business logic must live in `*.service.ts` files; controllers only parse requests and shape responses
@@ -1303,8 +1427,10 @@ frontend/src/
 11. **Model Strings in One Place**: Never hardcoded in provider files; all in `config/provider-models.config.ts`
 12. **No Hand-Rolled Validation**: Use ajv for JSON Schema; hand-rolled `checkSchema()` was the root cause of a production bug
 13. **Quota Errors Fail Fast**: Billing/rate-limit errors skip remaining keys and escalate to next fallback immediately
+14. **BaseScoringEngine Abstraction**: All V2 scoring engines must extend `BaseScoringEngine` and return `ScoreBreakdown`
+15. **Weight Config in JSON**: Recommendation weights live in `recommendation-weights.v1.json`, not hardcoded
 
-### 13.2 Field Naming Conventions
+### 15.2 Field Naming Conventions
 
 - **API Boundary**: Always `snake_case` (e.g., `user_id`, `career_code`, `student_dna`)
 - **Database**: Match API naming (`snake_case`)
@@ -1314,12 +1440,12 @@ frontend/src/
 
 ---
 
-## 14. Career Catalog Import
+## 16. Career Catalog Import
 
-### 14.1 Import Phases
+### 16.1 Import Phases
 
 | Phase | Sector | Careers Added | Running Total | Key Notes |
-|-------|--------|:------------:|:------------:|-----------|
+|-------|--------|:------------:|:------------:|-----------| 
 | Existing seed | — | 40 | 40 | Original seed careers |
 | Phase 1 | Science (PCM/PCB) | +93 | 133 | B.Des, Aerospace flagged for enrichment |
 | Phase 2 | Commerce | +106 | 239 | Sub-domain code resolution for parenthetical names |
@@ -1331,7 +1457,7 @@ frontend/src/
 | Phase 8 | Emerging & Future | +83 | **742** | 31 merged, final dedup clean |
 | **Total** | | | **742** | From ~1,000 catalog leaves |
 
-### 14.2 AI Backfill (Phase 9)
+### 16.2 AI Backfill (Phase 9)
 
 | Run | Concurrency | Delay | Eligible | Success | Fail | Detail |
 |-----|:-----------:|:-----:|:-------:|:------:|:----:|:-------|
@@ -1339,19 +1465,149 @@ frontend/src/
 | 2 | 1 sequential | 3s + 429 retry | 460 | 386 | 74 | Groq daily token limits exhausted |
 | **Total** | | | **702** | **628** | **74** | **89.5% backfill rate** |
 
-### 14.3 Admin Panel (Phase 10)
+### 16.3 Import Infrastructure
 
-- Full CRUD for careers with filters (category, backfill_status, needs_enrichment, is_active, search)
-- Draft publish/reject workflow for LLM backfill results
-- Import audit log with summary cards
-- Bulk publish across filters
-- Toggle active/inactive for careers
+| File | Lines | Purpose |
+|------|:-----:|---------|
+| `tree-parser.service.ts` | 286 | Parse ASCII tree from catalog markdown files |
+| `seed.service.ts` | 221 | Seed careers from parsed catalog + handle dedup/merge |
+| `default-weights.config.ts` | 195 | Rule-based trait weight defaults per category |
+| `default-eligibility.config.ts` | 307 | Rule-based eligibility defaults per category |
+| `taxonomy.config.ts` | 169 | Category/sub-domain validation tables |
+| `ai-backfill-runner.ts` | 203 | Resumable batch AI backfill script |
+| `publish-drafts.ts` | 88 | Bulk publish AI-refined drafts |
 
 ---
 
-## 15. Project Status & Progress
+## 17. Docker & Deployment
 
-### 15.1 Phase Status
+### 17.1 Docker Compose Stack
+
+```yaml
+name: scpr
+
+services:
+  backend:
+    build: ./backend              # Multi-stage Dockerfile (322 bytes)
+    restart: unless-stopped
+    ports: ["3000:3000"]
+    env_file: ./backend/.env
+    environment:
+      MONGODB_URI: mongodb://mongodb:27017/scpr
+    depends_on: [mongodb]
+
+  frontend:
+    build: ./frontend             # Multi-stage Dockerfile (348 bytes) → nginx
+    restart: unless-stopped
+    ports: ["8080:80"]            # nginx serves on port 80, exposed as 8080
+    depends_on: [backend]
+
+  mongodb:
+    image: mongo:7
+    restart: unless-stopped
+    ports: ["27017:27017"]
+    volumes: [mongo_data:/data/db]
+
+volumes:
+  mongo_data:
+```
+
+### 17.2 Frontend nginx Configuration
+
+- SPA routing: all non-file requests → `/index.html`
+- Static file caching: 1 year for hashed assets
+- Gzip compression enabled
+
+### 17.3 Quick Start (Development)
+
+```bash
+# Option 1: start.bat (Windows)
+start.bat  # Starts both backend (port 3000) + frontend (port 5173)
+
+# Option 2: Manual
+cd backend && npm run start:dev  # NestJS watch mode
+cd frontend && npm run dev       # Vite dev server
+
+# Option 3: Docker
+docker compose up --build
+```
+
+---
+
+## 18. Environment Configuration
+
+### 18.1 Backend `.env` Variables
+
+| Variable | Example | Purpose |
+|----------|---------|---------|
+| `PORT` | `3000` | Backend server port |
+| `MONGODB_URI` | `mongodb://localhost:27017/scpr` | MongoDB connection string |
+| `JWT_ACCESS_SECRET` | `fallback_access_secret_123` | JWT access token signing secret |
+| `JWT_REFRESH_SECRET` | `fallback_refresh_secret_123` | JWT refresh token signing secret |
+| `GROQ_API_KEYS` | `gsk_xxx,gsk_yyy,...` | Comma-separated Groq API keys (8 keys in pool) |
+| `GEMINI_API_KEYS` | `AQ.xxx,AQ.yyy,...` | Comma-separated Gemini API keys (8 keys in pool) |
+| `MISTRAL_API_KEYS` | `xxx,yyy` | Comma-separated Mistral API keys (2 keys in pool) |
+| `GLM_API_KEYS` | `xxx,yyy` | Comma-separated GLM API keys (2 keys in pool) |
+| `OPENROUTER_API_KEYS` | `sk-or-v1-xxx` | OpenRouter API key(s) |
+| `AI_SERVICE_CACHE_TTL_SECONDS` | `3600` | AI response cache TTL (1 hour) |
+| `AI_SERVICE_DEFAULT_TIMEOUT_MS` | `15000` | AI provider timeout (15 seconds) |
+| `AI_SERVICE_MAX_RETRIES_PER_PROVIDER` | `2` | Max retries per provider before fallback |
+| `RECOMMENDATION_ENGINE_VERSION` | `v1` or `v2` | Toggle between V1 (3-stage) and V2 (10-engine) pipeline |
+
+### 18.2 Startup Validation
+
+On bootstrap, `main.ts` validates that primary provider API keys are present:
+- Checks `GEMINI_API_KEYS`, `GROQ_API_KEYS`, `MISTRAL_API_KEYS`
+- Logs loud `⚠️ WARNING` if any primary provider keys are missing
+- **Never blocks startup** — logging only
+
+---
+
+## 19. Testing & Quality
+
+### 19.1 Test Summary
+
+| Category | Files | Lines | Framework |
+|----------|:-----:|:-----:|-----------|
+| Backend unit tests (`.spec.ts`) | 26 | ~2,610 | Jest + ts-jest |
+| Frontend unit tests (`.test.ts`) | 2 | ~97 | Vitest |
+| Backend e2e scaffold | 1 | 30 | Jest + Supertest |
+| **Total** | **29** | **~2,737** | |
+
+### 19.2 Test Coverage by Module
+
+| Module | Test Files | Key Tests |
+|--------|:----------:|-----------|
+| Auth | `auth.service.spec.ts` | Register conflict, login lockout (5 attempts → 15min), refresh token validation, sanitizeUser strips sensitive fields |
+| AI Service | `json-validator.service.spec.ts` | 22 tests: valid/invalid data per task type, repair (strip fences, trailing commas, single quotes), fail-fast on truncated/garbage JSON |
+| Onboarding | `onboarding-flow.service.spec.ts`, `trait-engine.service.spec.ts` | Step transitions, completion percentages, DNA computation (10 traits clamped 0-100), scenario impact, null fallback to 50 |
+| Recommendation V2 | `academic.engine.spec.ts`, `interest.engine.spec.ts`, `skill.engine.spec.ts`, `personality.engine.spec.ts`, `constraint.engine.spec.ts`, `opportunity.engine.spec.ts`, `eligibility.engine.spec.ts`, `base-scoring.engine.spec.ts`, `hybrid-ranking.engine.spec.ts`, `diversity.engine.spec.ts`, `explainability.engine.spec.ts`, `eligibility-engine.service.spec.ts`, `trait-matching-engine.service.spec.ts`, `recommendation.service.spec.ts` | Per-engine scoring, normalization, bonus/penalty capping, weight validation, hybrid ranking, diversity enforcement, eligibility query building, trait matching sorting/limits, full pipeline integration (V1 + V2 paths) |
+| Counselor | `counselor.service.spec.ts` | Safety filter (hack/kill/suicide/bomb → `***`), session authorization, message flow |
+| Careers Import | `tree-parser.spec.ts`, `default-weights.spec.ts`, `default-eligibility.spec.ts` | ASCII tree parsing, weight computation per category, eligibility rule generation |
+| Recommendation Utils | `bonus.spec.ts`, `penalty.spec.ts`, `normalize.spec.ts`, `weight-calculator.spec.ts` | Bonus capping, penalty capping, normalization, weight validation (sum=1.0, opportunity ceiling) |
+| Frontend | `client.test.ts`, `authStore.test.ts` | Axios interceptor behavior, Zustand store state management |
+
+### 19.3 Running Tests
+
+```bash
+# Backend
+cd backend
+npm test                    # Run all Jest tests
+npm run test:watch          # Watch mode
+npm run test:cov            # Coverage report
+npm run test:e2e            # E2E tests
+
+# Frontend
+cd frontend
+npm test                    # Run all Vitest tests
+npm run test:watch          # Watch mode
+```
+
+---
+
+## 20. Project Status & Progress
+
+### 20.1 Phase Status
 
 | Phase | Description | Status | Date |
 |-------|-------------|--------|------|
@@ -1363,224 +1619,502 @@ frontend/src/
 | P5 | Counselor (AI chat) | ✅ Done | 2026-07-11 |
 | P6 | Dashboard, reports, analytics, history | ✅ Done | 2026-07-11 |
 | — | Career catalog import (~742 careers) | ✅ Done | 2026-07-12 |
-| — | AI backfill (628/702) | ⚠️ Partial | 2026-07-12 |
+| — | AI backfill (628/702) | ⚠️ 89.5% | 2026-07-12 |
 | — | Admin panel | ✅ Done | 2026-07-12 |
 | P7 | Frontend UI migration | ✅ Done | 2026-07-13 |
 | — | JSON Validator fix (ajv + schemas) | ✅ Done | 2026-07-13 |
 | — | AI Provider config fix & health checks | ✅ Done | 2026-07-13 |
-| P8 | Testing & QA | ⏳ Pending | — |
+| — | Recommendation Engine V2 (10 engines) | ✅ Done | 2026-08-xx |
+| — | Liquid Glass redesign | ✅ Done | 2026-08-xx |
+| — | Career Gallery page | ✅ Done | 2026-08-xx |
+| — | Design token system | ✅ Done | 2026-08-xx |
+| — | ChatMarkdown + Mermaid rendering | ✅ Done | 2026-08-xx |
+| — | Scenario generation via AI | ✅ Done | 2026-08-xx |
+| P8 | Testing & QA | 🔄 In Progress | — |
 
-### 15.2 Build Order Rationale
+### 20.2 Build Order Rationale
 
 ```
-Auth → AI Service → Careers → Onboarding → Recommendation → Counselor → Consumer Modules
+Auth → AI Service → Careers → Onboarding → Recommendation → Counselor → Consumer Modules → V2 Engines
 ```
 
-Each module only depends on modules already built, eliminating circular dependencies.
+Each module only depends on modules already built, eliminating circular dependencies. Event emitters provide loose coupling between Onboarding → Recommendation and Onboarding → Analytics.
 
 ---
 
-## 16. Known Issues & Open Items
+## 21. Known Issues & Open Items
 
-### 16.1 High Priority
+### 21.1 High Priority
 
 | Issue | Detail | Status |
 |-------|--------|--------|
 | 74 careers not AI backfilled | Rate limits exhausted (Gemini 1500/day, Groq TPD) — runner is resumable | ⚠️ Pending retry |
 
-### 16.2 Medium Priority
+### 21.2 Medium Priority
 
 | Issue | Detail | Status |
 |-------|--------|--------|
-| Groq TPD limit (100k tokens/day) | Limits batch backfill throughput | ⚠️ Mitigated (4 keys in pool) |
+| Groq TPD limit (100k tokens/day) | Limits batch backfill throughput | ⚠️ Mitigated (8 keys in pool) |
 | GLM model not in routing | Provider configured (`glm-4-plus`) but not wired into any task route | ⚠️ Open |
-| DeepSeek insufficient balance | Account out of credits | ❌ Requires human action |
+| DeepSeek insufficient balance | Account out of credits, no keys configured | ❌ Requires human action |
+| OpenRouter not in routing | API key configured but no task routes use it | ⚙️ Available |
 
-### 16.3 Low Priority
+### 21.3 Low Priority
 
 | Issue | Detail | Status |
 |-------|--------|--------|
 | 11 broad-degree careers need enrichment | B.Des, B.Arch, etc. flagged `needs_enrichment: true` | ⚠️ Open |
 | 25 Polytechnic cross-links best-effort | Slug-matched sub-domain names may have imperfections | ⚠️ Open |
 | 22 government roles need enrichment | Graduate-level roles needing additional context | ⚠️ Open |
-| ProtectedRoute role check timing | On page refresh, user is null until hydration | ⚠️ Mitigated |
+| ProtectedRoute role check timing | On page refresh, user is null until hydration completes | ⚠️ Mitigated |
 
-### 16.4 Recently Resolved
+### 21.4 Recently Resolved
 
 | Issue | Fix |
 |-------|-----|
-| `json-validator.service.ts` `checkSchema()` broken | Replaced with ajv-backed compiled validation + bounded JSON repair (22 tests) |
+| `json-validator.service.ts` `checkSchema()` broken | Replaced with ajv-backed compiled validation + bounded JSON repair |
 | Gemini 1.5 Flash not found on v1beta API | Changed to `v1` API, model `gemini-2.5-flash` |
 | Model strings hardcoded across router + providers | Centralized into `config/provider-models.config.ts` |
 | Quota/billing errors wasted retry attempts | Added fail-fast detection (`insufficient_balance` / `429` / `402`) |
 | Health endpoint only checked key presence | Now performs live per-provider API ping with 5-min cache |
-| Missing API keys discovered on first request | Startup validation logs loud warning for missing Primary provider keys |
-| `checkSchema()` field-key format incompatible with JSON Schema | Rewritten to understand `{type, properties}` format via ajv |
-| `needsEnrichment` query param case sensitivity | Fixed with `.toLowerCase()` normalization |
-| Admin route protection non-admin access | Added `isAdminRoute` check verifying `user?.role === 'admin'` |
+| V1 pipeline collapsed to same 1-2 careers | V2 multi-engine pipeline with diversity enforcement |
+| No score transparency | V2 ScoreBreakdown interface provides per-engine reasoning |
+| Design system inconsistent | Liquid Glass design token system with TS exports + CSS @theme sync |
 
-### 16.5 Human Action Items
+### 21.5 Human Action Items
 
 | Item | Detail |
 |------|--------|
 | Top up DeepSeek balance | Account out of credits — either top up or remove `deepseek` from routing |
-| Review Groq org-level TPD | 4 API keys in pool but may share a single org quota |
+| Review Groq org-level TPD | 8 API keys in pool but may share a single org quota |
+| Set `RECOMMENDATION_ENGINE_VERSION=v2` in production | Currently defaults to `v1`; V2 ready for production use |
 
 ---
 
-## 17. File Structure
+## 22. Complete File Structure
 
-### 17.1 Root Structure
+### 22.1 Root Structure
 
 ```
 parul project/
+├── .agents/                         # Agent skills & customizations
 ├── .git/
 ├── .gitignore
-├── .mimocode/
-├── .opencode/
-├── start.bat                    # Starts both backend + frontend dev servers
-├── WORKFLOW.md                  # Project workflow documentation
-├── ISSUES_LOG.md                # Issues & failures log
-├── CAREER_IMPORT_PROGRESS.md    # Career catalog import progress
-├── PROJECT_ANALYSIS.md          # This file
+├── .dockerignore                    # 29 bytes
+├── docker-compose.yml               # 3-service stack (backend + frontend + mongodb)
+├── start.bat                        # Dev server launcher (both backend + frontend)
+├── PROJECT_ANALYSIS.md              # This file
+├── WORKFLOW.md                      # Project workflow documentation
+├── ISSUES_LOG.md                    # Issues & failures log
+├── CAREER_IMPORT_PROGRESS.md        # Career catalog import progress
+├── LIQUID_GLASS_REDESIGN_PROMPT.md  # Design system specification
+├── colour_analysis.md               # Color system analysis
+├── recommendation-engine-v2-implementation-prompt.md  # V2 engine specification
+├── SCPR_Master_Career_Catalog_Part_[1-8]*.md          # 8 career catalog source files
+├── analyze.js                       # Codebase analysis script
+├── analyze_root.js                  # Root analysis script
+├── deep_analyze.js                  # Deep analysis script
+├── generate_color_analysis.js       # Color analysis generator
+├── clean_analysis.js                # Analysis cleanup script
+├── skills-lock.json                 # Skills lock file
 ├── backend/
-│   ├── package.json
-│   ├── tsconfig.json
-│   ├── tsconfig.build.json
-│   ├── nest-cli.json
-│   ├── .env                     # Environment variables (not in git)
+│   ├── .dockerignore
+│   ├── .env                         # Environment variables (gitignored)
+│   ├── .env.example                 # Environment template (17 variables)
+│   ├── .prettierrc                  # Prettier config
+│   ├── Dockerfile                   # Multi-stage Node.js build
+│   ├── README.md                    # Backend documentation
+│   ├── eslint.config.mjs            # ESLint 9 flat config
+│   ├── nest-cli.json                # NestJS CLI config (compilerOptions: deleteOutDir, assets: prompts/**/*.md)
+│   ├── package.json                 # Dependencies (90 lines)
+│   ├── package-lock.json            # Lock file (397KB)
+│   ├── tsconfig.json                # TypeScript config (strict, decorators)
+│   ├── tsconfig.build.json          # Build-specific TS config
+│   ├── dist/                        # Compiled output
+│   ├── node_modules/
+│   ├── reports_output/              # Generated PDF reports
 │   ├── test/
 │   │   ├── jest-e2e.json
 │   │   └── app.e2e-spec.ts
-│   ├── test_phase1.js           # Phase test scripts
-│   ├── test_phase2.js
-│   ├── test_phase3.js
-│   ├── test_phase4.js
-│   ├── test_phase5.js
-│   ├── test_phase6.js
 │   └── src/
-│       ├── main.ts              # Bootstrap + global pipes/filters/interceptors
-│       ├── app.module.ts        # Root module (imports all 11 modules)
+│       ├── main.ts                  # Bootstrap (49 lines)
+│       ├── app.module.ts            # Root module (51 lines, imports all 11 modules)
+│       ├── test-api-keys.ts         # API key testing script
 │       ├── common/
-│       │   ├── vector-math.ts
-│       │   ├── filters/http-exception.filter.ts
-│       │   └── interceptors/transform.interceptor.ts
-│       ├── auth/
-│       ├── health/
-│       ├── ai-service/
-│       ├── careers/
-│       ├── onboarding/
-│       ├── recommendation/
-│       ├── counselor/
-│       ├── dashboard/
-│       ├── reports/
-│       ├── analytics/
-│       └── history/
+│       │   ├── vector-math.ts       # Cosine similarity (37 lines)
+│       │   ├── filters/
+│       │   │   └── http-exception.filter.ts   # Global error handler (81 lines)
+│       │   └── interceptors/
+│       │       └── transform.interceptor.ts   # Response envelope wrapper (41 lines)
+│       ├── auth/                    # Authentication module
+│       ├── health/                  # Health check module
+│       ├── ai-service/              # Multi-LLM orchestration module
+│       ├── careers/                 # Career catalog module
+│       ├── onboarding/             # Student onboarding module
+│       ├── recommendation/          # Recommendation engine module
+│       ├── counselor/               # AI counselor chat module
+│       ├── dashboard/               # Dashboard module
+│       ├── reports/                 # PDF report module
+│       ├── analytics/               # Analytics module
+│       └── history/                 # History timeline module
 └── frontend/
-    ├── package.json
-    ├── vite.config.ts
+    ├── .dockerignore
+    ├── .gitignore
+    ├── .oxlintrc.json               # OxLint config
+    ├── Dockerfile                   # Multi-stage Vite build → nginx
+    ├── README.md
+    ├── index.html                   # SPA entry (589 bytes)
+    ├── nginx.conf                   # Production nginx config (1,137 bytes)
+    ├── package.json                 # Dependencies (43 lines)
+    ├── package-lock.json            # Lock file (212KB)
+    ├── vite.config.ts               # Vite + React plugin (8 lines)
     ├── tsconfig.json
     ├── tsconfig.app.json
     ├── tsconfig.node.json
-    ├── .oxlintrc.json
-    ├── .gitignore
     ├── public/
-    │   ├── favicon.svg
-    │   └── icons.svg
-    ├── dist/                    # Built output
-    └── src/
-        ├── main.tsx
-        ├── App.tsx
-        ├── App.css
-        ├── index.css
-        ├── api/
-        ├── store/
-        ├── lib/
-        ├── components/
-        │   ├── layout/
-        │   ├── shared/
-        │   ├── ui/
-        │   └── OnboardingProgress.tsx
-        └── pages/
-            ├── Landing.tsx
-            ├── Login.tsx
-            ├── Register.tsx
-            ├── Dashboard.tsx
-            ├── Onboarding.tsx
-            ├── CareerExplorer.tsx
-            ├── CounselingChat.tsx
-            ├── HistoryLog.tsx
-            └── AdminCareers.tsx
+    │   ├── favicon.svg              # App favicon
+    │   └── icons.svg                # Icon sprite
+    ├── dist/                        # Built output
+    ├── node_modules/
+    └── src/                         # Source code (see Section 13.1)
 ```
 
-### 17.2 Backend Module Structure (Per Module)
+### 22.2 Backend Module Structure (Per Module)
 
 ```
 <module>/
 ├── <module>.controller.ts    # Request parsing + response shaping
 ├── <module>.service.ts       # Business logic
 ├── <module>.module.ts        # NestJS module definition
+├── <module>.service.spec.ts  # Unit tests
 ├── dto/                      # Data Transfer Objects
 │   └── <name>.dto.ts
 └── schemas/                  # Mongoose schemas
     └── <name>.schema.ts
 ```
 
+### 22.3 AI Service Module Structure
+
+```
+ai-service/
+├── config/
+│   └── provider-models.config.ts       # Centralized model identifiers + API versions
+├── schemas/
+│   └── json-schemas/
+│       ├── index.ts                    # TaskType → JSONSchema map
+│       ├── career-recommendation.schema.ts
+│       ├── counselor-chat.schema.ts
+│       ├── career-trait-backfill.schema.ts
+│       ├── report-summary.schema.ts
+│       ├── roadmap-generation.schema.ts
+│       └── scenario-generation.schema.ts
+├── prompts/
+│   ├── career-recommendation.md
+│   ├── career-trait-backfill.md
+│   ├── counselor-chat.md
+│   ├── report-summary.md
+│   ├── roadmap-generation.md
+│   ├── scenario-generation.md
+│   └── test-task.md
+├── providers/
+│   ├── provider.interface.ts           # AbstractLLMProvider + ProviderResponse
+│   ├── gemini.provider.ts
+│   ├── groq.provider.ts
+│   ├── mistral.provider.ts
+│   ├── deepseek.provider.ts
+│   └── glm.provider.ts
+├── scripts/
+│   └── audit-json-validation.ts        # Validation audit script (204 lines)
+├── ai-request-log.schema.ts            # MongoDB logging schema
+├── ai-service.client.ts                # SINGLE public entrypoint (145 lines)
+├── ai-service.controller.ts            # GET /ai-service/health
+├── ai-service.module.ts                # Module definition (48 lines, 16 imports)
+├── ai-service.schemas.ts               # AIRunRequestDto
+├── cache.service.ts                    # SHA-256 + TTL cache (52 lines)
+├── json-validator.service.ts           # ajv-backed + bounded repair (95 lines)
+├── json-validator.service.spec.ts      # 22 tests (104 lines)
+├── key-pool.service.ts                 # Round-robin key rotation (53 lines)
+├── prompt-builder.service.ts           # .md template loader + interpolation (75 lines)
+├── retry-manager.service.ts            # Cross-provider fallback (156 lines)
+├── router.service.ts                   # TaskType → provider chain mapping (39 lines)
+└── token-logger.service.ts             # MongoDB AI request logging (37 lines)
+```
+
+### 22.4 Recommendation Engine V2 Structure
+
+```
+recommendation/
+├── config/
+│   ├── recommendation.constants.ts     # RECOMMENDATION_ENGINE_VERSION toggle
+│   ├── recommendation-weights.v1.json  # Weights: academic=0.25, interest=0.20, ...
+│   └── thresholds.ts                   # Bonus/penalty caps, match level thresholds
+├── engines/
+│   ├── base-scoring.engine.ts          # Abstract base (normalize, clamp, applyBonuses, applyPenalties)
+│   ├── base-scoring.engine.spec.ts
+│   ├── academic.engine.ts              # Academic score (186 lines)
+│   ├── academic.engine.spec.ts
+│   ├── interest.engine.ts              # Interest score (177 lines)
+│   ├── interest.engine.spec.ts
+│   ├── skill.engine.ts                 # Skill score (153 lines)
+│   ├── skill.engine.spec.ts
+│   ├── personality.engine.ts           # Personality/DNA match (72 lines)
+│   ├── personality.engine.spec.ts
+│   ├── constraint.engine.ts            # Constraint satisfaction (122 lines)
+│   ├── constraint.engine.spec.ts
+│   ├── opportunity.engine.ts           # Market opportunity (62 lines)
+│   ├── opportunity.engine.spec.ts
+│   ├── eligibility.engine.ts           # Eligibility (BaseScoringEngine version, 34 lines)
+│   ├── eligibility.engine.spec.ts
+│   ├── hybrid-ranking.engine.ts        # Weighted aggregation + tie-break (98 lines)
+│   ├── hybrid-ranking.engine.spec.ts
+│   ├── diversity.engine.ts             # Category diversity enforcement (106 lines)
+│   ├── diversity.engine.spec.ts
+│   ├── confidence.engine.ts            # Overall confidence (44 lines)
+│   ├── explainability.engine.ts        # Reason generation (130 lines)
+│   └── explainability.engine.spec.ts
+├── interfaces/
+│   ├── engine.interface.ts             # RecommendationEngine interface
+│   └── score-breakdown.interface.ts    # ScoreBreakdown output contract
+├── utils/
+│   ├── bonus.ts                        # BonusRule interface + application (20 lines)
+│   ├── bonus.spec.ts
+│   ├── penalty.ts                      # PenaltyRule interface + application (20 lines)
+│   ├── penalty.spec.ts
+│   ├── normalize.ts                    # Normalization utility (11 lines)
+│   ├── normalize.spec.ts
+│   ├── weight-calculator.ts            # Weight loading + validation (61 lines)
+│   └── weight-calculator.spec.ts
+├── test/
+│   └── run-persona-tests.ts            # Persona-based integration tests (253 lines)
+├── dto/
+│   └── recommendation.dto.ts           # FeedbackDto (21 lines)
+├── schemas/
+│   ├── recommendation.schema.ts        # Recommendation + ShortlistEntry + FinalRecommendation (99 lines)
+│   └── recommendation-feedback.schema.ts
+├── eligibility-engine.service.ts       # Stage 1: MongoDB query filtering (41 lines)
+├── eligibility-engine.service.spec.ts
+├── trait-matching-engine.service.ts    # V1 Stage 2: Cosine similarity (52 lines)
+├── trait-matching-engine.service.spec.ts
+├── recommendation.controller.ts        # generate/latest/regenerate/feedback (40 lines)
+├── recommendation.service.ts           # Full pipeline orchestration V1+V2 (505 lines)
+├── recommendation.service.spec.ts      # Integration tests (229 lines)
+└── recommendation.module.ts            # Module definition (74 lines, 23 imports)
+```
+
 ---
 
-## 18. Summary & Next Steps
+## 23. Codebase Metrics
 
-### 18.1 Key Innovations
+### 23.1 Lines of Code
 
-1. **Three-Stage Pipeline**: Eligibility → Trait Matching → AI Personalization
-2. **LLM as Co-Pilot**: AI explains and personalizes, but never decides
-3. **Architectural Fix for Classification Failure**: Previous ML approach collapsed; deterministic architecture solves this
-4. **Provider Abstraction**: Swap AI providers with one-line config changes
-5. **Traceable Recommendations**: Every recommendation can be traced through the pipeline
-6. **Resumable Onboarding**: Students can leave and return without losing progress
-7. **Memory-Only JWT**: No localStorage/sessionStorage — immune to XSS token theft
+| Category | Files | Lines |
+|----------|:-----:|:-----:|
+| Backend source (`.ts`, excl. tests) | 117 | ~10,741 |
+| Frontend source (`.ts`/`.tsx`, excl. tests) | 38 | ~5,831 |
+| Backend tests (`.spec.ts`) | 26 | ~2,610 |
+| Frontend tests (`.test.ts`) | 2 | ~97 |
+| **Total source** | **155** | **~16,572** |
+| **Total tests** | **28** | **~2,707** |
+| **Grand total** | **183** | **~19,279** |
 
-### 18.2 Architecture Quality
+### 23.2 Largest Files
+
+| File | Size (bytes) | Lines | Category |
+|------|:----------:|:-----:|----------|
+| `backend/src/careers/careers.service.ts` | 49,036 | 1,058 | Career catalog CRUD + seed + admin |
+| `frontend/src/pages/Onboarding.tsx` | 52,900 | ~943 | 8-step onboarding wizard |
+| `frontend/src/pages/Landing.tsx` | 52,673 | ~669 | Marketing landing page |
+| `frontend/src/pages/AdminCareers.tsx` | 36,200 | ~679 | Admin career management |
+| `frontend/src/pages/CounselingChat.tsx` | 22,627 | ~469 | AI counselor chat |
+| `frontend/src/pages/CareerExplorer.tsx` | 22,196 | ~542 | Career browsing |
+| `backend/src/recommendation/recommendation.service.ts` | 18,203 | 505 | V1+V2 pipeline orchestration |
+| `backend/src/counselor/counselor.service.ts` | 12,316 | 328 | Counselor business logic |
+
+### 23.3 Dependency Counts
+
+| Category | Count |
+|----------|:-----:|
+| Backend production dependencies | 13 |
+| Backend dev dependencies | 17 |
+| Frontend production dependencies | 12 |
+| Frontend dev dependencies | 9 |
+| **Total unique packages** | **~51** |
+
+---
+
+## 24. Detailed File-by-File Analysis
+
+### 24.1 Backend — Auth Module
+
+| File | Size | Lines | Classes/Interfaces | Endpoints |
+|------|:----:|:-----:|-------------------|-----------|
+| `auth.controller.ts` | 1,209 | 54 | `AuthController` | POST register, POST login, POST refresh, POST logout, GET me |
+| `auth.service.ts` | 4,210 | 138 | `AuthService` | — |
+| `auth.service.spec.ts` | 4,531 | 130 | — (test) | — |
+| `auth.module.ts` | 760 | 21 | `AuthModule` | — |
+| `schemas/user.schema.ts` | 1,050 | 41 | `User extends Document` | — |
+| `dto/login.dto.ts` | 254 | 12 | `LoginDto` | — |
+| `dto/register.dto.ts` | 510 | 17 | `RegisterDto` | — |
+| `guards/jwt-auth.guard.ts` | 622 | 23 | `JwtAuthGuard` | — |
+| `strategies/jwt.strategy.ts` | 1,109 | 32 | `JwtStrategy` | — |
+| `decorators/public.decorator.ts` | 150 | 5 | — | — |
+
+### 24.2 Backend — AI Service Module
+
+| File | Size | Lines | Classes/Interfaces | Purpose |
+|------|:----:|:-----:|-------------------|---------|
+| `ai-service.client.ts` | 4,311 | 145 | `AIServiceClient`, `AIResponse<T>` | Single public entrypoint |
+| `ai-service.controller.ts` | 2,887 | 73 | `AIServiceController` | Health check endpoint |
+| `ai-service.module.ts` | 1,534 | 48 | `AIServiceModule` | Module definition (16 imports) |
+| `router.service.ts` | 1,209 | 39 | `RouterService`, `RouteConfig` | Task → provider chain mapping |
+| `retry-manager.service.ts` | 4,956 | 156 | `RetryManagerService` | Cross-provider fallback orchestration |
+| `key-pool.service.ts` | 1,611 | 53 | `KeyPoolService` | Round-robin key management |
+| `prompt-builder.service.ts` | 2,534 | 75 | `PromptBuilderService` | .md template loading + interpolation |
+| `cache.service.ts` | 1,368 | 52 | `CacheService` | In-memory SHA-256 cache |
+| `json-validator.service.ts` | 3,227 | 95 | `JsonValidatorService` | ajv validation + bounded repair |
+| `json-validator.service.spec.ts` | 4,735 | 104 | — | 22 tests |
+| `token-logger.service.ts` | 1,141 | 37 | `TokenLoggerService` | MongoDB AI request logging |
+| `ai-request-log.schema.ts` | 1,049 | 40 | `AIRequestLog` | Logging schema |
+| `config/provider-models.config.ts` | 737 | 30 | `ProviderModelConfig`, `ProviderModels` | Centralized model strings |
+| `providers/provider.interface.ts` | 373 | 19 | `ProviderResponse`, `AbstractLLMProvider` | Provider contract |
+| `providers/gemini.provider.ts` | 2,256 | 77 | `GeminiProvider` | Gemini API adapter |
+| `providers/groq.provider.ts` | 1,965 | 77 | `GroqProvider` | Groq API adapter |
+| `providers/mistral.provider.ts` | 1,969 | 77 | `MistralProvider` | Mistral API adapter |
+| `providers/deepseek.provider.ts` | — | — | `DeepSeekProvider` | DeepSeek API adapter |
+| `providers/glm.provider.ts` | 1,968 | 77 | `GLMProvider` | GLM API adapter |
+| `scripts/audit-json-validation.ts` | 7,981 | 204 | — | Validation audit tool |
+
+### 24.3 Backend — Onboarding Module
+
+| File | Size | Lines | Classes/Interfaces |
+|------|:----:|:-----:|-------------------|
+| `onboarding.controller.ts` | 2,940 | 112 | `OnboardingController` (6 endpoints) |
+| `onboarding.service.ts` | 6,682 | 192 | `OnboardingService` |
+| `onboarding-flow.service.ts` | 1,629 | 56 | `OnboardingFlowService` |
+| `onboarding-flow.service.spec.ts` | 2,822 | 79 | — |
+| `trait-engine.service.ts` | 5,639 | 159 | `TraitEngineService` |
+| `trait-engine.service.spec.ts` | 4,163 | 99 | — |
+| `onboarding.module.ts` | 1,027 | 24 | `OnboardingModule` |
+| `dto/onboarding-step.dto.ts` | 4,080 | 164 | 12 DTO classes |
+| `schemas/student-profile.schema.ts` | 7,631 | 288 | 11 classes (StudentDNA, PersonalInfo, etc.) |
+| `schemas/student-dna-history.schema.ts` | 805 | 23 | `StudentDNAHistory` |
+
+### 24.4 Backend — Recommendation Module
+
+| File | Size | Lines | Purpose |
+|------|:----:|:-----:|---------|
+| `recommendation.service.ts` | 18,203 | 505 | Full V1+V2 pipeline orchestration |
+| `recommendation.service.spec.ts` | 11,986 | 229 | Integration tests |
+| `recommendation.controller.ts` | 1,059 | 40 | 4 endpoints |
+| `recommendation.module.ts` | 2,846 | 74 | Module (23 imports — all engines) |
+| `eligibility-engine.service.ts` | 1,843 | 41 | MongoDB eligibility query |
+| `trait-matching-engine.service.ts` | 1,780 | 52 | Cosine similarity matching |
+| `engines/academic.engine.ts` | 8,600 | 186 | Academic scoring |
+| `engines/interest.engine.ts` | 7,285 | 177 | Interest scoring |
+| `engines/skill.engine.ts` | 6,408 | 153 | Skill scoring |
+| `engines/constraint.engine.ts` | 5,356 | 122 | Constraint scoring |
+| `engines/explainability.engine.ts` | 4,721 | 130 | Reason generation |
+| `engines/diversity.engine.ts` | 3,719 | 106 | Category diversity |
+| `engines/hybrid-ranking.engine.ts` | 3,468 | 98 | Weighted ranking |
+| `engines/personality.engine.ts` | 2,567 | 72 | DNA-career matching |
+| `engines/opportunity.engine.ts` | 2,132 | 62 | Market signals |
+| `engines/confidence.engine.ts` | 1,696 | 44 | Confidence scoring |
+| `engines/base-scoring.engine.ts` | 1,747 | 59 | Abstract base class |
+
+### 24.5 Backend — Careers Module
+
+| File | Size | Lines | Purpose |
+|------|:----:|:-----:|---------|
+| `careers.service.ts` | 49,036 | 1,058 | Full CRUD + seed + admin + backfill |
+| `careers.controller.ts` | 5,076 | 165 | 17 endpoints |
+| `careers.module.ts` | 857 | 23 | Module definition |
+| `schemas/career.schema.ts` | 4,575 | 151 | Career + TraitProfile + Constraints |
+| `schemas/saved-career.schema.ts` | 585 | 19 | Bookmarks schema |
+| `dto/career.dto.ts` | 1,551 | 93 | Create/Update/Review DTOs |
+| `import/seed.service.ts` | 8,627 | 221 | Catalog seeder |
+| `import/tree-parser.service.ts` | 8,563 | 286 | ASCII tree parser |
+| `import/ai-backfill-runner.ts` | 7,978 | 203 | Batch AI backfill |
+| `import/default-eligibility.config.ts` | 7,732 | 307 | Category → eligibility rules |
+| `import/default-weights.config.ts` | 5,349 | 195 | Category → trait weights |
+| `import/taxonomy.config.ts` | 3,776 | 169 | Category/sub-domain validation |
+
+### 24.6 Frontend Pages
+
+| Page | Size (bytes) | Lines | Hooks Used |
+|------|:----------:|:-----:|------------|
+| `Onboarding.tsx` | 52,900 | ~943 | useEffect, useNavigate, useAuthStore, useState |
+| `Landing.tsx` | 52,673 | ~669 | useState, useNavigate, useScroll, useRef, useInView, useMotionValue, useEffect, useReducedMotion, useMotionValueEvent, useMemo |
+| `AdminCareers.tsx` | 36,200 | ~679 | useState, useNavigate, useAuthStore, useEffect, useCallback |
+| `CounselingChat.tsx` | 22,627 | ~469 | useEffect, useNavigate, useAuthStore, useState, useRef |
+| `CareerExplorer.tsx` | 22,196 | ~542 | useEffect, useNavigate, useAuthStore, useState |
+| `CareerGallery.tsx` | 13,679 | ~228 | useEffect, useNavigate, useState |
+| `HistoryLog.tsx` | 10,835 | ~236 | useEffect, useNavigate, useAuthStore, useState |
+| `Dashboard.tsx` | 10,797 | ~352 | useEffect, useNavigate, useAuthStore, useState |
+| `Register.tsx` | 4,445 | ~96 | useState, useNavigate |
+| `Login.tsx` | 3,864 | ~87 | useState, useNavigate, useAuthStore |
+
+---
+
+## 25. Summary & Next Steps
+
+### 25.1 Key Innovations
+
+1. **V2 Multi-Engine Pipeline**: 6 scoring engines + Hybrid Ranking + Diversity + Confidence + Explainability
+2. **ScoreBreakdown Transparency**: Every career recommendation has per-engine score, reasoning, matched/missing factors
+3. **LLM as Co-Pilot**: AI explains and personalizes, but never decides eligibility or invents careers
+4. **Architectural Fix for Classification Failure**: Previous ML approach collapsed; deterministic + multi-engine architecture solves this
+5. **Provider Abstraction**: Swap AI providers with one-line config changes
+6. **Traceable Recommendations**: Every recommendation can be traced through every engine in the pipeline
+7. **Resumable Onboarding**: Students can leave and return without losing progress
+8. **Memory-Only JWT**: No localStorage/sessionStorage — immune to XSS token theft
+9. **Liquid Glass Design System**: Premium dark UI codified in TypeScript design tokens
+10. **Docker-Ready Deployment**: Full docker-compose stack for one-command deployment
+
+### 25.2 Architecture Quality
 
 | Aspect | Rating | Notes |
 |--------|--------|-------|
-| Separation of Concerns | Excellent | Strict module boundaries, no circular deps |
-| Type Safety | Excellent | TypeScript throughout, DTOs validated |
-| Security | Strong | JWT memory-only, bcrypt, rate limiting |
-| Resilience | Strong | Multi-LLM fallback, retry manager, quota fail-fast |
-| Scalability | Good | MongoDB Atlas, provider-agnostic AI layer |
-| Maintainability | Excellent | Thin controllers, prompts as .md, config centralized |
-| Testability | Good | 22 JSON validator tests, e2e scaffold ready |
+| Separation of Concerns | Excellent | Strict module boundaries, no circular deps, event-driven coupling |
+| Type Safety | Excellent | TypeScript throughout, DTOs validated, ScoreBreakdown contracts |
+| Security | Strong | JWT memory-only, bcrypt, rate limiting, safety filter, admin role guards |
+| Resilience | Strong | Multi-LLM fallback, retry manager, quota fail-fast, 8+ keys per provider |
+| Scalability | Good | MongoDB Atlas/Docker, provider-agnostic AI layer, event-driven |
+| Maintainability | Excellent | Thin controllers, prompts as .md, config centralized, BaseScoringEngine abstraction |
+| Testability | Good | 28 test files, 2,707 test lines, per-engine spec coverage |
+| Design System | Excellent | Codified tokens in TS + CSS @theme sync, glassmorphism, category colors |
 
-### 18.3 Next Steps
+### 25.3 Next Steps
 
 1. **Phase 8 — Testing & QA**
    - Full onboarding sequence + resume tests
    - Eligibility edge case: zero eligible careers
    - Forced provider fallback tests
    - Cache hit/miss tests
-   - JSON validator unit tests (22 already pass)
    - Response envelope contract tests
-   - Postman/API collection
+   - V2 engine integration tests with real career data
+   - Frontend component tests
 
 2. **Retry AI Backfill**
    - Run `ai-backfill-runner.ts` when quotas reset (typically next calendar day)
    - Runner is resumable — picks up remaining 74 careers automatically
 
-3. **Human Action Items**
+3. **Production Readiness**
+   - Set `RECOMMENDATION_ENGINE_VERSION=v2` in production
    - Top up DeepSeek balance or remove from routing
    - Review Groq org-level TPD allocation
+   - Wire OpenRouter into task routing as additional fallback
 
 4. **Optional Enhancements** (Future)
    - Social login (Google OAuth)
    - Mobile apps
-   - Full admin dashboard with analytics
+   - Full admin dashboard with charts/analytics
    - Expand career catalog beyond 742
+   - TanStack Query adoption for all API calls (replace direct axios in pages)
 
 ---
 
-*Generated: 2026-07-14*
-*Documentation Version: 2.0*
+*Generated: 2026-08-24*
+*Documentation Version: 3.0*
 *Project: SCPR — Smart Career Path Recommendation System*
 ## 19. Detailed File-by-File Analysis
 
@@ -1591,16 +2125,20 @@ parul project/
 - **Lines:** 8
 
 #### `backend\.env`
-- **Size:** 1418 bytes
-- **Lines:** 14
+- **Size:** 1526 bytes
+- **Lines:** 15
+
+#### `backend\.env.example`
+- **Size:** 1652 bytes
+- **Lines:** 17
 
 #### `backend\.prettierrc`
 - **Size:** 56 bytes
 - **Lines:** 5
 
 #### `backend\Dockerfile`
-- **Size:** 656 bytes
-- **Lines:** 37
+- **Size:** 322 bytes
+- **Lines:** 17
 
 #### `backend\eslint.config.mjs`
 - **Size:** 934 bytes
@@ -1612,59 +2150,39 @@ parul project/
 - **Lines:** 11
 
 #### `backend\package.json`
-- **Size:** 2667 bytes
-- **Lines:** 91
+- **Size:** 2759 bytes
+- **Lines:** 90
 
 #### `backend\README.md`
 - **Size:** 5125 bytes
 - **Lines:** 99
 
-#### `backend\reports_output\report_6a521aa13562d31059114f04.pdf`
-- **Size:** 0 bytes
-- **Lines:** 1
-
-#### `backend\reports_output\report_6a521b74188fdcf729cd68ed.pdf`
-- **Size:** 3351 bytes
-- **Lines:** 149
-
-#### `backend\reports_output\report_6a521b96d16345d6353da515.pdf`
-- **Size:** 3351 bytes
-- **Lines:** 149
-
-#### `backend\reports_output\report_6a53bd64dd93c51c858f73dc.pdf`
-- **Size:** 11115 bytes
-- **Lines:** 217
-
-#### `backend\reports_output\report_6a564d8f0c9b862eb2ebf044.pdf`
-- **Size:** 9327 bytes
-- **Lines:** 202
-
 #### `backend\src\ai-service\ai-request-log.schema.ts`
-- **Size:** 1049 bytes
-- **Lines:** 40
+- **Size:** 1091 bytes
+- **Lines:** 41
 - **Classes:** export class AIRequestLog {
 - **Imports Count:** 2
 
 #### `backend\src\ai-service\ai-service.client.ts`
-- **Size:** 4311 bytes
-- **Lines:** 145
+- **Size:** 4502 bytes
+- **Lines:** 150
 - **Classes:** export class AIServiceClient {
 - **Interfaces:** export interface AIResponse<T = any> {
 - **Imports Count:** 7
 
 #### `backend\src\ai-service\ai-service.controller.ts`
-- **Size:** 2887 bytes
-- **Lines:** 73
+- **Size:** 3063 bytes
+- **Lines:** 88
 - **Classes:** export class AIServiceController {
 - **Imports Count:** 5
 - **Endpoints:**
   - `@Get('health')`
 
 #### `backend\src\ai-service\ai-service.module.ts`
-- **Size:** 1534 bytes
-- **Lines:** 48
+- **Size:** 1692 bytes
+- **Lines:** 52
 - **Classes:** export class AIServiceModule {}
-- **Imports Count:** 16
+- **Imports Count:** 17
 
 #### `backend\src\ai-service\ai-service.schemas.ts`
 - **Size:** 234 bytes
@@ -1673,41 +2191,41 @@ parul project/
 - **Imports Count:** 1
 
 #### `backend\src\ai-service\cache.service.ts`
-- **Size:** 1368 bytes
-- **Lines:** 52
+- **Size:** 1434 bytes
+- **Lines:** 54
 - **Classes:** export class CacheService {
 - **Imports Count:** 2
 
 #### `backend\src\ai-service\config\provider-models.config.ts`
-- **Size:** 737 bytes
-- **Lines:** 30
+- **Size:** 933 bytes
+- **Lines:** 35
 - **Interfaces:** export interface ProviderModelConfig {, export interface ProviderModels {
 
 #### `backend\src\ai-service\json-validator.service.spec.ts`
-- **Size:** 4735 bytes
-- **Lines:** 104
+- **Size:** 5596 bytes
+- **Lines:** 196
 - **Imports Count:** 2
 
 #### `backend\src\ai-service\json-validator.service.ts`
-- **Size:** 3227 bytes
-- **Lines:** 95
+- **Size:** 3430 bytes
+- **Lines:** 108
 - **Classes:** export class JsonValidatorService {
 - **Imports Count:** 3
 
 #### `backend\src\ai-service\key-pool.service.ts`
-- **Size:** 1611 bytes
-- **Lines:** 53
+- **Size:** 1723 bytes
+- **Lines:** 57
 - **Classes:** export class KeyPoolService {
 - **Imports Count:** 1
 
 #### `backend\src\ai-service\prompt-builder.service.ts`
-- **Size:** 2534 bytes
-- **Lines:** 75
+- **Size:** 2722 bytes
+- **Lines:** 91
 - **Classes:** export class PromptBuilderService {
 - **Imports Count:** 3
 
 #### `backend\src\ai-service\prompts\career-recommendation.md`
-- **Size:** 2104 bytes
+- **Size:** 2160 bytes
 - **Lines:** 57
 
 #### `backend\src\ai-service\prompts\career-trait-backfill.md`
@@ -1715,8 +2233,8 @@ parul project/
 - **Lines:** 52
 
 #### `backend\src\ai-service\prompts\counselor-chat.md`
-- **Size:** 1408 bytes
-- **Lines:** 31
+- **Size:** 2517 bytes
+- **Lines:** 35
 
 #### `backend\src\ai-service\prompts\report-summary.md`
 - **Size:** 526 bytes
@@ -1730,59 +2248,61 @@ parul project/
 - **Size:** 1523 bytes
 - **Lines:** 44
 
-#### `backend\src\ai-service\prompts\test-task.md`
-- **Size:** 369 bytes
-- **Lines:** 14
-
 #### `backend\src\ai-service\providers\gemini.provider.ts`
-- **Size:** 2256 bytes
-- **Lines:** 77
+- **Size:** 2359 bytes
+- **Lines:** 81
 - **Classes:** export class GeminiProvider implements AbstractLLM
 - **Imports Count:** 4
 
 #### `backend\src\ai-service\providers\glm.provider.ts`
-- **Size:** 1968 bytes
-- **Lines:** 77
+- **Size:** 2296 bytes
+- **Lines:** 86
 - **Classes:** export class GLMProvider implements AbstractLLMPro
 - **Imports Count:** 3
 
 #### `backend\src\ai-service\providers\groq.provider.ts`
-- **Size:** 1965 bytes
-- **Lines:** 77
+- **Size:** 2074 bytes
+- **Lines:** 81
 - **Classes:** export class GroqProvider implements AbstractLLMPr
 - **Imports Count:** 3
 
 #### `backend\src\ai-service\providers\mistral.provider.ts`
-- **Size:** 1969 bytes
-- **Lines:** 77
+- **Size:** 2078 bytes
+- **Lines:** 81
 - **Classes:** export class MistralProvider implements AbstractLL
 - **Imports Count:** 3
 
+#### `backend\src\ai-service\providers\openrouter.provider.ts`
+- **Size:** 2208 bytes
+- **Lines:** 83
+- **Classes:** export class OpenRouterProvider implements Abstrac
+- **Imports Count:** 3
+
 #### `backend\src\ai-service\providers\provider.interface.ts`
-- **Size:** 373 bytes
+- **Size:** 392 bytes
 - **Lines:** 19
 - **Interfaces:** export interface ProviderResponse {, export interface AbstractLLMProvider {
 
 #### `backend\src\ai-service\retry-manager.service.ts`
-- **Size:** 4956 bytes
-- **Lines:** 156
+- **Size:** 5291 bytes
+- **Lines:** 163
 - **Classes:** export class RetryManagerService {
-- **Imports Count:** 9
+- **Imports Count:** 10
 
 #### `backend\src\ai-service\router.service.ts`
-- **Size:** 1209 bytes
-- **Lines:** 39
+- **Size:** 1286 bytes
+- **Lines:** 40
 - **Classes:** export class RouterService {
 - **Interfaces:** export interface RouteConfig {
 - **Imports Count:** 2
 
 #### `backend\src\ai-service\schemas\json-schemas\career-recommendation.schema.ts`
-- **Size:** 883 bytes
-- **Lines:** 27
+- **Size:** 947 bytes
+- **Lines:** 30
 
 #### `backend\src\ai-service\schemas\json-schemas\career-trait-backfill.schema.ts`
-- **Size:** 1674 bytes
-- **Lines:** 45
+- **Size:** 1779 bytes
+- **Lines:** 57
 
 #### `backend\src\ai-service\schemas\json-schemas\counselor-chat.schema.ts`
 - **Size:** 392 bytes
@@ -1806,19 +2326,19 @@ parul project/
 - **Lines:** 30
 
 #### `backend\src\ai-service\scripts\audit-json-validation.ts`
-- **Size:** 7981 bytes
-- **Lines:** 204
+- **Size:** 8428 bytes
+- **Lines:** 237
 - **Imports Count:** 11
 
 #### `backend\src\ai-service\token-logger.service.ts`
-- **Size:** 1141 bytes
-- **Lines:** 37
+- **Size:** 1183 bytes
+- **Lines:** 38
 - **Classes:** export class TokenLoggerService {
 - **Imports Count:** 4
 
 #### `backend\src\analytics\analytics.controller.ts`
-- **Size:** 1035 bytes
-- **Lines:** 39
+- **Size:** 1126 bytes
+- **Lines:** 51
 - **Classes:** export class AnalyticsController {
 - **Imports Count:** 2
 - **Endpoints:**
@@ -1829,28 +2349,28 @@ parul project/
   - `@Post('event')`
 
 #### `backend\src\analytics\analytics.module.ts`
-- **Size:** 1148 bytes
-- **Lines:** 27
+- **Size:** 1198 bytes
+- **Lines:** 36
 - **Classes:** export class AnalyticsModule {}
 - **Imports Count:** 9
 
 #### `backend\src\analytics\analytics.service.ts`
-- **Size:** 5447 bytes
-- **Lines:** 150
+- **Size:** 5930 bytes
+- **Lines:** 186
 - **Classes:** export class AnalyticsService implements OnModuleI
 - **Imports Count:** 8
 
 #### `backend\src\analytics\schemas\analytics-event.schema.ts`
-- **Size:** 781 bytes
-- **Lines:** 22
+- **Size:** 824 bytes
+- **Lines:** 27
 - **Classes:** export class AnalyticsEvent {
 - **Imports Count:** 2
 
 #### `backend\src\app.module.ts`
-- **Size:** 1659 bytes
-- **Lines:** 51
-- **Classes:** export class AppModule {}
-- **Imports Count:** 16
+- **Size:** 1631 bytes
+- **Lines:** 49
+- **Classes:** export class AppModule { }
+- **Imports Count:** 15
 
 #### `backend\src\auth\auth.controller.ts`
 - **Size:** 1209 bytes
@@ -1871,13 +2391,13 @@ parul project/
 - **Imports Count:** 8
 
 #### `backend\src\auth\auth.service.spec.ts`
-- **Size:** 4531 bytes
-- **Lines:** 130
+- **Size:** 4862 bytes
+- **Lines:** 153
 - **Imports Count:** 3
 
 #### `backend\src\auth\auth.service.ts`
-- **Size:** 4210 bytes
-- **Lines:** 138
+- **Size:** 4455 bytes
+- **Lines:** 151
 - **Classes:** export class AuthService {
 - **Imports Count:** 9
 
@@ -1911,14 +2431,14 @@ parul project/
 - **Imports Count:** 2
 
 #### `backend\src\auth\strategies\jwt.strategy.ts`
-- **Size:** 1109 bytes
-- **Lines:** 32
+- **Size:** 1138 bytes
+- **Lines:** 31
 - **Classes:** export class JwtStrategy extends PassportStrategy(
 - **Imports Count:** 6
 
 #### `backend\src\careers\careers.controller.ts`
-- **Size:** 5076 bytes
-- **Lines:** 165
+- **Size:** 5386 bytes
+- **Lines:** 193
 - **Classes:** export class CareersController {
 - **Imports Count:** 4
 - **Endpoints:**
@@ -1926,11 +2446,11 @@ parul project/
   - `@Get('categories')`
   - `@Get('by-codes')`
   - `@Get('related/:careerCode')`
-  - `@Get(':careerCode')`
   - `@Post('save')`
   - `@Delete('save/:careerCode')`
   - `@Get('saved')`
   - `@Get('saved/status/:careerCode')`
+  - `@Get(':careerCode')`
   - `@Get('admin/careers')`
   - `@Get('admin/careers/:careerCode')`
   - `@Put('admin/careers/:careerCode')`
@@ -1947,30 +2467,30 @@ parul project/
 - **Imports Count:** 8
 
 #### `backend\src\careers\careers.service.ts`
-- **Size:** 49036 bytes
-- **Lines:** 1058
+- **Size:** 57868 bytes
+- **Lines:** 1637
 - **Classes:** export class CareersService implements OnModuleIni
-- **Imports Count:** 7
+- **Imports Count:** 10
 
 #### `backend\src\careers\dto\career.dto.ts`
-- **Size:** 1551 bytes
-- **Lines:** 93
+- **Size:** 1669 bytes
+- **Lines:** 102
 - **Classes:** export class CreateCareerDto {, export class UpdateCareerDto {, export class ReviewPromoteDto {
 - **Imports Count:** 1
 
 #### `backend\src\careers\import\ai-backfill-runner.ts`
-- **Size:** 7978 bytes
-- **Lines:** 203
-- **Imports Count:** 6
+- **Size:** 8802 bytes
+- **Lines:** 250
+- **Imports Count:** 7
 
 #### `backend\src\careers\import\default-eligibility.config.ts`
-- **Size:** 7732 bytes
-- **Lines:** 307
+- **Size:** 8030 bytes
+- **Lines:** 310
 - **Interfaces:** export interface EligibilityConstraints {, export interface CategoryEligibilityRule {
 
 #### `backend\src\careers\import\default-eligibility.spec.ts`
-- **Size:** 6527 bytes
-- **Lines:** 171
+- **Size:** 6884 bytes
+- **Lines:** 191
 - **Imports Count:** 1
 
 #### `backend\src\careers\import\default-weights.config.ts`
@@ -1979,102 +2499,92 @@ parul project/
 - **Interfaces:** export interface TraitProfile {
 
 #### `backend\src\careers\import\default-weights.spec.ts`
-- **Size:** 5606 bytes
-- **Lines:** 148
+- **Size:** 5836 bytes
+- **Lines:** 159
 - **Imports Count:** 1
 
 #### `backend\src\careers\import\dry-run-part-1.ts`
-- **Size:** 5677 bytes
-- **Lines:** 166
+- **Size:** 5997 bytes
+- **Lines:** 207
 - **Imports Count:** 6
 
 #### `backend\src\careers\import\publish-drafts.ts`
-- **Size:** 2942 bytes
-- **Lines:** 88
+- **Size:** 3082 bytes
+- **Lines:** 100
 - **Imports Count:** 5
 
-#### `backend\src\careers\import\run-seed-bulk.ts`
-- **Size:** 4159 bytes
-- **Lines:** 111
-- **Imports Count:** 5
-
-#### `backend\src\careers\import\run-seed-part-1.ts`
-- **Size:** 2529 bytes
-- **Lines:** 79
-- **Imports Count:** 5
-
-#### `backend\src\careers\import\run-seed-part-2.ts`
-- **Size:** 2205 bytes
-- **Lines:** 68
-- **Imports Count:** 5
+#### `backend\src\careers\import\run-seed-all.ts`
+- **Size:** 4513 bytes
+- **Lines:** 143
+- **Imports Count:** 6
 
 #### `backend\src\careers\import\seed-part-1.ts`
-- **Size:** 1420 bytes
-- **Lines:** 45
+- **Size:** 1471 bytes
+- **Lines:** 47
 - **Imports Count:** 1
 
 #### `backend\src\careers\import\seed.service.ts`
-- **Size:** 8627 bytes
-- **Lines:** 221
+- **Size:** 9396 bytes
+- **Lines:** 286
 - **Classes:** export class CareerSeedService {
 - **Interfaces:** export interface SeedPhaseResult {
 - **Imports Count:** 10
 
 #### `backend\src\careers\import\taxonomy.config.ts`
-- **Size:** 3776 bytes
-- **Lines:** 169
+- **Size:** 3954 bytes
+- **Lines:** 172
 
 #### `backend\src\careers\import\tree-parser.service.ts`
-- **Size:** 8563 bytes
-- **Lines:** 286
+- **Size:** 8861 bytes
+- **Lines:** 296
 - **Interfaces:** export interface ParsedCareerLeaf {, export interface CatalogParseResult {
 
 #### `backend\src\careers\import\tree-parser.spec.ts`
-- **Size:** 8776 bytes
-- **Lines:** 291
+- **Size:** 9105 bytes
+- **Lines:** 293
 - **Imports Count:** 1
 
 #### `backend\src\careers\schemas\career.schema.ts`
-- **Size:** 4575 bytes
-- **Lines:** 151
+- **Size:** 4734 bytes
+- **Lines:** 154
 - **Classes:** export class CareerTraitProfile {, export class CareerConstraints {, export class Career {
 - **Imports Count:** 2
 
 #### `backend\src\careers\schemas\saved-career.schema.ts`
-- **Size:** 585 bytes
-- **Lines:** 19
+- **Size:** 606 bytes
+- **Lines:** 20
 - **Classes:** export class SavedCareer {
 - **Imports Count:** 2
 
 #### `backend\src\common\filters\http-exception.filter.ts`
-- **Size:** 2391 bytes
-- **Lines:** 81
+- **Size:** 2481 bytes
+- **Lines:** 83
 - **Classes:** export class HttpExceptionFilter implements Except
 - **Interfaces:** export interface FieldError {
 - **Imports Count:** 3
 
 #### `backend\src\common\interceptors\transform.interceptor.ts`
-- **Size:** 953 bytes
-- **Lines:** 41
-- **Classes:** export class TransformInterceptor<T>
+- **Size:** 1056 bytes
+- **Lines:** 44
+- **Classes:** export class TransformInterceptor<T> implements Ne
 - **Interfaces:** export interface Response<T> {
 - **Imports Count:** 4
 
 #### `backend\src\common\vector-math.ts`
-- **Size:** 969 bytes
-- **Lines:** 37
+- **Size:** 1011 bytes
+- **Lines:** 38
 
 #### `backend\src\counselor\context-builder.service.ts`
-- **Size:** 5240 bytes
-- **Lines:** 117
+- **Size:** 5736 bytes
+- **Lines:** 146
 - **Classes:** export class ContextBuilderService {
 - **Imports Count:** 7
 
 #### `backend\src\counselor\counselor.controller.ts`
-- **Size:** 2730 bytes
-- **Lines:** 78
+- **Size:** 3028 bytes
+- **Lines:** 99
 - **Classes:** export class CounselorController {
-- **Imports Count:** 3
+- **Imports Count:** 4
 - **Endpoints:**
   - `@Post('chat')`
   - `@Get('conversations')`
@@ -2083,21 +2593,26 @@ parul project/
   - `@Post('regenerate')`
 
 #### `backend\src\counselor\counselor.module.ts`
-- **Size:** 1210 bytes
-- **Lines:** 29
+- **Size:** 1254 bytes
+- **Lines:** 35
 - **Classes:** export class CounselorModule {}
 - **Imports Count:** 11
 
 #### `backend\src\counselor\counselor.service.spec.ts`
-- **Size:** 6983 bytes
-- **Lines:** 149
+- **Size:** 8749 bytes
+- **Lines:** 243
 - **Imports Count:** 9
 
 #### `backend\src\counselor\counselor.service.ts`
-- **Size:** 12316 bytes
-- **Lines:** 328
+- **Size:** 15806 bytes
+- **Lines:** 469
 - **Classes:** export class CounselorService {
-- **Imports Count:** 11
+- **Imports Count:** 12
+
+#### `backend\src\counselor\dto\chat-response.dto.ts`
+- **Size:** 213 bytes
+- **Lines:** 13
+- **Classes:** export class SearchResultDto {, export class ChatResponseDto {
 
 #### `backend\src\counselor\dto\chat.dto.ts`
 - **Size:** 428 bytes
@@ -2112,26 +2627,26 @@ parul project/
 - **Imports Count:** 1
 
 #### `backend\src\counselor\schemas\conversation-message.schema.ts`
-- **Size:** 957 bytes
-- **Lines:** 28
+- **Size:** 987 bytes
+- **Lines:** 29
 - **Classes:** export class ConversationMessage {
 - **Imports Count:** 2
 
 #### `backend\src\counselor\schemas\conversation.schema.ts`
-- **Size:** 619 bytes
-- **Lines:** 19
+- **Size:** 640 bytes
+- **Lines:** 20
 - **Classes:** export class Conversation {
 - **Imports Count:** 2
 
 #### `backend\src\counselor\schemas\counselor-chat-message.schema.ts`
-- **Size:** 764 bytes
-- **Lines:** 25
+- **Size:** 791 bytes
+- **Lines:** 26
 - **Classes:** export class CounselorChatMessage {
 - **Imports Count:** 2
 
 #### `backend\src\counselor\schemas\counselor-chat-session.schema.ts`
-- **Size:** 757 bytes
-- **Lines:** 22
+- **Size:** 781 bytes
+- **Lines:** 23
 - **Classes:** export class CounselorChatSession {
 - **Imports Count:** 2
 
@@ -2144,14 +2659,14 @@ parul project/
   - `@Get()`
 
 #### `backend\src\dashboard\dashboard.module.ts`
-- **Size:** 634 bytes
-- **Lines:** 20
+- **Size:** 627 bytes
+- **Lines:** 15
 - **Classes:** export class DashboardModule {}
 - **Imports Count:** 7
 
 #### `backend\src\dashboard\dashboard.service.ts`
-- **Size:** 4934 bytes
-- **Lines:** 124
+- **Size:** 5165 bytes
+- **Lines:** 143
 - **Classes:** export class DashboardService {
 - **Imports Count:** 7
 
@@ -2170,50 +2685,50 @@ parul project/
 - **Imports Count:** 2
 
 #### `backend\src\history\history.controller.ts`
-- **Size:** 584 bytes
-- **Lines:** 20
+- **Size:** 640 bytes
+- **Lines:** 25
 - **Classes:** export class HistoryController {
 - **Imports Count:** 2
 - **Endpoints:**
   - `@Get()`
 
 #### `backend\src\history\history.module.ts`
-- **Size:** 554 bytes
-- **Lines:** 18
+- **Size:** 550 bytes
+- **Lines:** 14
 - **Classes:** export class HistoryModule {}
 - **Imports Count:** 6
 
 #### `backend\src\history\history.service.ts`
-- **Size:** 4197 bytes
-- **Lines:** 116
+- **Size:** 4564 bytes
+- **Lines:** 146
 - **Classes:** export class HistoryService {
 - **Interfaces:** export interface HistoryItem {
 - **Imports Count:** 7
 
 #### `backend\src\main.ts`
-- **Size:** 1512 bytes
-- **Lines:** 47
+- **Size:** 1577 bytes
+- **Lines:** 49
 - **Imports Count:** 5
 
 #### `backend\src\onboarding\dto\onboarding-step.dto.ts`
-- **Size:** 4080 bytes
-- **Lines:** 164
+- **Size:** 4288 bytes
+- **Lines:** 179
 - **Classes:** export class SavePersonalStepDto {, export class Class10SubjectsDto {, export class Class10DetailsDto {, export class Class12DetailsDto {, export class SaveAcademicStepDto {, export class SaveInterestsStepDto {, export class SaveSkillsStepDto {, export class SaveGoalsStepDto {, export class SaveWorkPreferencesStepDto {, export class SaveConstraintsStepDto {, export class ScenarioResponseDto {, export class SaveScenariosStepDto {
 - **Imports Count:** 2
 
 #### `backend\src\onboarding\onboarding-flow.service.spec.ts`
-- **Size:** 2822 bytes
-- **Lines:** 79
+- **Size:** 3040 bytes
+- **Lines:** 97
 - **Imports Count:** 2
 
 #### `backend\src\onboarding\onboarding-flow.service.ts`
-- **Size:** 1629 bytes
-- **Lines:** 56
+- **Size:** 1704 bytes
+- **Lines:** 58
 - **Classes:** export class OnboardingFlowService {
 - **Imports Count:** 1
 
 #### `backend\src\onboarding\onboarding.controller.ts`
-- **Size:** 2940 bytes
+- **Size:** 3048 bytes
 - **Lines:** 112
 - **Classes:** export class OnboardingController {
 - **Imports Count:** 5
@@ -2226,206 +2741,206 @@ parul project/
   - `@Get('student-dna')`
 
 #### `backend\src\onboarding\onboarding.module.ts`
-- **Size:** 1027 bytes
-- **Lines:** 24
+- **Size:** 1066 bytes
+- **Lines:** 30
 - **Classes:** export class OnboardingModule {}
 - **Imports Count:** 9
 
 #### `backend\src\onboarding\onboarding.service.ts`
-- **Size:** 6682 bytes
-- **Lines:** 192
+- **Size:** 12167 bytes
+- **Lines:** 359
 - **Classes:** export class OnboardingService {
 - **Imports Count:** 9
 
 #### `backend\src\onboarding\schemas\student-dna-history.schema.ts`
-- **Size:** 805 bytes
-- **Lines:** 23
+- **Size:** 830 bytes
+- **Lines:** 24
 - **Classes:** export class StudentDNAHistory {
 - **Imports Count:** 3
 
 #### `backend\src\onboarding\schemas\student-profile.schema.ts`
-- **Size:** 7631 bytes
-- **Lines:** 288
+- **Size:** 7940 bytes
+- **Lines:** 293
 - **Classes:** export class StudentDNA {, export class PersonalInfo {, export class Class10Subjects {, export class Class10Details {, export class Class12Details {, export class AcademicInfo {, export class StudentInterests {, export class StudentSkills {, export class StudentConstraints {, export class ScenarioResponse {, export class StudentProfile {
 - **Imports Count:** 2
 
 #### `backend\src\onboarding\trait-engine.service.spec.ts`
-- **Size:** 4163 bytes
-- **Lines:** 99
+- **Size:** 4779 bytes
+- **Lines:** 161
 - **Imports Count:** 2
 
 #### `backend\src\onboarding\trait-engine.service.ts`
-- **Size:** 5639 bytes
-- **Lines:** 159
+- **Size:** 5870 bytes
+- **Lines:** 168
 - **Classes:** export class TraitEngineService {
 - **Imports Count:** 2
 
 #### `backend\src\recommendation\config\recommendation-weights.v1.json`
-- **Size:** 128 bytes
+- **Size:** 136 bytes
 - **Lines:** 9
 
 #### `backend\src\recommendation\config\recommendation.constants.ts`
-- **Size:** 166 bytes
+- **Size:** 169 bytes
 - **Lines:** 4
 
 #### `backend\src\recommendation\config\thresholds.ts`
-- **Size:** 372 bytes
+- **Size:** 386 bytes
 - **Lines:** 15
 
 #### `backend\src\recommendation\dto\recommendation.dto.ts`
-- **Size:** 335 bytes
-- **Lines:** 21
+- **Size:** 375 bytes
+- **Lines:** 28
 - **Classes:** export class FeedbackDto {
 - **Imports Count:** 1
 
 #### `backend\src\recommendation\eligibility-engine.service.spec.ts`
-- **Size:** 2518 bytes
-- **Lines:** 81
+- **Size:** 2644 bytes
+- **Lines:** 87
 - **Imports Count:** 2
 
 #### `backend\src\recommendation\eligibility-engine.service.ts`
-- **Size:** 1776 bytes
-- **Lines:** 41
+- **Size:** 1843 bytes
+- **Lines:** 46
 - **Classes:** export class EligibilityEngineService {
 - **Imports Count:** 5
 
 #### `backend\src\recommendation\engines\academic.engine.spec.ts`
-- **Size:** 1399 bytes
-- **Lines:** 48
+- **Size:** 1523 bytes
+- **Lines:** 54
 - **Imports Count:** 3
 
 #### `backend\src\recommendation\engines\academic.engine.ts`
-- **Size:** 7565 bytes
-- **Lines:** 186
+- **Size:** 8600 bytes
+- **Lines:** 263
 - **Classes:** export class AcademicEngine extends BaseScoringEng
 - **Imports Count:** 6
 
 #### `backend\src\recommendation\engines\base-scoring.engine.spec.ts`
-- **Size:** 2339 bytes
-- **Lines:** 78
+- **Size:** 2458 bytes
+- **Lines:** 86
 - **Imports Count:** 4
 
 #### `backend\src\recommendation\engines\base-scoring.engine.ts`
-- **Size:** 1574 bytes
-- **Lines:** 40
+- **Size:** 1747 bytes
+- **Lines:** 59
 - **Imports Count:** 4
 
 #### `backend\src\recommendation\engines\confidence.engine.ts`
-- **Size:** 1637 bytes
-- **Lines:** 44
+- **Size:** 1696 bytes
+- **Lines:** 47
 - **Classes:** export class ConfidenceEngine {
 - **Imports Count:** 3
 
 #### `backend\src\recommendation\engines\constraint.engine.spec.ts`
-- **Size:** 1808 bytes
+- **Size:** 1872 bytes
 - **Lines:** 65
 - **Imports Count:** 3
 
 #### `backend\src\recommendation\engines\constraint.engine.ts`
-- **Size:** 5009 bytes
-- **Lines:** 122
+- **Size:** 5342 bytes
+- **Lines:** 142
 - **Classes:** export class ConstraintEngine extends BaseScoringE
 - **Imports Count:** 6
 
 #### `backend\src\recommendation\engines\diversity.engine.spec.ts`
-- **Size:** 1576 bytes
-- **Lines:** 45
+- **Size:** 1785 bytes
+- **Lines:** 62
 - **Imports Count:** 2
 
 #### `backend\src\recommendation\engines\diversity.engine.ts`
-- **Size:** 3489 bytes
-- **Lines:** 106
+- **Size:** 3719 bytes
+- **Lines:** 119
 - **Classes:** export class DiversityEngine {
 - **Interfaces:** export interface DiversityInput {
 - **Imports Count:** 3
 
 #### `backend\src\recommendation\engines\eligibility.engine.spec.ts`
-- **Size:** 1492 bytes
-- **Lines:** 38
+- **Size:** 1559 bytes
+- **Lines:** 42
 - **Imports Count:** 4
 
 #### `backend\src\recommendation\engines\eligibility.engine.ts`
-- **Size:** 1354 bytes
-- **Lines:** 34
+- **Size:** 1474 bytes
+- **Lines:** 46
 - **Classes:** export class EligibilityEngine extends BaseScoring
 - **Imports Count:** 6
 
 #### `backend\src\recommendation\engines\explainability.engine.spec.ts`
-- **Size:** 3253 bytes
-- **Lines:** 54
+- **Size:** 4441 bytes
+- **Lines:** 160
 - **Imports Count:** 2
 
 #### `backend\src\recommendation\engines\explainability.engine.ts`
-- **Size:** 4512 bytes
-- **Lines:** 130
+- **Size:** 4721 bytes
+- **Lines:** 138
 - **Classes:** export class ExplainabilityEngine {
 - **Interfaces:** export interface RecommendationReason {
 - **Imports Count:** 2
 
 #### `backend\src\recommendation\engines\hybrid-ranking.engine.spec.ts`
-- **Size:** 2417 bytes
-- **Lines:** 74
+- **Size:** 2523 bytes
+- **Lines:** 83
 - **Imports Count:** 2
 
 #### `backend\src\recommendation\engines\hybrid-ranking.engine.ts`
-- **Size:** 3273 bytes
-- **Lines:** 98
+- **Size:** 3468 bytes
+- **Lines:** 110
 - **Classes:** export class HybridRankingEngine {
 - **Interfaces:** export interface HybridInput {, export interface HybridRankedResult {
 - **Imports Count:** 3
 
 #### `backend\src\recommendation\engines\interest.engine.spec.ts`
-- **Size:** 1373 bytes
+- **Size:** 1423 bytes
 - **Lines:** 51
 - **Imports Count:** 3
 
 #### `backend\src\recommendation\engines\interest.engine.ts`
-- **Size:** 6611 bytes
-- **Lines:** 177
+- **Size:** 7285 bytes
+- **Lines:** 247
 - **Classes:** export class InterestEngine extends BaseScoringEng
 - **Imports Count:** 7
 
 #### `backend\src\recommendation\engines\opportunity.engine.spec.ts`
-- **Size:** 1200 bytes
-- **Lines:** 37
+- **Size:** 1251 bytes
+- **Lines:** 39
 - **Imports Count:** 3
 
 #### `backend\src\recommendation\engines\opportunity.engine.ts`
-- **Size:** 2037 bytes
-- **Lines:** 62
+- **Size:** 2132 bytes
+- **Lines:** 66
 - **Classes:** export class OpportunityEngine extends BaseScoring
 - **Imports Count:** 6
 
 #### `backend\src\recommendation\engines\personality.engine.spec.ts`
-- **Size:** 1116 bytes
+- **Size:** 1153 bytes
 - **Lines:** 38
 - **Imports Count:** 4
 
 #### `backend\src\recommendation\engines\personality.engine.ts`
-- **Size:** 2401 bytes
-- **Lines:** 72
+- **Size:** 2567 bytes
+- **Lines:** 85
 - **Classes:** export class PersonalityEngine extends BaseScoring
 - **Imports Count:** 7
 
 #### `backend\src\recommendation\engines\skill.engine.spec.ts`
-- **Size:** 879 bytes
+- **Size:** 910 bytes
 - **Lines:** 32
 - **Imports Count:** 3
 
 #### `backend\src\recommendation\engines\skill.engine.ts`
-- **Size:** 5703 bytes
-- **Lines:** 153
+- **Size:** 6404 bytes
+- **Lines:** 215
 - **Classes:** export class SkillEngine extends BaseScoringEngine
 - **Imports Count:** 7
 
 #### `backend\src\recommendation\interfaces\engine.interface.ts`
-- **Size:** 448 bytes
-- **Lines:** 11
+- **Size:** 474 bytes
+- **Lines:** 14
 - **Interfaces:** export interface RecommendationEngine {
 - **Imports Count:** 3
 
 #### `backend\src\recommendation\interfaces\score-breakdown.interface.ts`
-- **Size:** 575 bytes
+- **Size:** 524 bytes
 - **Lines:** 13
 - **Interfaces:** export interface ScoreBreakdown {
 
@@ -2441,160 +2956,102 @@ parul project/
   - `@Post('feedback')`
 
 #### `backend\src\recommendation\recommendation.module.ts`
-- **Size:** 2731 bytes
-- **Lines:** 74
+- **Size:** 2846 bytes
+- **Lines:** 83
 - **Classes:** export class RecommendationModule {}
 - **Imports Count:** 23
 
 #### `backend\src\recommendation\recommendation.service.spec.ts`
-- **Size:** 10480 bytes
-- **Lines:** 229
+- **Size:** 11986 bytes
+- **Lines:** 361
 - **Imports Count:** 19
 
 #### `backend\src\recommendation\recommendation.service.ts`
-- **Size:** 16933 bytes
-- **Lines:** 409
+- **Size:** 18203 bytes
+- **Lines:** 505
 - **Classes:** export class RecommendationService implements OnMo
 - **Imports Count:** 22
 
 #### `backend\src\recommendation\schemas\recommendation-feedback.schema.ts`
-- **Size:** 851 bytes
-- **Lines:** 28
+- **Size:** 881 bytes
+- **Lines:** 29
 - **Classes:** export class RecommendationFeedback {
 - **Imports Count:** 2
 
 #### `backend\src\recommendation\schemas\recommendation.schema.ts`
-- **Size:** 2485 bytes
-- **Lines:** 99
+- **Size:** 2624 bytes
+- **Lines:** 108
 - **Classes:** export class ShortlistEntry {, export class FinalRecommendation {, export class Recommendation {
 - **Imports Count:** 2
 
-#### `backend\src\recommendation\test\run-persona-tests.ts`
-- **Size:** 7544 bytes
-- **Lines:** 253
-- **Imports Count:** 12
-
 #### `backend\src\recommendation\trait-matching-engine.service.spec.ts`
-- **Size:** 3250 bytes
-- **Lines:** 69
+- **Size:** 3922 bytes
+- **Lines:** 135
 - **Imports Count:** 3
 
 #### `backend\src\recommendation\trait-matching-engine.service.ts`
-- **Size:** 1679 bytes
-- **Lines:** 52
+- **Size:** 1780 bytes
+- **Lines:** 59
 - **Classes:** export class TraitMatchingEngineService {
 - **Imports Count:** 4
 
 #### `backend\src\recommendation\utils\bonus.spec.ts`
-- **Size:** 576 bytes
+- **Size:** 592 bytes
 - **Lines:** 17
 - **Imports Count:** 1
 
 #### `backend\src\recommendation\utils\bonus.ts`
-- **Size:** 452 bytes
+- **Size:** 472 bytes
 - **Lines:** 20
 - **Interfaces:** export interface BonusRule {
 
 #### `backend\src\recommendation\utils\normalize.spec.ts`
-- **Size:** 750 bytes
+- **Size:** 778 bytes
 - **Lines:** 29
 - **Imports Count:** 1
 
 #### `backend\src\recommendation\utils\normalize.ts`
-- **Size:** 345 bytes
+- **Size:** 355 bytes
 - **Lines:** 11
 
 #### `backend\src\recommendation\utils\penalty.spec.ts`
-- **Size:** 625 bytes
-- **Lines:** 17
+- **Size:** 648 bytes
+- **Lines:** 18
 - **Imports Count:** 1
 
 #### `backend\src\recommendation\utils\penalty.ts`
-- **Size:** 460 bytes
+- **Size:** 480 bytes
 - **Lines:** 20
 - **Interfaces:** export interface PenaltyRule {
 
 #### `backend\src\recommendation\utils\weight-calculator.spec.ts`
-- **Size:** 1781 bytes
-- **Lines:** 59
+- **Size:** 1842 bytes
+- **Lines:** 63
 - **Imports Count:** 1
 
 #### `backend\src\recommendation\utils\weight-calculator.ts`
-- **Size:** 1724 bytes
-- **Lines:** 61
+- **Size:** 1792 bytes
+- **Lines:** 64
 - **Interfaces:** export interface RecommendationWeights {
 - **Imports Count:** 3
 
-#### `backend\src\reports\reports.controller.ts`
-- **Size:** 1205 bytes
-- **Lines:** 44
-- **Classes:** export class ReportsController {
-- **Imports Count:** 2
-- **Endpoints:**
-  - `@Post('generate')`
-  - `@Get('status/:reportId')`
-  - `@Get('download/:reportId')`
-  - `@Get('history')`
-
-#### `backend\src\reports\reports.module.ts`
-- **Size:** 698 bytes
-- **Lines:** 20
-- **Classes:** export class ReportsModule {}
+#### `backend\src\test-api-keys.ts`
+- **Size:** 3138 bytes
+- **Lines:** 103
 - **Imports Count:** 7
 
-#### `backend\src\reports\reports.service.ts`
-- **Size:** 6965 bytes
-- **Lines:** 182
-- **Classes:** export class ReportsService {
-- **Imports Count:** 8
-
-#### `backend\src\reports\schemas\report.schema.ts`
-- **Size:** 824 bytes
-- **Lines:** 29
-- **Classes:** export class Report {
-- **Imports Count:** 2
-
-#### `backend\src\test-api-keys.ts`
-- **Size:** 3028 bytes
-- **Lines:** 102
-- **Imports Count:** 3
-
 #### `backend\test\app.e2e-spec.ts`
-- **Size:** 754 bytes
-- **Lines:** 30
-- **Imports Count:** 5
+- **Size:** 5237 bytes
+- **Lines:** 151
+- **Imports Count:** 9
+
+#### `backend\test\jest-e2e-setup.ts`
+- **Size:** 304 bytes
+- **Lines:** 8
 
 #### `backend\test\jest-e2e.json`
-- **Size:** 192 bytes
-- **Lines:** 10
-
-#### `backend\test_out.pdf`
-- **Size:** 1503 bytes
-- **Lines:** 120
-
-#### `backend\test_phase1.js`
-- **Size:** 2118 bytes
-- **Lines:** 58
-
-#### `backend\test_phase2.js`
-- **Size:** 4299 bytes
-- **Lines:** 110
-
-#### `backend\test_phase3.js`
-- **Size:** 6969 bytes
-- **Lines:** 183
-
-#### `backend\test_phase4.js`
-- **Size:** 6872 bytes
-- **Lines:** 170
-
-#### `backend\test_phase5.js`
-- **Size:** 7901 bytes
-- **Lines:** 196
-
-#### `backend\test_phase6.js`
-- **Size:** 8032 bytes
-- **Lines:** 184
+- **Size:** 232 bytes
+- **Lines:** 11
 
 #### `backend\tsconfig.build.json`
 - **Size:** 101 bytes
@@ -2623,8 +3080,8 @@ parul project/
 - **Lines:** 16
 
 #### `frontend\nginx.conf`
-- **Size:** 729 bytes
-- **Lines:** 26
+- **Size:** 1135 bytes
+- **Lines:** 35
 
 #### `frontend\package.json`
 - **Size:** 1047 bytes
@@ -2679,14 +3136,14 @@ parul project/
 - **Lines:** 2
 
 #### `frontend\src\components\ChatMarkdown.tsx`
-- **Size:** 2434 bytes
-- **Lines:** 56
+- **Size:** 3189 bytes
+- **Lines:** 67
 - **Imports Count:** 3
 
 #### `frontend\src\components\layout\AppShell.tsx`
-- **Size:** 4402 bytes
-- **Lines:** 103
-- **Imports Count:** 7
+- **Size:** 11211 bytes
+- **Lines:** 267
+- **Imports Count:** 8
 
 #### `frontend\src\components\layout\AuthLayout.tsx`
 - **Size:** 453 bytes
@@ -2694,18 +3151,18 @@ parul project/
 - **Imports Count:** 2
 
 #### `frontend\src\components\OnboardingProgress.tsx`
-- **Size:** 3694 bytes
-- **Lines:** 96
-- **Imports Count:** 2
+- **Size:** 4160 bytes
+- **Lines:** 99
+- **Imports Count:** 3
 
 #### `frontend\src\components\shared\AmbientOrbs.tsx`
-- **Size:** 720 bytes
-- **Lines:** 19
-- **Imports Count:** 1
+- **Size:** 5671 bytes
+- **Lines:** 134
+- **Imports Count:** 2
 
 #### `frontend\src\components\shared\ErrorBoundary.tsx`
-- **Size:** 1911 bytes
-- **Lines:** 52
+- **Size:** 2927 bytes
+- **Lines:** 69
 - **Imports Count:** 1
 
 #### `frontend\src\components\shared\SectionReveal.tsx`
@@ -2714,26 +3171,72 @@ parul project/
 - **Imports Count:** 4
 
 #### `frontend\src\components\ui\Button.tsx`
-- **Size:** 1350 bytes
-- **Lines:** 42
+- **Size:** 2615 bytes
+- **Lines:** 54
 - **Imports Count:** 3
 
 #### `frontend\src\components\ui\GlassCard.tsx`
-- **Size:** 625 bytes
-- **Lines:** 24
+- **Size:** 2206 bytes
+- **Lines:** 64
 - **Imports Count:** 4
 
+#### `frontend\src\components\ui\Skeleton.tsx`
+- **Size:** 751 bytes
+- **Lines:** 22
+- **Imports Count:** 1
+
+#### `frontend\src\design\index.ts`
+- **Size:** 514 bytes
+- **Lines:** 22
+- **Imports Count:** 9
+
+#### `frontend\src\design\tokens\blur.ts`
+- **Size:** 143 bytes
+- **Lines:** 9
+
+#### `frontend\src\design\tokens\colors.ts`
+- **Size:** 1698 bytes
+- **Lines:** 73
+
+#### `frontend\src\design\tokens\glass.ts`
+- **Size:** 1096 bytes
+- **Lines:** 37
+
+#### `frontend\src\design\tokens\lighting.ts`
+- **Size:** 393 bytes
+- **Lines:** 21
+
+#### `frontend\src\design\tokens\motion.ts`
+- **Size:** 530 bytes
+- **Lines:** 18
+
+#### `frontend\src\design\tokens\radius.ts`
+- **Size:** 126 bytes
+- **Lines:** 9
+
+#### `frontend\src\design\tokens\shadow.ts`
+- **Size:** 286 bytes
+- **Lines:** 8
+
+#### `frontend\src\design\tokens\spacing.ts`
+- **Size:** 176 bytes
+- **Lines:** 15
+
+#### `frontend\src\design\tokens\typography.ts`
+- **Size:** 749 bytes
+- **Lines:** 44
+
 #### `frontend\src\index.css`
-- **Size:** 2180 bytes
-- **Lines:** 76
+- **Size:** 4655 bytes
+- **Lines:** 154
 
 #### `frontend\src\lib\catalogs.ts`
-- **Size:** 1578 bytes
-- **Lines:** 22
+- **Size:** 1685 bytes
+- **Lines:** 28
 
 #### `frontend\src\lib\motion.ts`
-- **Size:** 772 bytes
-- **Lines:** 27
+- **Size:** 2775 bytes
+- **Lines:** 107
 - **Imports Count:** 1
 
 #### `frontend\src\lib\utils.ts`
@@ -2752,24 +3255,24 @@ parul project/
 - **Imports Count:** 7
 
 #### `frontend\src\pages\CareerExplorer.tsx`
-- **Size:** 25980 bytes
-- **Lines:** 542
-- **Imports Count:** 8
+- **Size:** 22184 bytes
+- **Lines:** 473
+- **Imports Count:** 11
 
 #### `frontend\src\pages\CareerGallery.tsx`
-- **Size:** 9592 bytes
-- **Lines:** 228
-- **Imports Count:** 7
+- **Size:** 13679 bytes
+- **Lines:** 293
+- **Imports Count:** 10
 
 #### `frontend\src\pages\CounselingChat.tsx`
-- **Size:** 19828 bytes
-- **Lines:** 469
-- **Imports Count:** 8
+- **Size:** 22623 bytes
+- **Lines:** 525
+- **Imports Count:** 11
 
 #### `frontend\src\pages\Dashboard.tsx`
-- **Size:** 16688 bytes
-- **Lines:** 352
-- **Imports Count:** 7
+- **Size:** 10797 bytes
+- **Lines:** 243
+- **Imports Count:** 10
 
 #### `frontend\src\pages\HistoryLog.tsx`
 - **Size:** 10833 bytes
@@ -2777,22 +3280,22 @@ parul project/
 - **Imports Count:** 7
 
 #### `frontend\src\pages\Landing.tsx`
-- **Size:** 45076 bytes
-- **Lines:** 669
+- **Size:** 52039 bytes
+- **Lines:** 1121
 - **Imports Count:** 9
 
 #### `frontend\src\pages\Login.tsx`
-- **Size:** 3507 bytes
+- **Size:** 3848 bytes
 - **Lines:** 87
 - **Imports Count:** 9
 
 #### `frontend\src\pages\Onboarding.tsx`
-- **Size:** 48652 bytes
-- **Lines:** 943
-- **Imports Count:** 9
+- **Size:** 52884 bytes
+- **Lines:** 995
+- **Imports Count:** 12
 
 #### `frontend\src\pages\Register.tsx`
-- **Size:** 3980 bytes
+- **Size:** 4429 bytes
 - **Lines:** 96
 - **Imports Count:** 8
 
@@ -2872,11 +3375,11 @@ flowchart TD
 - **Lines:** 5
 
 #### `analyze.js`
-- **Size:** 5183 bytes
+- **Size:** 5311 bytes
 - **Lines:** 129
 
 #### `analyze_root.js`
-- **Size:** 2018 bytes
+- **Size:** 2069 bytes
 - **Lines:** 52
 
 #### `CAREER_IMPORT_PROGRESS.md`
@@ -2884,24 +3387,36 @@ flowchart TD
 - **Lines:** 207
 
 #### `clean_analysis.js`
-- **Size:** 446 bytes
+- **Size:** 457 bytes
 - **Lines:** 12
 
+#### `colour_analysis.md`
+- **Size:** 26346 bytes
+- **Lines:** 834
+
 #### `deep_analyze.js`
-- **Size:** 4841 bytes
+- **Size:** 4960 bytes
 - **Lines:** 120
 
 #### `docker-compose.yml`
-- **Size:** 1067 bytes
-- **Lines:** 54
-- **Services:** services, mongo, ports, volumes, healthcheck, backend, build, ports, depends_on, mongo, healthcheck, env_file, environment, frontend, build, ports, depends_on, volumes, mongo-data
+- **Size:** 562 bytes
+- **Lines:** 34
+- **Services:** services, backend, ports, env_file, environment, depends_on, frontend, ports, depends_on, mongodb, ports, volumes, volumes, mongo_data
+
+#### `generate_color_analysis.js`
+- **Size:** 7180 bytes
+- **Lines:** 129
 
 #### `ISSUES_LOG.md`
 - **Size:** 14102 bytes
 - **Lines:** 194
 
+#### `LIQUID_GLASS_REDESIGN_PROMPT.md`
+- **Size:** 26383 bytes
+- **Lines:** 376
+
 #### `recommendation-engine-v2-implementation-prompt.md`
-- **Size:** 43515 bytes
+- **Size:** 44237 bytes
 - **Lines:** 723
 
 #### `SCPR_Master_Career_Catalog_Part_1_Science_v2.md`
@@ -2935,6 +3450,34 @@ flowchart TD
 #### `SCPR_Master_Career_Catalog_Part_8_Emerging_Future_Careers.md`
 - **Size:** 5180 bytes
 - **Lines:** 209
+
+#### `scratch\andrej-karpathy-skills\.cursor\rules\karpathy-guidelines.mdc`
+- **Size:** 2696 bytes
+- **Lines:** 71
+
+#### `scratch\andrej-karpathy-skills\CLAUDE.md`
+- **Size:** 2410 bytes
+- **Lines:** 66
+
+#### `scratch\andrej-karpathy-skills\CURSOR.md`
+- **Size:** 1979 bytes
+- **Lines:** 29
+
+#### `scratch\andrej-karpathy-skills\EXAMPLES.md`
+- **Size:** 15312 bytes
+- **Lines:** 523
+
+#### `scratch\andrej-karpathy-skills\README.md`
+- **Size:** 6333 bytes
+- **Lines:** 172
+
+#### `scratch\andrej-karpathy-skills\README.zh.md`
+- **Size:** 3227 bytes
+- **Lines:** 172
+
+#### `scratch\andrej-karpathy-skills\skills\karpathy-guidelines\SKILL.md`
+- **Size:** 2573 bytes
+- **Lines:** 68
 
 #### `start.bat`
 - **Size:** 221 bytes
@@ -2990,10 +3533,12 @@ flowchart LR
 - **Methods / Signatures:**
   - `const execMock = jest.fn();`
   - `const fn: any = function (this: any, data: any)`
+  - `field === 'created_at' || field === 'updated_at' ? new Date() : undefined;`
   - `this.save = jest.fn().mockResolvedValue(undefined);`
   - `fn.findOne = jest.fn(() => (`
   - `sign: jest.fn().mockReturnValue('mock-token'),`
   - `password_hash: bcrypt.hashSync('password123', 10),`
+  - `field === 'created_at' || field === 'updated_at' ? new Date() : undefined,`
   - `save: jest.fn().mockResolvedValue(undefined),`
   - `describe('AuthService', () =>`
   - `execMock.mockReset();`
@@ -3003,8 +3548,9 @@ flowchart LR
   - `describe('register', () =>`
   - `it('throws ConflictException when email exists', async () =>`
   - `execMock.mockResolvedValue(makeUser());`
-  - `await expect(service.register(`
-  - `.rejects.toThrow(ConflictException);`
+  - `await expect(`
+  - `service.register(`
+  - `).rejects.toThrow(ConflictException);`
   - `execMock.mockResolvedValue(null);`
   - `const result = await service.register(`
   - `expect(result.email).toBe('new@t.com');`
@@ -3012,17 +3558,21 @@ flowchart LR
   - `describe('login', () =>`
   - `it('rejects unknown email', async () =>`
   - `execMock.mockResolvedValue(null);`
-  - `await expect(service.login(`
-  - `.rejects.toThrow(UnauthorizedException);`
+  - `await expect(`
+  - `service.login(`
+  - `).rejects.toThrow(UnauthorizedException);`
   - `it('rejects locked account', async () =>`
-  - `execMock.mockResolvedValue(makeUser(`
-  - `await expect(service.login(`
-  - `.rejects.toThrow(/Account is locked/);`
+  - `execMock.mockResolvedValue(`
+  - `makeUser(`
+  - `await expect(`
+  - `service.login(`
+  - `).rejects.toThrow(/Account is locked/);`
   - `it('locks after 5 failed attempts', async () =>`
   - `const user = makeUser(`
   - `execMock.mockResolvedValue(user);`
-  - `await expect(service.login(`
-  - `.rejects.toThrow(UnauthorizedException);`
+  - `await expect(`
+  - `service.login(`
+  - `).rejects.toThrow(UnauthorizedException);`
   - `expect(user.failed_login_attempts).toBe(5);`
   - `expect(user.locked_until).toBeInstanceOf(Date);`
   - `const user = makeUser(`
@@ -3034,7 +3584,8 @@ flowchart LR
   - `expect(user.locked_until).toBeUndefined();`
   - `describe('refresh', () =>`
   - `it('rejects invalid token', async () =>`
-  - `await expect(service.refresh('bad')).rejects.toThrow(UnauthorizedException);`
+  - `throw new Error('bad');`
+  - `await expect(service.refresh('bad')).rejects.toThrow(`
   - `execMock.mockResolvedValue(makeUser());`
   - `const result = await service.refresh('good');`
   - `expect(result.access_token).toBe('mock-token');`
@@ -3052,7 +3603,8 @@ flowchart LR
   - `@Injectable()`
   - `@InjectModel(User.name) private userModel: Model<User>,`
   - `async register(dto: RegisterDto)`
-  - `const existing = await this.userModel.findOne(`
+  - `.findOne(`
+  - `.exec();`
   - `throw new ConflictException('Email is already registered');`
   - `const salt = await bcrypt.genSalt(10);`
   - `const passwordHash = await bcrypt.hash(dto.password, salt);`
@@ -3061,11 +3613,13 @@ flowchart LR
   - `email: dto.email.toLowerCase(),`
   - `await user.save();`
   - `async login(dto: LoginDto)`
-  - `const user = await this.userModel.findOne(`
+  - `.findOne(`
+  - `.exec();`
   - `throw new UnauthorizedException('Invalid credentials');`
-  - `const waitTime = Math.ceil((user.locked_until.getTime() - Date.now()) / 1000 / 60);`
-  - `throw new UnauthorizedException(`Account is locked. Try again in $`
-  - `const passwordMatch = await bcrypt.compare(dto.password, user.password_hash);`
+  - `const waitTime = Math.ceil(`
+  - `(user.locked_until.getTime() - Date.now()) / 1000 / 60,`
+  - `throw new UnauthorizedException(`
+  - `const passwordMatch = await bcrypt.compare(`
   - `user.locked_until = new Date(Date.now() + 15 * 60 * 1000); // 15 mins lock`
   - `await user.save();`
   - `throw new UnauthorizedException('Invalid credentials');`
@@ -3074,7 +3628,8 @@ flowchart LR
   - `const tokens = await this.generateTokens(user);`
   - `user: this.sanitizeUser(user),`
   - `async refresh(refreshToken: string)`
-  - `const user = await this.userModel.findOne(`
+  - `.findOne(`
+  - `.exec();`
   - `throw new UnauthorizedException('Invalid refresh token');`
   - `const tokens = await this.generateTokens(user);`
   - `throw new UnauthorizedException('Invalid or expired refresh token');`
@@ -3148,7 +3703,7 @@ flowchart LR
   - `const keys = this.keyPoolService.getKeysForProvider(name);`
   - `const start = Date.now();`
   - `await axios.get(url,`
-  - `statusMap[name] =`
+  - `latency_ms: Date.now() - start,`
   - `latency_ms: Date.now() - start,`
   - `healthCache =`
 
@@ -3156,7 +3711,7 @@ flowchart LR
 - **Methods / Signatures:**
   - `@Injectable()`
   - `private readonly logger = new Logger(CacheService.name);`
-  - `this.ttlSeconds = parseInt(process.env.AI_SERVICE_CACHE_TTL_SECONDS || '3600');`
+  - `this.ttlSeconds = parseInt(`
   - `generateKey(taskType: string, context: Record<string, any>): string`
   - `get(key: string): any | null`
   - `const entry = this.cache.get(key);`
@@ -3176,23 +3731,45 @@ flowchart LR
   - `describe('validate', () =>`
   - `describe.each(Object.entries(fixtures))('%s', (taskType, f) =>`
   - `it('accepts valid data', () =>`
+  - `expect(() =>`
+  - `).not.toThrow();`
   - `it('rejects missing required field', () =>`
-  - `.toThrow(BadRequestException);`
+  - `expect(() =>`
+  - `service.validateAndRepair(`
+  - `).toThrow(BadRequestException);`
   - `it('rejects wrong field type', () =>`
-  - `.toThrow(BadRequestException);`
+  - `expect(() =>`
+  - `).toThrow(BadRequestException);`
   - `describe('repair', () =>`
   - `it('strips ```json fences', () =>`
+  - `expect(() =>`
+  - `service.validateAndRepair(`
+  - `).not.toThrow();`
+  - `expect(() =>`
+  - `service.validateAndRepair(`
+  - `).not.toThrow();`
   - `it('removes trailing commas', () =>`
   - `const withTrailing = validStr.replace(/}$/, ',}');`
-  - `expect(() => service.validateAndRepair(withTrailing, 'counselor_chat')).not.toThrow();`
+  - `expect(() =>`
+  - `service.validateAndRepair(withTrailing, 'counselor_chat'),`
+  - `).not.toThrow();`
   - `it('handles single-quoted keys', () =>`
   - `const singleQuoted = validStr.replace(/"/g, "'");`
-  - `expect(() => service.validateAndRepair(singleQuoted, 'counselor_chat')).not.toThrow();`
+  - `expect(() =>`
+  - `service.validateAndRepair(singleQuoted, 'counselor_chat'),`
+  - `).not.toThrow();`
   - `it('fails fast on truncated JSON', () =>`
-  - `expect(() => service.validateAndRepair('`
+  - `expect(() =>`
+  - `service.validateAndRepair('`
+  - `).toThrow(BadRequestException);`
   - `it('fails fast on non-JSON garbage', () =>`
+  - `expect(() =>`
+  - `service.validateAndRepair('not json at all', 'counselor_chat'),`
+  - `).toThrow(BadRequestException);`
   - `it('does not loop — single repair attempt', () =>`
-  - `expect(() => service.validateAndRepair(unbalanced, 'counselor_chat')).toThrow(BadRequestException);`
+  - `expect(() =>`
+  - `service.validateAndRepair(unbalanced, 'counselor_chat'),`
+  - `).toThrow(BadRequestException);`
 
 **File:** `backend\src\ai-service\json-validator.service.ts`
 - **Methods / Signatures:**
@@ -3201,9 +3778,9 @@ flowchart LR
   - `private readonly validators: Map<string, ValidateFunction> = new Map();`
   - `const ajv = new Ajv(`
   - `this.validators.set(taskType, ajv.compile(schema));`
-  - `validate(taskType: string, data: unknown):`
+  - `validate(`
   - `const validate = this.validators.get(taskType);`
-  - `const valid = validate(data) as boolean;`
+  - `const valid = validate(data);`
   - `validateAndRepair(rawText: string, taskType?: string): any`
   - `let text = rawText.trim();`
   - `const match = text.match(markdownRegex);`
@@ -3215,10 +3792,12 @@ flowchart LR
   - `parsed = JSON.parse(text);`
   - `parsed = JSON.parse(this.repairJson(text));`
   - `this.logger.error(`JSON Parsing failed. Raw text: $`
-  - `throw new BadRequestException('AI provider response is not valid JSON and could not be repaired');`
+  - `throw new BadRequestException(`
   - `const result = this.validate(taskType, parsed);`
   - `const messages = result.errors!.map(`
-  - `throw new BadRequestException(`AI provider response failed schema validation: $`
+  - `this.logger.error(`
+  - `throw new BadRequestException(`
+  - ``AI provider response failed schema validation: $`
   - `private repairJson(text: string): string`
   - `.replace(/(?<=[`
   - `.replace(/:\s*'([^']*?)'\s*([,}\]])/g, ': "$1"$2')`
@@ -3235,6 +3814,8 @@ flowchart LR
   - `.split(',')`
   - `.map((k) => k.trim())`
   - `.filter((k) => k.length > 0);`
+  - `this.logger.log(`
+  - `this.logger.warn(`
   - `getKeysForProvider(provider: string): string[]`
   - `const name = provider.toLowerCase();`
   - `// Get the next key round-robin style (though the retry manager might iterate systematically)`
@@ -3246,16 +3827,18 @@ flowchart LR
   - `@Injectable()`
   - `private readonly logger = new Logger(PromptBuilderService.name);`
   - `private readonly promptsDir = path.join(__dirname, 'prompts');`
-  - `async build(taskType: string, context: Record<string, any>): Promise<`
+  - `async build(`
   - `const filename = `$`
   - `const filePath = path.join(this.promptsDir, filename);`
   - `const content = await fs.readFile(filePath, 'utf-8');`
   - `const sections = content.split('---');`
   - `promptBody = sections.slice(2).join('---').trim();`
-  - `const systemMatch = frontmatter.match(/system_instruction:\s*([\s\S]*?)(?:\n\w+:|$)/);`
-  - `systemInstruction = this.interpolate(systemMatch[1].trim(), context);`
+  - `const systemMatch = frontmatter.match(`
+  - `systemInstruction = this.interpolate(`
+  - `systemMatch[1].trim(),`
   - `const finalPrompt = this.interpolate(promptBody, context);`
-  - `throw new InternalServerErrorException(`Prompt template not found or invalid: $`
+  - `this.logger.error(`
+  - `throw new InternalServerErrorException(`
   - `private interpolate(template: string, context: Record<string, any>): string`
   - `const keys = key.split('.');`
 
@@ -3300,7 +3883,7 @@ flowchart LR
 - **Methods / Signatures:**
   - `@Injectable()`
   - `private readonly logger = new Logger(TokenLoggerService.name);`
-  - `@InjectModel(AIRequestLog.name) private readonly logModel: Model<AIRequestLog>,`
+  - `@InjectModel(AIRequestLog.name)`
   - `async log(logData:`
   - `const log = new this.logModel(logData);`
   - `await log.save();`
@@ -3319,7 +3902,7 @@ flowchart LR
   - `@Prop(`
   - `@Prop(`
   - `@Prop(`
-  - `export const AIRequestLogSchema: MongooseSchema = SchemaFactory.createForClass(AIRequestLog);`
+  - `SchemaFactory.createForClass(AIRequestLog);`
 
 **File:** `backend\src\ai-service\schemas\json-schemas\career-recommendation.schema.ts`
 
@@ -3365,7 +3948,7 @@ flowchart LR
   - `async logCustomEvent(`
   - `@Request() req: any,`
   - `@Body() body:`
-  - `await this.analyticsService.trackEvent(userId, body.event_type, body.payload);`
+  - `await this.analyticsService.trackEvent(`
 
 **File:** `backend\src\analytics\analytics.service.ts`
 - **Methods / Signatures:**
@@ -3383,24 +3966,29 @@ flowchart LR
   - `onboardingEvents.on('ONBOARDING_COMPLETED', async (data) =>`
   - `await this.trackEvent(data.user_id, 'ONBOARDING_COMPLETED', data);`
   - `aiServiceEvents.on('AI_PROVIDER_FALLBACK_TRIGGERED', async (data) =>`
-  - `await this.trackEvent(data.user_id || 'system', 'AI_PROVIDER_FALLBACK_TRIGGERED', data);`
+  - `await this.trackEvent(`
   - `aiServiceEvents.on('AI_PROVIDER_UNHEALTHY_DETECTED', async (data) =>`
   - `await this.trackEvent('system', 'AI_PROVIDER_UNHEALTHY_DETECTED', data);`
+  - `async trackEvent(`
+  - `this.logger.log(`
   - `const event = new this.eventModel(`
   - `await event.save();`
-  - `this.logger.error(`[Analytics Failure Swallowed] Failed to track event $`
+  - `this.logger.error(`
   - `async getUserEvents(userId: string): Promise<AnalyticsEvent[]>`
-  - `const stats = await this.eventModel.aggregate([`
-  - `]).exec();`
+  - `.find(`
+  - `.sort(`
+  - `.exec();`
+  - `.aggregate([`
+  - `.exec();`
   - `async getCareersStats()`
   - `const savedCount = await this.savedCareerModel.countDocuments().exec();`
-  - `const topSaved = await this.savedCareerModel.aggregate([`
-  - `]).exec();`
+  - `.aggregate([`
+  - `.exec();`
   - `top_bookmarked_careers: topSaved.map((t) => (`
   - `async getAIStats()`
   - `const totalRequests = await this.aiLogModel.countDocuments().exec();`
-  - `const aggregateData = await this.aiLogModel.aggregate([`
-  - `]).exec();`
+  - `.aggregate([`
+  - `.exec();`
   - `.find(`
   - `.sort(`
   - `.limit(10)`
@@ -3417,7 +4005,7 @@ flowchart LR
   - `@Prop(`
   - `@Prop(`
   - `@Prop(`
-  - `export const AnalyticsEventSchema: MongooseSchema = SchemaFactory.createForClass(AnalyticsEvent);`
+  - `SchemaFactory.createForClass(AnalyticsEvent);`
 
 ### 21.4 Backend Module: CAREERS
 
@@ -3451,22 +4039,28 @@ flowchart LR
   - `@Public()`
   - `@Get('by-codes')`
   - `async getCareersByCodes(@Query('codes') codesString?: string)`
-  - `const codes = codesString ? codesString.split(',').map((c) => c.trim()) : [];`
+  - `? codesString.split(',').map((c) => c.trim())`
   - `@Public()`
   - `@Get('related/:careerCode')`
   - `async getRelated(@Param('careerCode') careerCode: string)`
-  - `@Public()`
-  - `@Get(':careerCode')`
-  - `async getOne(@Param('careerCode') careerCode: string)`
   - `// Saved / bookmarked careers (requires authentication)`
   - `@Post('save')`
-  - `async saveCareer(@Request() req: any, @Body('career_code') careerCode: string)`
+  - `async saveCareer(`
+  - `@Request() req: any,`
+  - `@Body('career_code') careerCode: string,`
   - `@Delete('save/:careerCode')`
-  - `async unsaveCareer(@Request() req: any, @Param('careerCode') careerCode: string)`
+  - `async unsaveCareer(`
+  - `@Request() req: any,`
+  - `@Param('careerCode') careerCode: string,`
   - `@Get('saved')`
   - `async getSaved(@Request() req: any)`
   - `@Get('saved/status/:careerCode')`
-  - `async getSavedStatus(@Request() req: any, @Param('careerCode') careerCode: string)`
+  - `async getSavedStatus(`
+  - `@Request() req: any,`
+  - `@Param('careerCode') careerCode: string,`
+  - `@Public()`
+  - `@Get(':careerCode')`
+  - `async getOne(@Param('careerCode') careerCode: string)`
   - `// ============ Admin Endpoints (Phase 10) ============`
   - `private checkAdminRole(user: any)`
   - `@Get('admin/careers')`
@@ -3486,7 +4080,9 @@ flowchart LR
   - `limit: limit ? parseInt(limit, 10) : 50,`
   - `const ne = (needsEnrichment || '').toLowerCase();`
   - `@Get('admin/careers/:careerCode')`
-  - `async adminGetCareer(@Request() req: any, @Param('careerCode') careerCode: string)`
+  - `async adminGetCareer(`
+  - `@Request() req: any,`
+  - `@Param('careerCode') careerCode: string,`
   - `this.checkAdminRole(req.user);`
   - `@Put('admin/careers/:careerCode')`
   - `async adminUpdateCareer(`
@@ -3495,10 +4091,14 @@ flowchart LR
   - `@Body() body: any,`
   - `this.checkAdminRole(req.user);`
   - `@Post('admin/careers/:careerCode/publish-draft')`
-  - `async adminPublishDraft(@Request() req: any, @Param('careerCode') careerCode: string)`
+  - `async adminPublishDraft(`
+  - `@Request() req: any,`
+  - `@Param('careerCode') careerCode: string,`
   - `this.checkAdminRole(req.user);`
   - `@Post('admin/careers/:careerCode/reject-draft')`
-  - `async adminRejectDraft(@Request() req: any, @Param('careerCode') careerCode: string)`
+  - `async adminRejectDraft(`
+  - `@Request() req: any,`
+  - `@Param('careerCode') careerCode: string,`
   - `this.checkAdminRole(req.user);`
   - `@Post('admin/careers/bulk-publish')`
   - `async adminBulkPublish(`
@@ -3509,35 +4109,48 @@ flowchart LR
   - `async adminGetImportAudit(@Request() req: any)`
   - `this.checkAdminRole(req.user);`
   - `@Patch('admin/careers/:careerCode/toggle-active')`
-  - `async adminToggleActive(@Request() req: any, @Param('careerCode') careerCode: string)`
+  - `async adminToggleActive(`
+  - `@Request() req: any,`
+  - `@Param('careerCode') careerCode: string,`
   - `this.checkAdminRole(req.user);`
 
 **File:** `backend\src\careers\careers.service.ts`
 - **Methods / Signatures:**
   - `@Injectable()`
   - `private readonly logger = new Logger(CareersService.name);`
-  - `@InjectModel(Career.name) private readonly careerModel: Model<CareerDocument>,`
-  - `@InjectModel(SavedCareer.name) private readonly savedCareerModel: Model<SavedCareerDocument>,`
+  - `@InjectModel(Career.name)`
+  - `@InjectModel(SavedCareer.name)`
   - `async onModuleInit()`
   - `await this.seedCareers();`
   - `private async seedCareers()`
   - `const sample = await this.careerModel.findOne().exec();`
-  - `this.logger.log('Detected placeholder seed. Re-seeding with realistic weights...');`
+  - `this.logger.log('Detected placeholder seed. Re-seeding...');`
   - `await this.careerModel.deleteMany(`
-  - `const oldCategoryCount = await this.careerModel.countDocuments(`
+  - `.countDocuments(`
+  - `.exec();`
   - `this.logger.log('Detected old seed. Re-seeding...');`
   - `await this.careerModel.deleteMany(`
   - `const count = await this.careerModel.countDocuments().exec();`
-  - `this.logger.log('Careers catalog already seeded with weights.');`
-  - `this.logger.log('Seeding 40 careers into database with realistic weights...');`
-  - `const careersSeed = this.getCareersSeedData();`
-  - `await this.careerModel.insertMany(careersSeed);`
-  - `this.logger.log('Seeding completed successfully!');`
-  - `this.logger.error(`Seeding failed: $`
+  - `this.logger.log('Careers catalog already seeded.');`
+  - `const catalogRoot = fs.existsSync(`
+  - `: path.resolve(__dirname, '../../../../');`
+  - `const filePath = path.join(catalogRoot, cat.file);`
+  - `this.logger.warn(`Catalog file not found: $`
+  - `this.logger.log(`Importing $`
+  - `const result = await this.careerSeedService.seedFromCatalog(`
+  - `this.logger.log(`
+  - `this.logger.error(`Failed to import $`
+  - `const finalCount = await this.careerModel.countDocuments().exec();`
+  - `this.logger.log(`
+  - `await this.careerModel.insertMany(this.getCareersSeedData());`
+  - `this.logger.log('Fallback seeding completed.');`
+  - `this.logger.error(`Fallback seeding failed: $`
+  - `this.logger.log(`
   - `async findAll(category?: string, search?: string)`
   - `async findCategories()`
   - `async findOne(careerCode: string)`
-  - `const career = await this.careerModel.findOne(`
+  - `.findOne(`
+  - `.exec();`
   - `throw new NotFoundException(`Career with code $`
   - `async findRelated(careerCode: string)`
   - `const career = await this.findOne(careerCode);`
@@ -3552,7 +4165,8 @@ flowchart LR
   - `const saved = new this.savedCareerModel(`
   - `await saved.save();`
   - `async unsaveCareer(userId: string, careerCode: string)`
-  - `await this.savedCareerModel.deleteOne(`
+  - `.deleteOne(`
+  - `.exec();`
   - `async getSavedCareers(userId: string)`
   - `const saved = await this.savedCareerModel.find(`
   - `const codes = saved.map((s) => s.career_code);`
@@ -3560,22 +4174,26 @@ flowchart LR
   - `.findOne(`
   - `.exec();`
   - `async create(dto: CreateCareerDto)`
-  - `const existing = await this.careerModel.findOne(`
-  - `throw new ConflictException(`Career with code $`
+  - `.findOne(`
+  - `.exec();`
+  - `throw new ConflictException(`
   - `const newCareer = new this.careerModel(dto);`
   - `async update(careerCode: string, dto: UpdateCareerDto)`
   - `.findOneAndUpdate(`
   - `.exec();`
   - `throw new NotFoundException(`Career with code $`
   - `async delete(careerCode: string)`
-  - `const result = await this.careerModel.deleteOne(`
+  - `.deleteOne(`
+  - `.exec();`
   - `throw new NotFoundException(`Career with code $`
   - `async backfillTraitWeightsForAllCareers()`
   - `const careers = await this.careerModel.find().exec();`
   - `const response = await this.aiServiceClient.run(`
   - `await career.save();`
+  - `this.logger.error(`
   - `async promoteDraft(careerCode: string, approve: boolean)`
   - `const career = await this.findOne(careerCode);`
+  - `throw new NotFoundException(`
   - `await career.save();`
   - `async adminFindAll(filters:`
   - `const total = await this.careerModel.countDocuments(query).exec();`
@@ -3602,15 +4220,16 @@ flowchart LR
   - `await career.save();`
   - `async adminGetImportAudit()`
   - `const total = await this.careerModel.countDocuments().exec();`
-  - `const byCategory = await this.careerModel.aggregate([`
-  - `]).exec();`
-  - `const byBackfillStatus = await this.careerModel.aggregate([`
-  - `]).exec();`
-  - `const bySubDomain = await this.careerModel.aggregate([`
-  - `]).exec();`
-  - `const enrichmentCount = await this.careerModel.countDocuments(`
-  - `const backfillAwaitingReview = await this.careerModel.countDocuments(`
-  - `}).exec();`
+  - `.aggregate([`
+  - `.exec();`
+  - `.aggregate([`
+  - `.exec();`
+  - `.aggregate([`
+  - `.exec();`
+  - `.countDocuments(`
+  - `.exec();`
+  - `.countDocuments(`
+  - `.exec();`
   - `async adminToggleActive(careerCode: string)`
   - `const career = await this.findOne(careerCode);`
   - `await career.save();`
@@ -3700,42 +4319,46 @@ flowchart LR
 - **Methods / Signatures:**
   - `@Injectable()`
   - `private readonly logger = new Logger(CareerSeedService.name);`
-  - `@InjectModel(Career.name) private readonly careerModel: Model<CareerDocument>,`
-  - `async seedFromCatalog(filePath: string, catalogPart: string): Promise<SeedPhaseResult>`
-  - `throw new Error(`Unknown catalog part: $`
+  - `@InjectModel(Career.name)`
+  - `async seedFromCatalog(`
+  - `throw new Error(`
+  - ``Unknown catalog part: $`
   - `const resolvedPath = path.resolve(filePath);`
   - `content = await fs.readFile(resolvedPath, 'utf-8');`
-  - `throw new Error(`Failed to read catalog file at $`
+  - `throw new Error(`
   - `const`
   - `timestamp: new Date().toISOString(),`
-  - `this.logger.log(`Parsed $`
+  - `this.logger.log(`
   - `// Handle Part 5 (ITI/Polytechnic) cross-linking: Polytechnic subtree has degree names only`
-  - `const polytechnicLeaves = leaves.filter(l => l.sub_domain_source === 'Polytechnic');`
-  - `this.logger.log(`Cross-linking $`
-  - `const count = await this.careerModel.countDocuments(`
-  - `}).exec();`
-  - `await this.careerModel.updateMany(`
-  - `).exec();`
-  - `const careerLeaves = leaves.filter(l => l.sub_domain_source !== 'Polytechnic');`
+  - `const polytechnicLeaves = leaves.filter(`
+  - `this.logger.log(`
+  - `.countDocuments(`
+  - `.exec();`
+  - `.updateMany(`
+  - `.exec();`
+  - `this.logger.log(`
+  - `const careerLeaves = leaves.filter(`
   - `const rawSubDomain = computeSubDomainCode(leaf.sub_domain_source);`
   - `// For parenthetical codes like "Company Secretary (CS)", also try the inner code "cs"`
   - `const parenMatch = leaf.sub_domain_source.match(/\(([^)]+)\)/);`
   - `const subDomainCode = isValidSubDomain(categoryCode, rawSubDomain)`
-  - `: (innerCode && isValidSubDomain(categoryCode, innerCode))`
+  - `: innerCode && isValidSubDomain(categoryCode, innerCode)`
   - `: isValidSubDomain(categoryCode, prefixedSubDomain)`
-  - `const existing = await this.careerModel.findOne(`
+  - `.findOne(`
+  - `.exec();`
   - `// Merge pathway tags using $addToSet with $each (avoids overwrite in loop)`
   - `await this.careerModel.updateOne(`
   - `const traitWeights = computeTraitWeights(categoryCode, leaf.name);`
-  - `const`
+  - `computeEligibility(categoryCode, subDomainCode);`
   - `// Detect broad-degree leaves (Section 3.2 heuristic)`
   - `const nameLower = leaf.name.toLowerCase();`
-  - `const isBroadDegree = broadDegreeKeywords.some(kw => nameLower.includes(kw));`
+  - `const isBroadDegree = broadDegreeKeywords.some((kw) =>`
+  - `nameLower.includes(kw),`
   - `const newCareer = new this.careerModel(`
   - `imported_at: new Date(),`
   - `await newCareer.save();`
   - `this.logger.log(`Inserted $`
-  - `this.logger.log(`Merged $`
+  - `this.logger.log(`
   - `timestamp: new Date().toISOString(),`
 
 **File:** `backend\src\careers\import\tree-parser.service.ts`
@@ -3743,10 +4366,10 @@ flowchart LR
   - `/** The immediate parent (depth-1) node text — used to derive sub_domain_code */`
   - `.toLowerCase()`
   - `.trim()`
-  - `.replace(/[^a-z0-9_ ]/g, '')   // strip punctuation but keep spaces and underscores`
-  - `.replace(/\s+/g, '_')           // spaces to underscores`
-  - `.replace(/_+/g, '_')            // collapse multiple underscores`
-  - `.replace(/^_|_$/g, '');         // trim leading/trailing underscores`
+  - `.replace(/[^a-z0-9_ ]/g, '') // strip punctuation but keep spaces and underscores`
+  - `.replace(/\s+/g, '_') // spaces to underscores`
+  - `.replace(/_+/g, '_') // collapse multiple underscores`
+  - `.replace(/^_|_$/g, ''); // trim leading/trailing underscores`
   - `* Extract the fenced code block (```text ... ```) from catalog markdown.`
   - `export function extractFencedBlock(content: string): string | null`
   - `// Match ```text or ``` text (with/without space)`
@@ -3754,7 +4377,7 @@ flowchart LR
   - `* - Depth 0: marker is at column 0 (e.g. `├── Science (PCM)`)`
   - `* - Depth 1: marker is at column ~4 (e.g. `│   ├── Engineering`)`
   - `* - Depth 2: marker is at column ~8 (e.g. `│   │   ├── Computer Science`)`
-  - `export function parseTreeLine(line: string):`
+  - `export function parseTreeLine(`
   - `const trimmed = line.trimEnd();`
   - `// Match: any leading indent (spaces and │ chars), then the ├──/└── marker, then text`
   - `const treeMatch = trimmed.match(/^([ │]*?)([├└]──)\s+(.+)$/);`
@@ -3766,7 +4389,7 @@ flowchart LR
   - `const overviewIndices: Set<number> = new Set();`
   - `const parsed = parseTreeLine(line);`
   - `nodes.push(parsed);`
-  - `while (parentStack.length > 0 && nodes[parentStack[parentStack.length - 1]].depth >= node.depth)`
+  - `while (`
   - `parentStack.pop();`
   - `parentStack.push(i);`
   - `while (ancestor >= 0)`
@@ -3801,7 +4424,7 @@ flowchart LR
   - `@Prop(`
   - `@Prop(`
   - `@Prop(`
-  - `export const CareerTraitProfileSchema = SchemaFactory.createForClass(CareerTraitProfile);`
+  - `SchemaFactory.createForClass(CareerTraitProfile);`
   - `@Schema(`
   - `@Prop(`
   - `@Prop(`
@@ -3812,7 +4435,7 @@ flowchart LR
   - `@Prop(`
   - `@Prop(`
   - `@Prop(`
-  - `export const CareerConstraintsSchema = SchemaFactory.createForClass(CareerConstraints);`
+  - `SchemaFactory.createForClass(CareerConstraints);`
   - `@Schema(`
   - `@Prop(`
   - `@Prop(`
@@ -3836,14 +4459,14 @@ flowchart LR
   - `@Prop(`
   - `@Prop(`
   - `@Prop(`
-  - `export const CareerSchema: MongooseSchema = SchemaFactory.createForClass(Career);`
+  - `SchemaFactory.createForClass(Career);`
 
 **File:** `backend\src\careers\schemas\saved-career.schema.ts`
 - **Methods / Signatures:**
   - `@Schema(`
   - `@Prop(`
   - `@Prop(`
-  - `export const SavedCareerSchema: MongooseSchema = SchemaFactory.createForClass(SavedCareer);`
+  - `SchemaFactory.createForClass(SavedCareer);`
 
 **File:** `backend\src\careers\dto\career.dto.ts`
 - **Methods / Signatures:**
@@ -3927,7 +4550,9 @@ flowchart LR
   - `@Controller('counselor')`
   - `@Post('chat')`
   - `@HttpCode(HttpStatus.OK)`
-  - `async chat(@Request() req: any, @Body() dto: ChatDto)`
+  - `async chat(`
+  - `@Request() req: any,`
+  - `@Body() dto: ChatDto,`
   - `const session = await this.counselorService.startSession(userId,`
   - `conversationId = String(session._id);`
   - `@Get('conversations')`
@@ -3940,11 +4565,11 @@ flowchart LR
   - `@Post('regenerate')`
   - `@HttpCode(HttpStatus.OK)`
   - `async regenerate(@Request() req: any, @Body() dto: RegenerateDto)`
-  - `const history = await this.counselorService.getSessionHistory(userId, dto.conversation_id);`
-  - `const studentMessages = history.filter((m) => m.role === 'student' || m.role === 'user');`
-  - `throw new Error('No user messages found in this conversation history to regenerate');`
+  - `const history = await this.counselorService.getSessionHistory(`
+  - `const studentMessages = history.filter(`
+  - `throw new Error(`
   - `const`
-  - `const`
+  - `} = require('./schemas/conversation-message.schema');`
   - `// To keep controller thin, let's just send the last message text again (it will log a new message)`
 
 **File:** `backend\src\counselor\context-builder.service.ts`
@@ -3953,29 +4578,33 @@ flowchart LR
   - `private readonly logger = new Logger(ContextBuilderService.name);`
   - `@InjectModel(Conversation.name)`
   - `async buildContext(`
-  - `this.logger.log(`Conversation messages length ($`
+  - `this.logger.log(`
+  - `this.logger.log(`
+  - ``Conversation messages length ($`
   - `const messagesToSummarize = messages.slice(0, messages.length - 4);`
   - `const remainingMessages = messages.slice(messages.length - 4);`
-  - `.map((m) => `$`
+  - `.map(`
   - `.join('\n');`
   - `const summaryPrompt = `Existing Summary: $`
-  - `const summaryResponse = await this.aiServiceClient.run('report_summary',`
+  - `const summaryResponse = await this.aiServiceClient.run(`
   - `await conversation.save();`
-  - `this.logger.error(`Failed to compress conversation history: $`
-  - `.map((m) => `$`
+  - `this.logger.log(`
+  - `this.logger.error(`
+  - `.map(`
   - `.join('\n');`
   - `- Academic: Class 10 Status: $`
-  - `- Top Interests: $`
+  - `Object.entries(profile.interests ||`
   - `.filter(([_, val]) => val >= 70)`
   - `.map(([key, val]) => `$`
-  - `.join(', ') || 'None'}`
-  - `- Top Skills: $`
+  - `.join(', ') || 'None'`
+  - `Object.entries(profile.skills ||`
   - `.filter(([_, val]) => val >= 4)`
   - `.map(([key, val]) => `$`
-  - `.join(', ') || 'None'}`
+  - `.join(', ') || 'None'`
   - `- Top Goals: $`
   - ``.trim();`
   - `candidate_careers: '', // to be populated by caller (counselor service) with actual career lists`
+  - `suggested_careers: '', // Top-5 recommended careers, populated by caller (counselor service)`
 
 **File:** `backend\src\counselor\counselor.service.spec.ts`
 - **Methods / Signatures:**
@@ -3987,21 +4616,43 @@ flowchart LR
   - `fn.findById = jest.fn(() => query);`
   - `fn.find = jest.fn(() => query);`
   - `const module = await Test.createTestingModule(`
+  - `provide: getModelToken('ConversationMessage'),`
+  - `useValue: makeModel(),`
+  - `useValue:`
   - `}).compile();`
+  - `it('roadmap_question from "roadmap"', () =>`
+  - `it('roadmap_question from "step"', () =>`
+  - `it('roadmap_question from "path"', () =>`
+  - `it('roadmap_question from "how to"', () =>`
+  - `it('career_question from "career"', () =>`
+  - `it('career_question from "salary"', () =>`
+  - `it('career_question from "job"', () =>`
+  - `it('career_question from "work"', () =>`
+  - `it('case-insensitive', () =>`
   - `describe('applySafetyFilter', () =>`
   - `const module = await Test.createTestingModule(`
+  - `provide: getModelToken('ConversationMessage'),`
+  - `useValue: makeModel(),`
+  - `useValue:`
   - `}).compile();`
   - `const srv = module.get(CounselorService);`
   - `filter = (t: string) => (srv as any).applySafetyFilter(t);`
-  - `logWarn = jest.spyOn((srv as any).logger, 'warn').mockImplementation(() =>`
+  - `.spyOn((srv as any).logger, 'warn')`
+  - `.mockImplementation(() =>`
   - `afterAll(() => logWarn.mockRestore());`
-  - `it('replaces "hack"', () => expect(filter('hack the system')).toBe('*** the system'));`
-  - `it('replaces "kill"', () => expect(filter('this will kill')).toBe('this will ***'));`
-  - `it('replaces "suicide"', () => expect(filter('suicide is not')).toBe('*** is not'));`
+  - `it('replaces "hack"', () =>`
+  - `expect(filter('hack the system')).toBe('*** the system'));`
+  - `it('replaces "kill"', () =>`
+  - `expect(filter('this will kill')).toBe('this will ***'));`
+  - `it('replaces "suicide"', () =>`
+  - `expect(filter('suicide is not')).toBe('*** is not'));`
   - `it('replaces "bomb"', () => expect(filter('make a bomb')).toBe('make a ***'));`
   - `it('case-insensitive', () => expect(filter('HACK')).toBe('***'));`
-  - `it('passes clean text', () => expect(filter('What careers?')).toBe('What careers?'));`
+  - `it('passes clean text', () =>`
+  - `expect(filter('What careers?')).toBe('What careers?'));`
   - `it('logs warning on blocklist hit', () =>`
+  - `filter('hack');`
+  - `expect(logWarn).toHaveBeenCalled();`
   - `describe('sendMessage', () =>`
   - `const convModel = makeModel();`
   - `const msgModel = makeModel();`
@@ -4014,19 +4665,32 @@ flowchart LR
   - `rec: recModel.findOne()!.exec,`
   - `care: careModel.find()!.exec,`
   - `execs.conv.mockResolvedValue(`
+  - `set: jest.fn(),`
+  - `save: jest.fn(),`
   - `execs.prof.mockResolvedValue(`
   - `// trace: findOne -> sort -> exec finds rec (null = fallback to top seeding)`
   - `execs.rec.mockResolvedValue(null);`
   - `execs.care.mockResolvedValue([]);`
   - `execs.msg.mockResolvedValue([]);`
+  - `aiRunMock = jest.fn().mockResolvedValue(`
   - `const module = await Test.createTestingModule(`
+  - `useValue:`
   - `}).compile();`
   - `service = module.get(CounselorService);`
   - `it('rejects unauthorized session', async () =>`
-  - `await expect(service.sendMessage('other', 'sid', 'Hi')).rejects.toThrow(NotFoundException);`
+  - `await expect(service.sendMessage('other', 'sid', 'Hi')).rejects.toThrow(`
   - `const result = await service.sendMessage('user-1', 'sid', 'Hi');`
-  - `expect(result.role).toBe('counselor');`
-  - `expect(result.content).toBe('Hello there');`
+  - `expect(result.response).toBe('Hello there');`
+  - `expect(result.model_used).toBe('test-model');`
+  - `expect(result.cached).toBe(false);`
+  - `expect(result.latency_ms).toBe(100);`
+  - `it('passes suggested careers from final recommendations', async () =>`
+  - `mocks.rec.mockResolvedValue(`
+  - `mocks.care.mockResolvedValue([`
+  - `await service.sendMessage('user-1', 'sid', 'Which career is best?');`
+  - `expect(ctx.suggested_careers).toContain('Rank 1');`
+  - `expect(ctx.suggested_careers).toContain('Software Engineer');`
+  - `expect(ctx.suggested_careers).toContain('92%');`
 
 **File:** `backend\src\counselor\counselor.service.ts`
 - **Methods / Signatures:**
@@ -4037,39 +4701,67 @@ flowchart LR
   - `@InjectModel(StudentProfile.name)`
   - `@InjectModel(Recommendation.name)`
   - `@InjectModel(Career.name)`
-  - `async startSession(userId: string, dto: StartSessionDto): Promise<ConversationDocument>`
-  - `? await this.recommendationModel.findById(dto.recommendation_id).exec()`
-  - `: await this.recommendationModel.findOne(`
+  - `async startSession(`
+  - `await this.pruneSessions(userId);`
+  - `.find(`
+  - `.sort(`
+  - `.exec();`
+  - `this.logger.log(`
+  - `const toDelete = existing.slice(1); // Keep the newest one (index 0), delete the rest`
+  - `await this.conversationModel.findByIdAndDelete(conv._id).exec();`
+  - `.deleteMany(`
+  - `.exec();`
   - `const conversation = new this.conversationModel(`
   - `await conversation.save();`
   - `const message = new this.messageModel(`
   - `conversation_id: String(conversation._id),`
   - `await message.save();`
   - `async getSessions(userId: string): Promise<Conversation[]>`
-  - `async getSessionHistory(userId: string, sessionId: string): Promise<ConversationMessage[]>`
-  - `const conversation = await this.conversationModel.findById(sessionId).exec();`
+  - `await this.pruneSessions(userId);`
+  - `.find(`
+  - `.sort(`
+  - `.exec();`
+  - `async getSessionHistory(`
+  - `await this.pruneSessions(userId);`
+  - `.findById(sessionId)`
+  - `.exec();`
   - `throw new NotFoundException('Conversation not found or unauthorized');`
-  - `const conversation = await this.conversationModel.findById(sessionId).exec();`
+  - `.find(`
+  - `.sort(`
+  - `.exec();`
+  - `async sendMessage(`
+  - `await this.pruneSessions(userId);`
+  - `.findById(sessionId)`
+  - `.exec();`
   - `throw new NotFoundException('Conversation not found or unauthorized');`
   - `const userMessage = new this.messageModel(`
   - `await userMessage.save();`
   - `conversation.set('last_message_at', new Date());`
   - `await conversation.save();`
   - `const profile = await this.profileModel.findOne(`
-  - `throw new BadRequestException('Student profile not found. Please complete onboarding first.');`
+  - `throw new BadRequestException(`
   - `.findOne(`
   - `.sort(`
   - `.exec();`
   - `const careerCodes = latestRec.shortlist.map((c) => c.career_code);`
-  - `const careers = await this.careerModel.find(`
+  - `.find(`
+  - `.exec();`
   - `candidateCareersList = careers.map(`
   - `const careers = await this.careerModel.find().limit(20).exec();`
   - `candidateCareersList = careers.map(`
+  - `const recCodes = latestRec.final_recommendations.map(`
+  - `.find(`
+  - `.exec();`
+  - `const careerMap = new Map(careers.map((c) => [c.career_code, c]));`
+  - `suggestedCareersList = latestRec.final_recommendations.map((rec) =>`
+  - `const career = careerMap.get(rec.career_code);`
+  - ``Rank $`
   - `.find(`
   - `.sort(`
   - `.exec();`
   - `const aiContext = await this.contextBuilder.buildContext(`
   - `aiContext.candidate_careers = candidateCareersList.join('\n');`
+  - `aiContext.suggested_careers = suggestedCareersList.join('\n\n');`
   - `// 5. Call AI Service Client (routed to Groq/Mistral)`
   - `const aiResponse = await this.aiServiceClient.run(`
   - `throw new BadRequestException('AI Counselor failed to respond.');`
@@ -4080,16 +4772,32 @@ flowchart LR
   - `private buildRoadmapReply(data: any): string`
   - `md += `**Skills to Build:** $`
   - `md += `**Entrance Exams:** $`
-  - `const mermaidSyntax = this.buildMermaidSyntax(data.mermaid?.nodes, data.mermaid?.edges);`
-  - `private buildMermaidSyntax(nodes:`
-  - `const nodeMap = new Map(nodes.map(n => [n.id, n]));`
+  - `const mermaidSyntax = this.buildMermaidSyntax(`
+  - `private buildMermaidSyntax(`
+  - `const nodeMap = new Map(nodes.map((n) => [n.id, n]));`
   - `lines.push(`  $`
   - `lines.push(`  $`
   - `const lower = text.toLowerCase();`
+  - `lower.includes('roadmap') ||`
+  - `lower.includes('step') ||`
+  - `lower.includes('path') ||`
+  - `lower.includes('how to')`
+  - `lower.includes('career') ||`
+  - `lower.includes('salary') ||`
+  - `lower.includes('job') ||`
+  - `lower.includes('work')`
   - `private applySafetyFilter(text: string): string`
   - `const regex = new RegExp(`\\b$`
   - `this.logger.warn(`Safety filter flagged word: "$`
   - `cleanText = cleanText.replace(regex, '***');`
+  - `private async pruneSessions(userId: string): Promise<void>`
+  - `const thirtyMinutesAgo = new Date(Date.now() - 30 * 60 * 1000);`
+  - `.find(`
+  - `.exec();`
+  - `this.logger.log(`
+  - `await this.conversationModel.findByIdAndDelete(session._id).exec();`
+  - `.deleteMany(`
+  - `.exec();`
 
 **File:** `backend\src\counselor\schemas\conversation-message.schema.ts`
 - **Methods / Signatures:**
@@ -4099,13 +4807,14 @@ flowchart LR
   - `@Prop(`
   - `@Prop(`
   - `@Prop(`
+  - `SchemaFactory.createForClass(ConversationMessage);`
 
 **File:** `backend\src\counselor\schemas\conversation.schema.ts`
 - **Methods / Signatures:**
   - `@Schema(`
   - `@Prop(`
   - `@Prop(`
-  - `export const ConversationSchema: MongooseSchema = SchemaFactory.createForClass(Conversation);`
+  - `SchemaFactory.createForClass(Conversation);`
 
 **File:** `backend\src\counselor\schemas\counselor-chat-message.schema.ts`
 - **Methods / Signatures:**
@@ -4114,6 +4823,7 @@ flowchart LR
   - `@Prop(`
   - `@Prop(`
   - `@Prop(`
+  - `SchemaFactory.createForClass(CounselorChatMessage);`
 
 **File:** `backend\src\counselor\schemas\counselor-chat-session.schema.ts`
 - **Methods / Signatures:**
@@ -4121,6 +4831,9 @@ flowchart LR
   - `@Prop(`
   - `@Prop(`
   - `@Prop(`
+  - `SchemaFactory.createForClass(CounselorChatSession);`
+
+**File:** `backend\src\counselor\dto\chat-response.dto.ts`
 
 **File:** `backend\src\counselor\dto\chat.dto.ts`
 - **Methods / Signatures:**
@@ -4171,15 +4884,17 @@ flowchart LR
   - `@Injectable()`
   - `private readonly logger = new Logger(DashboardService.name);`
   - `@InjectModel(User.name) private readonly userModel: Model<User>,`
-  - `@InjectModel(StudentProfile.name) private readonly profileModel: Model<StudentProfileDocument>,`
-  - `@InjectModel(SavedCareer.name) private readonly savedCareerModel: Model<SavedCareerDocument>,`
+  - `@InjectModel(StudentProfile.name)`
+  - `@InjectModel(Recommendation.name)`
+  - `@InjectModel(SavedCareer.name)`
   - `async getDashboardData(userId: string)`
   - `const user = await this.userModel.findOne(`
   - `const profile = await this.profileModel.findOne(`
   - `.findOne(`
   - `.sort(`
   - `.exec();`
-  - `const savedCount = await this.savedCareerModel.countDocuments(`
+  - `.countDocuments(`
+  - `.exec();`
   - `.find(`
   - `.sort(`
   - `.limit(3)`
@@ -4188,7 +4903,8 @@ flowchart LR
   - `// 5. Server-Side AI Insight (Deterministic template matching)`
   - `const sortedTraits = Object.entries(`
   - `}).sort((a, b) => b[1] - a[1]);`
-  - `top_matches: recommendation?.final_recommendations?.slice(0, 3).map((r) => r.career_code) || [],`
+  - `?.slice(0, 3)`
+  - `.map((r) => r.career_code) || [],`
   - `recent: recentSaved.map((s) => s.career_code),`
 
 ### 21.8 Backend Module: HEALTH
@@ -4236,7 +4952,7 @@ flowchart LR
   - `@Request() req: any,`
   - `@Query('type') type = 'all',`
   - `@Query('page') page = '1',`
-  - `@Query('limit') limit = '10'`
+  - `@Query('limit') limit = '10',`
   - `const pageNum = parseInt(page, 10) || 1;`
   - `const limitNum = parseInt(limit, 10) || 10;`
 
@@ -4244,26 +4960,38 @@ flowchart LR
 - **Methods / Signatures:**
   - `@Injectable()`
   - `private readonly logger = new Logger(HistoryService.name);`
-  - `@InjectModel(StudentDNAHistory.name) private readonly dnaHistoryModel: Model<any>,`
-  - `@InjectModel(Recommendation.name) private readonly recommendationModel: Model<any>,`
-  - `@InjectModel(SavedCareer.name) private readonly savedCareerModel: Model<any>,`
+  - `@InjectModel(StudentDNAHistory.name)`
+  - `@InjectModel(Recommendation.name)`
+  - `@InjectModel(SavedCareer.name)`
   - `@InjectModel(Career.name) private readonly careerModel: Model<any>,`
-  - `async getHistory(userId: string, type: string, page = 1, limit = 10): Promise<`
+  - `async getHistory(`
+  - `this.logger.log(`
   - `const onboardingHistoryPromise = (async (): Promise<HistoryItem[]> =>`
-  - `const records = await this.dnaHistoryModel.find(`
+  - `.find(`
+  - `.sort(`
+  - `.exec();`
   - `title: `Onboarding completed (DNA snapshot generated)`,`
   - `const recommendationsHistoryPromise = (async (): Promise<HistoryItem[]> =>`
-  - `const records = await this.recommendationModel.find(`
+  - `.find(`
+  - `.sort(`
+  - `.exec();`
   - `title: `Recommendation generated ($`
   - `top_careers: r.final_recommendations.map((fr: any) => fr.career_code),`
   - `const savedCareersHistoryPromise = (async (): Promise<HistoryItem[]> =>`
-  - `const records = await this.savedCareerModel.find(`
+  - `.find(`
+  - `.sort(`
+  - `.exec();`
   - `const careerCodes = records.map((r) => r.career_code);`
-  - `const careers = await this.careerModel.find(`
-  - `const nameMap = careers.reduce((acc, curr) =>`
+  - `.find(`
+  - `.exec();`
+  - `const nameMap = careers.reduce(`
   - `title: `Saved career bookmark: $`
   - `const [onboard, recs, saved] = await Promise.all([`
   - `items = [...onboard, ...recs, ...saved].sort((a, b) =>`
+  - `? a.timestamp.getTime()`
+  - `: new Date(a.timestamp).getTime();`
+  - `? b.timestamp.getTime()`
+  - `: new Date(b.timestamp).getTime();`
   - `const paginatedItems = items.slice(startIndex, startIndex + limit);`
 
 ### 21.10 Backend Module: ONBOARDING
@@ -4327,20 +5055,35 @@ flowchart LR
   - `expect(service.getCompletionPercentage(step)).toBe(pct);`
   - `describe('validateStepTransition', () =>`
   - `it('allows jumping back to any completed step', () =>`
-  - `expect(() => service.validateStepTransition('skills', 'personal')).not.toThrow();`
-  - `expect(() => service.validateStepTransition('skills', 'academic')).not.toThrow();`
-  - `expect(() => service.validateStepTransition('personal', 'academic')).not.toThrow();`
-  - `expect(() => service.validateStepTransition('academic', 'interests')).not.toThrow();`
-  - `expect(() => service.validateStepTransition('personal', 'skills'))`
-  - `.toThrow(BadRequestException);`
-  - `expect(() => service.validateStepTransition('personal', 'scenarios'))`
-  - `.toThrow(BadRequestException);`
+  - `expect(() =>`
+  - `service.validateStepTransition('skills', 'personal'),`
+  - `).not.toThrow();`
+  - `expect(() =>`
+  - `service.validateStepTransition('skills', 'academic'),`
+  - `).not.toThrow();`
+  - `expect(() =>`
+  - `service.validateStepTransition('personal', 'academic'),`
+  - `).not.toThrow();`
+  - `expect(() =>`
+  - `service.validateStepTransition('academic', 'interests'),`
+  - `).not.toThrow();`
+  - `expect(() =>`
+  - `service.validateStepTransition('personal', 'skills'),`
+  - `).toThrow(BadRequestException);`
+  - `expect(() =>`
+  - `service.validateStepTransition('personal', 'scenarios'),`
+  - `).toThrow(BadRequestException);`
   - `it('rejects invalid target step', () =>`
-  - `expect(() => service.validateStepTransition('personal', 'invalid_step'))`
-  - `.toThrow(BadRequestException);`
+  - `expect(() =>`
+  - `service.validateStepTransition('personal', 'invalid_step'),`
+  - `).toThrow(BadRequestException);`
   - `it('allows editing any step from complete', () =>`
-  - `expect(() => service.validateStepTransition('complete', 'personal')).not.toThrow();`
-  - `expect(() => service.validateStepTransition('complete', 'scenarios')).not.toThrow();`
+  - `expect(() =>`
+  - `service.validateStepTransition('complete', 'personal'),`
+  - `).not.toThrow();`
+  - `expect(() =>`
+  - `service.validateStepTransition('complete', 'scenarios'),`
+  - `).not.toThrow();`
   - `describe('getNextStep', () =>`
   - `expect(service.getNextStep('personal')).toBe('academic');`
   - `expect(service.getNextStep('work_preferences')).toBe('constraints');`
@@ -4356,7 +5099,7 @@ flowchart LR
   - `validateStepTransition(currentStep: string, targetStep: string): void`
   - `const currentIdx = this.getStepIndex(currentStep);`
   - `const targetIdx = this.getStepIndex(targetStep);`
-  - `throw new BadRequestException(`Invalid target onboarding step: $`
+  - `throw new BadRequestException(`
   - `throw new BadRequestException(`
   - `getNextStep(currentStep: string): string`
   - `const idx = this.getStepIndex(currentStep);`
@@ -4377,14 +5120,17 @@ flowchart LR
   - `const profile = await this.profileModel.findOne(`
   - `async saveStep(userId: string, stepKey: string, stepData: any)`
   - `const profile = await this.profileModel.findOne(`
-  - `throw new NotFoundException('Onboarding profile not found. Call start first.');`
+  - `throw new NotFoundException(`
   - `const normalizedStep = stepKey.toLowerCase();`
-  - `this.flowService.validateStepTransition(profile.onboarding_step, normalizedStep);`
+  - `this.flowService.validateStepTransition(`
   - `switch (normalizedStep)`
   - `throw new BadRequestException(`Unknown step key: $`
   - `const nextStep = this.flowService.getNextStep(normalizedStep);`
-  - `profile.completion_percentage = this.flowService.getCompletionPercentage(normalizedStep);`
+  - `this.flowService.getStepIndex(normalizedStep) >=`
+  - `this.flowService.getStepIndex(profile.onboarding_step)`
+  - `this.flowService.getCompletionPercentage(normalizedStep);`
   - `await profile.save();`
+  - `this.logger.log(`
   - `onboardingEvents.emit('ONBOARDING_STEP_COMPLETED',`
   - `onboardingEvents.emit('PROFILE_UPDATED',`
   - `async completeOnboarding(userId: string)`
@@ -4395,16 +5141,21 @@ flowchart LR
   - `await profile.save();`
   - `const history = new this.dnaHistoryModel(`
   - `await history.save();`
+  - `this.logger.log(`
   - `// 4. Emit event to trigger recommendation pipeline (Phase 4 stub)`
   - `onboardingEvents.emit('ONBOARDING_COMPLETED',`
   - `async generateScenarios(userId: string): Promise<any>`
   - `const profile = await this.profileModel.findOne(`
   - `throw new NotFoundException('Onboarding profile not found.');`
   - `const response = await this.aiClient.run('scenario_generation', context);`
+  - `this.logger.warn(`
+  - ``AI scenario generation failed ($`
+  - `scenarios = this.buildOfflineScenarios();`
   - `await profile.save();`
+  - `private buildOfflineScenarios(): any[]`
   - `async getDNA(userId: string): Promise<StudentDNA>`
   - `const profile = await this.profileModel.findOne(`
-  - `throw new NotFoundException('Student DNA not found. Onboarding must be completed first.');`
+  - `throw new NotFoundException(`
 
 **File:** `backend\src\onboarding\trait-engine.service.spec.ts`
 - **Methods / Signatures:**
@@ -4442,9 +5193,12 @@ flowchart LR
   - `@Injectable()`
   - `private readonly logger = new Logger(TraitEngineService.name);`
   - `computeDNA(profile: StudentProfile): StudentDNA`
+  - `this.logger.log(`
   - `const traits = Object.keys(this.TRAIT_CONFIG);`
   - `// 3. Compute Skills Component (scale 1-5 to 0-100)`
-  - `? profileComponents.reduce((a, b) => a + b, 0) / profileComponents.length`
+  - `profileComponents.push(subjectScore);`
+  - `profileComponents.push(interestScore);`
+  - `? profileComponents.reduce((a, b) => a + b, 0) /`
   - `? resp.trait_weights.get(trait)`
   - `scenarioSum = Math.min(100, Math.max(0, scenarioSum + impactSum));`
   - `dna[trait] = Math.round(Math.min(100, Math.max(0, finalScore)));`
@@ -4456,6 +5210,7 @@ flowchart LR
   - `@Prop(`
   - `@Prop(`
   - `@Prop(`
+  - `SchemaFactory.createForClass(StudentDNAHistory);`
 
 **File:** `backend\src\onboarding\schemas\student-profile.schema.ts`
 - **Methods / Signatures:**
@@ -4550,9 +5305,10 @@ flowchart LR
   - `@Prop(`
   - `@Prop(`
   - `@Prop(`
+  - `type: [SchemaFactory.createForClass(ScenarioResponse)],`
   - `@Prop(`
   - `@Prop(`
-  - `export const StudentProfileSchema: MongooseSchema = SchemaFactory.createForClass(StudentProfile);`
+  - `SchemaFactory.createForClass(StudentProfile);`
 
 **File:** `backend\src\onboarding\dto\onboarding-step.dto.ts`
 - **Methods / Signatures:**
@@ -4578,17 +5334,27 @@ flowchart LR
   - `@IsNumber() @Min(0) @Max(100) computer: number;`
   - `@IsString() @IsOptional() status?: string;`
   - `@IsNumber() @IsOptional() @Min(0) @Max(100) percentage?: number;`
-  - `@ValidateNested() @IsOptional() @Type(() => Class10SubjectsDto) subjects?: Class10SubjectsDto;`
-  - `@IsArray() @IsString(`
+  - `@ValidateNested()`
+  - `@IsOptional()`
+  - `@Type(() => Class10SubjectsDto)`
+  - `@IsArray()`
+  - `@IsString(`
+  - `@IsOptional()`
   - `@IsArray() @IsString(`
   - `@IsString() @IsOptional() status?: string;`
   - `@IsString() @IsOptional() stream?: string;`
   - `@IsNumber() @IsOptional() @Min(0) @Max(100) percentage?: number;`
   - `@IsObject() @IsOptional() subjects?: Record<string, number>;`
+  - `@IsArray()`
+  - `@IsString(`
+  - `@IsOptional()`
   - `@IsArray() @IsString(`
-  - `@IsArray() @IsString(`
-  - `@ValidateNested() @IsOptional() @Type(() => Class10DetailsDto) class10?: Class10DetailsDto;`
-  - `@ValidateNested() @IsOptional() @Type(() => Class12DetailsDto) class12?: Class12DetailsDto;`
+  - `@ValidateNested()`
+  - `@IsOptional()`
+  - `@Type(() => Class10DetailsDto)`
+  - `@ValidateNested()`
+  - `@IsOptional()`
+  - `@Type(() => Class12DetailsDto)`
   - `@IsNumber() @Min(0) @Max(100) technology: number;`
   - `@IsNumber() @Min(0) @Max(100) business: number;`
   - `@IsNumber() @Min(0) @Max(100) helping_people: number;`
@@ -4702,10 +5468,11 @@ flowchart LR
 - **Methods / Signatures:**
   - `@Injectable()`
   - `private readonly logger = new Logger(EligibilityEngineService.name);`
-  - `@InjectModel(Career.name) private readonly careerModel: Model<CareerDocument>,`
+  - `@InjectModel(Career.name)`
   - `async getEligibleCareers(student: StudentProfile): Promise<CareerDocument[]>`
+  - `this.logger.log(`
   - `const eligible = await this.careerModel.find(query).exec();`
-  - `this.logger.log(`Eligibility check: found $`
+  - `this.logger.log(`
 
 **File:** `backend\src\recommendation\recommendation.service.spec.ts`
 - **Methods / Signatures:**
@@ -4727,36 +5494,40 @@ flowchart LR
   - `eligibilityEngine =`
   - `traitMatchingEngine =`
   - `aiClient =`
-  - `const mockAcademicEngine =`
-  - `const mockInterestEngine =`
-  - `const mockSkillEngine =`
-  - `const mockPersonalityEngine =`
-  - `const mockConstraintEngine =`
-  - `const mockOpportunityEngine =`
   - `calculate: jest.fn().mockReturnValue(`
+  - `calculate: jest.fn().mockReturnValue(`
+  - `calculate: jest.fn().mockReturnValue(`
+  - `calculate: jest.fn().mockReturnValue(`
+  - `calculate: jest.fn().mockReturnValue(`
+  - `calculate: jest.fn().mockReturnValue(`
+  - `.fn()`
+  - `.mockReturnValue(`
   - `rank: jest.fn().mockImplementation((x) => x),`
   - `calculate: jest.fn().mockReturnValue(85),`
   - `explain: jest.fn().mockReturnValue(`
   - `const module: TestingModule = await Test.createTestingModule(`
+  - `provide: getModelToken('RecommendationFeedback'),`
   - `}).compile();`
   - `describe('generateRecommendation', () =>`
   - `it('throws when profile or DNA not found', async () =>`
   - `execMock.mockResolvedValue(null);`
-  - `await expect(service.generateRecommendation('user-1')).rejects.toThrow(BadRequestException);`
+  - `await expect(service.generateRecommendation('user-1')).rejects.toThrow(`
   - `it('throws when zero eligible careers', async () =>`
   - `execMock.mockResolvedValue(mockProfile);`
   - `eligibilityEngine.getEligibleCareers.mockResolvedValue([]);`
-  - `await expect(service.generateRecommendation('user-1')).rejects.toThrow(BadRequestException);`
+  - `await expect(service.generateRecommendation('user-1')).rejects.toThrow(`
   - `it('throws when AI call fails', async () =>`
   - `execMock.mockResolvedValue(mockProfile);`
   - `eligibilityEngine.getEligibleCareers.mockResolvedValue(eligible);`
-  - `traitMatchingEngine.matchCareers.mockReturnValue(eligible.map(c => (`
+  - `traitMatchingEngine.matchCareers.mockReturnValue(`
+  - `eligible.map((c) => (`
   - `aiClient.run.mockResolvedValue(`
-  - `await expect(service.generateRecommendation('user-1')).rejects.toThrow(BadRequestException);`
+  - `await expect(service.generateRecommendation('user-1')).rejects.toThrow(`
   - `it('saves recommendation with top 5 on success', async () =>`
   - `execMock.mockResolvedValue(mockProfile);`
   - `eligibilityEngine.getEligibleCareers.mockResolvedValue(eligible);`
-  - `traitMatchingEngine.matchCareers.mockReturnValue(eligible.map(c => (`
+  - `traitMatchingEngine.matchCareers.mockReturnValue(`
+  - `eligible.map((c) => (`
   - `aiClient.run.mockResolvedValue(`
   - `await service.generateRecommendation('user-1');`
   - `expect(recModel.updateMany).toHaveBeenCalledWith(`
@@ -4769,14 +5540,16 @@ flowchart LR
   - `describe('getLatestRecommendation', () =>`
   - `it('throws when none exists', async () =>`
   - `execMock.mockResolvedValue(null);`
-  - `await expect(service.getLatestRecommendation('user-1')).rejects.toThrow(NotFoundException);`
+  - `await expect(service.getLatestRecommendation('user-1')).rejects.toThrow(`
   - `execMock.mockResolvedValue(`
   - `const result = await service.getLatestRecommendation('user-1');`
   - `expect(result._id).toBe('rec-1');`
   - `describe('submitFeedback', () =>`
   - `it('throws when recommendation not found', async () =>`
   - `execMock.mockResolvedValue(null);`
-  - `await expect(service.submitFeedback('user-1',`
+  - `await expect(`
+  - `service.submitFeedback('user-1',`
+  - `).rejects.toThrow(NotFoundException);`
   - `execMock.mockResolvedValue(`
   - `await service.submitFeedback('user-1',`
   - `describe('event hooks', () =>`
@@ -4795,65 +5568,84 @@ flowchart LR
   - `@InjectModel(StudentProfile.name)`
   - `onModuleInit()`
   - `onboardingEvents.on('ONBOARDING_COMPLETED', async (data) =>`
+  - `this.logger.log(`
   - `await this.generateRecommendation(data.user_id);`
+  - `this.logger.error(`
   - `onboardingEvents.on('PROFILE_UPDATED', async (data) =>`
+  - `this.logger.log(`
   - `await this.markAsStale(data.user_id);`
+  - `this.logger.error(`
   - `async generateRecommendation(userId: string): Promise<Recommendation>`
   - `const startTime = Date.now();`
-  - `const profile = await this.profileModel.findOne(`
-  - `const eligibleCareers = await this.eligibilityEngine.getEligibleCareers(profile);`
+  - `this.logger.log(`
+  - `.findOne(`
+  - `.exec();`
+  - `throw new BadRequestException(`
+  - `await this.eligibilityEngine.getEligibleCareers(profile);`
+  - `throw new BadRequestException(`
   - `const scoredResults = await Promise.all(`
   - `eligibleCareers.map(async (career) =>`
   - `const academicScore = this.academicEngine.calculate(profile, career);`
   - `const interestScore = this.interestEngine.calculate(profile, career);`
   - `const skillScore = this.skillEngine.calculate(profile, career);`
-  - `const personalityScore = this.personalityEngine.calculate(profile, career);`
-  - `const constraintScore = this.constraintEngine.calculate(profile, career);`
-  - `const opportunityScore = this.opportunityEngine.calculate(profile, career);`
+  - `const personalityScore = this.personalityEngine.calculate(`
+  - `const constraintScore = this.constraintEngine.calculate(`
+  - `const opportunityScore = this.opportunityEngine.calculate(`
+  - `const hybridResult = this.hybridRankingEngine.calculate(`
   - `const rankedResults = this.hybridRankingEngine.rank(scoredResults);`
   - `const diversityInput = (rankedResults as any[]).map((r) => (`
   - `const shortlist = rankedResults.slice(0, 20).map((item) => (`
   - `// 6. Call AI Service Client (exactly 1 routed call)`
   - `const aiResponse = await this.aiServiceClient.run(`
-  - `throw new BadRequestException('AI Personalization failed to produce valid recommendations.');`
-  - `const confidenceScore = this.confidenceEngine.calculate(profile, rankedResults);`
-  - `const matchingRankedResult = rankedResults.find(r => r.career_code === item.career.career_code)!;`
+  - `throw new BadRequestException(`
+  - `const confidenceScore = this.confidenceEngine.calculate(`
+  - `const matchingRankedResult = rankedResults.find(`
+  - `const nextRankedResult = rankedResults.find(`
   - `const reason = this.explainabilityEngine.explain(`
   - `const matchingAiRec = aiResponse.data.final_recommendations.find(`
-  - `await this.recommendationModel.updateMany(`
+  - `.updateMany(`
+  - `.exec();`
   - `const recommendation = new this.recommendationModel(`
   - `processing_time_ms: Date.now() - startTime,`
   - `await recommendation.save();`
   - `const profile = await this.profileModel.findOne(`
+  - `throw new BadRequestException(`
   - `// 2. Eligibility Engine (runs database Mongoose filters)`
-  - `const eligibleCareers = await this.eligibilityEngine.getEligibleCareers(profile);`
+  - `await this.eligibilityEngine.getEligibleCareers(profile);`
+  - `this.logger.warn(`
+  - `throw new BadRequestException(`
   - `// 3. Trait Matching Engine (calculates cosine similarities)`
+  - `const shortlistScored = this.traitMatchingEngine.matchCareers(`
   - `const shortlist = shortlistScored.map((item) => (`
   - `// 4. Assemble AI Personalization payload (top 20 max)`
   - `const aiCandidateCareers = shortlistScored.map((item) => (`
   - `// 5. Call AI Service Client (exactly 1 routed call)`
   - `const aiResponse = await this.aiServiceClient.run(`
-  - `throw new BadRequestException('AI Personalization failed to produce valid recommendations.');`
+  - `throw new BadRequestException(`
   - `const finalRecs = aiResponse.data.final_recommendations.slice(0, 5);`
-  - `await this.recommendationModel.updateMany(`
+  - `.updateMany(`
+  - `.exec();`
   - `const recommendation = new this.recommendationModel(`
   - `await recommendation.save();`
   - `async getLatestRecommendation(userId: string): Promise<Recommendation>`
   - `.findOne(`
   - `.sort(`
   - `.exec();`
+  - `throw new NotFoundException(`
   - `async regenerate(userId: string): Promise<Recommendation>`
-  - `async submitFeedback(userId: string, dto: FeedbackDto): Promise<RecommendationFeedback>`
-  - `const rec = await this.recommendationModel.findById(dto.recommendation_id).exec();`
-  - `throw new NotFoundException('Recommendation document not found or unauthorized');`
+  - `async submitFeedback(`
+  - `.findById(dto.recommendation_id)`
+  - `.exec();`
+  - `throw new NotFoundException(`
   - `const feedback = new this.feedbackModel(`
   - `async markAsStale(userId: string): Promise<void>`
-  - `await this.recommendationModel.updateMany(`
+  - `.updateMany(`
+  - `.exec();`
 
 **File:** `backend\src\recommendation\trait-matching-engine.service.spec.ts`
 - **Methods / Signatures:**
   - `const service = new TraitMatchingEngineService();`
-  - `risk_tolerance: 50, computed_at: new Date(), source_version: 'v1',`
+  - `computed_at: new Date(),`
   - `describe('TraitMatchingEngineService', () =>`
   - `describe('matchCareers', () =>`
   - `const result = service.matchCareers(makeDNA(), []);`
@@ -4881,11 +5673,11 @@ flowchart LR
 - **Methods / Signatures:**
   - `@Injectable()`
   - `private readonly logger = new Logger(TraitMatchingEngineService.name);`
-  - `matchCareers(dna: StudentDNA, eligibleCareers: CareerDocument[]):`
-  - `this.logger.log(`Running Trait Matching Engine against $`
+  - `matchCareers(`
+  - `this.logger.log(`
   - `const dnaVector = TRAIT_KEYS.map((key) => (dna as any)[key] || 0);`
   - `const scored = eligibleCareers.map((career) =>`
-  - `const careerVector = TRAIT_KEYS.map((key) => (careerWeights as any)[key] || 0);`
+  - `const careerVector = TRAIT_KEYS.map(`
   - `// 3. Compute cosine similarity (convert -1 to 1 to a 0 to 100 percentage score)`
   - `const similarity = cosineSimilarity(dnaVector, careerVector);`
   - `const score = Math.round(similarity * 100);`
@@ -4901,6 +5693,7 @@ flowchart LR
   - `@Prop(`
   - `@Prop(`
   - `@Prop(`
+  - `SchemaFactory.createForClass(RecommendationFeedback);`
 
 **File:** `backend\src\recommendation\schemas\recommendation.schema.ts`
 - **Methods / Signatures:**
@@ -4923,6 +5716,9 @@ flowchart LR
   - `@Prop(`
   - `@Prop(`
   - `@Prop(`
+  - `type: [SchemaFactory.createForClass(ShortlistEntry)],`
+  - `@Prop(`
+  - `type: [SchemaFactory.createForClass(FinalRecommendation)],`
   - `@Prop(`
   - `@Prop(`
   - `@Prop(`
@@ -4932,8 +5728,7 @@ flowchart LR
   - `@Prop(`
   - `@Prop(`
   - `@Prop(`
-  - `@Prop(`
-  - `export const RecommendationSchema: MongooseSchema = SchemaFactory.createForClass(Recommendation);`
+  - `SchemaFactory.createForClass(Recommendation);`
 
 **File:** `backend\src\recommendation\dto\recommendation.dto.ts`
 - **Methods / Signatures:**
@@ -4946,84 +5741,6 @@ flowchart LR
   - `@Max(5)`
   - `@IsString()`
   - `@IsOptional()`
-
-### 21.12 Backend Module: REPORTS
-
-#### Sub-Flow (Mermaid)
-```mermaid
-flowchart LR
-    Client([Client])
-    Module[reports Module]
-    Controllers[Controllers]
-    Client --> Controllers
-    Controllers --> Module
-    Services[Services]
-    Module --> Services
-    Database[(MongoDB)]
-    Services --> Database
-```
-
-#### Files & Methods in reports
-
-**File:** `backend\src\reports\reports.controller.ts`
-- **Methods / Signatures:**
-  - `@Controller('reports')`
-  - `@Post('generate')`
-  - `@HttpCode(HttpStatus.OK)`
-  - `async generate(@Request() req: any)`
-  - `@Get('status/:reportId')`
-  - `async getStatus(@Request() req: any, @Param('reportId') reportId: string)`
-  - `@Get('download/:reportId')`
-  - `@Header('Content-Type', 'application/pdf')`
-  - `async download(@Request() req: any, @Param('reportId') reportId: string)`
-  - `const stream = await this.reportsService.getReportDownloadStream(req.user.user_id, reportId);`
-  - `@Get('history')`
-  - `async getHistory(@Request() req: any)`
-
-**File:** `backend\src\reports\reports.service.ts`
-- **Methods / Signatures:**
-  - `const pdfmake = require('pdfmake');`
-  - `@Injectable()`
-  - `private readonly logger = new Logger(ReportsService.name);`
-  - `private readonly reportsDir = path.join(process.cwd(), 'reports_output');`
-  - `@InjectModel(Report.name) private readonly reportModel: Model<ReportDocument>,`
-  - `@InjectModel(StudentProfile.name) private readonly profileModel: Model<StudentProfileDocument>,`
-  - `fs.mkdirSync(this.reportsDir,`
-  - `async startReportGeneration(userId: string): Promise<Report>`
-  - `const profile = await this.profileModel.findOne(`
-  - `.findOne(`
-  - `.sort(`
-  - `.exec();`
-  - `throw new BadRequestException('No recommendation found. Generate recommendations first.');`
-  - `const report = new this.reportModel(`
-  - `recommendation_ref: String(recommendation._id),`
-  - `await report.save();`
-  - `this.generatePdfAsync(report, profile, recommendation);`
-  - `private async generatePdfAsync(`
-  - `await report.save();`
-  - `...finalRecs.map((rec) => [`
-  - `const filePath = path.join(this.reportsDir, filename);`
-  - `const pdfDoc = pdfmake.createPdf(docDefinition);`
-  - `await pdfDoc.write(filePath);`
-  - `await report.save();`
-  - `await report.save();`
-  - `async getReportStatus(userId: string, reportId: string): Promise<Report>`
-  - `const report = await this.reportModel.findById(reportId).exec();`
-  - `throw new NotFoundException('Report not found or unauthorized');`
-  - `async getReportDownloadStream(userId: string, reportId: string): Promise<fs.ReadStream>`
-  - `const report = await this.reportModel.findById(reportId).exec();`
-  - `throw new NotFoundException('Report not found or unauthorized');`
-  - `await report.save();`
-  - `async getReportsHistory(userId: string): Promise<Report[]>`
-
-**File:** `backend\src\reports\schemas\report.schema.ts`
-- **Methods / Signatures:**
-  - `@Schema(`
-  - `@Prop(`
-  - `@Prop(`
-  - `@Prop(`
-  - `@Prop(`
-  - `export const ReportSchema: MongooseSchema = SchemaFactory.createForClass(Report);`
 
 ### 21.13 Frontend Components & Pages
 
@@ -5068,6 +5785,7 @@ flowchart TD
 
 **File:** `frontend\src\components\layout\AppShell.tsx`
 - **Hooks Detected:**
+  - `useState`
   - `useNavigate`
   - `useAuthStore`
   - `useLocation`
@@ -5077,6 +5795,12 @@ flowchart TD
 **File:** `frontend\src\components\OnboardingProgress.tsx`
 
 **File:** `frontend\src\components\shared\AmbientOrbs.tsx`
+- **Hooks Detected:**
+  - `useEffect`
+  - `useMotionValue`
+  - `useState`
+  - `useSpring`
+  - `useMove`
 
 **File:** `frontend\src\components\shared\ErrorBoundary.tsx`
 
@@ -5086,9 +5810,32 @@ flowchart TD
 
 **File:** `frontend\src\components\ui\GlassCard.tsx`
 
+**File:** `frontend\src\components\ui\Skeleton.tsx`
+
+**File:** `frontend\src\design\index.ts`
+
+**File:** `frontend\src\design\tokens\blur.ts`
+
+**File:** `frontend\src\design\tokens\colors.ts`
+
+**File:** `frontend\src\design\tokens\glass.ts`
+
+**File:** `frontend\src\design\tokens\lighting.ts`
+
+**File:** `frontend\src\design\tokens\motion.ts`
+
+**File:** `frontend\src\design\tokens\radius.ts`
+
+**File:** `frontend\src\design\tokens\shadow.ts`
+
+**File:** `frontend\src\design\tokens\spacing.ts`
+
+**File:** `frontend\src\design\tokens\typography.ts`
+
 **File:** `frontend\src\lib\catalogs.ts`
 
 **File:** `frontend\src\lib\motion.ts`
+- **Hooks Detected:**
 
 **File:** `frontend\src\lib\utils.ts`
 
@@ -5143,12 +5890,12 @@ flowchart TD
   - `useState`
   - `useNavigate`
   - `useScroll`
-  - `useRef`
+  - `useMotionValueEvent`
   - `useInView`
   - `useMotionValue`
-  - `useEffect`
   - `useReducedMotion`
-  - `useMotionValueEvent`
+  - `useRef`
+  - `useEffect`
   - `useMemo`
 
 **File:** `frontend\src\pages\Login.tsx`

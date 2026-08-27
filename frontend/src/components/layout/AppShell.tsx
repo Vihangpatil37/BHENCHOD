@@ -52,7 +52,7 @@ export const AppShell = ({ children }: AppShellProps) => {
     <div
       className={twMerge(
         'bg-bg-primary text-text-primary flex flex-col md:flex-row min-h-screen',
-        isChatPage ? 'md:h-screen md:overflow-hidden' : ''
+        isChatPage ? 'md:h-dvh md:overflow-hidden' : ''
       )}
     >
       {/* ── MOBILE NAVBAR ── */}
@@ -126,7 +126,7 @@ export const AppShell = ({ children }: AppShellProps) => {
       {/* ── DESKTOP FLOATING SIDEBAR (Elevation 1) ── */}
       <aside
         className={twMerge(
-          'hidden md:flex flex-col justify-between shrink-0 m-4 h-[calc(100vh-2rem)] sticky top-4 transition-all duration-350 ease-in-out z-20',
+          'hidden md:flex flex-col justify-between shrink-0 m-4 h-[calc(100dvh-2rem)] sticky top-4 transition-all duration-350 ease-in-out z-20',
           isCollapsed ? 'w-20' : 'w-64'
         )}
       >

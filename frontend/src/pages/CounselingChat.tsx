@@ -226,7 +226,7 @@ export const CounselingChat: React.FC = () => {
               <Skeleton className="h-16 w-full" />
             </div>
           ) : (
-            <div className="flex-grow overflow-y-auto space-y-2 pr-2">
+            <div className="flex-grow overflow-y-auto space-y-2 pr-2 max-h-[45dvh] md:max-h-none">
               {conversations.length === 0 ? (
                 <p className="text-xs text-text-secondary/60 text-center py-8">No previous chats. Start a new thread!</p>
               ) : (
@@ -261,7 +261,7 @@ export const CounselingChat: React.FC = () => {
       </section>
 
       {/* Right Column: Chat Box */}
-      <section className="flex-grow flex flex-col h-[calc(100vh-160px)] md:h-full relative overflow-hidden p-4 md:p-6 lg:p-8">
+      <section className="flex-grow flex flex-col h-[calc(100dvh-128px)] md:h-full relative overflow-hidden p-4 md:p-6 lg:p-8">
         <div className="absolute top-0 right-0 w-96 h-96 bg-brand/5 rounded-full blur-3xl pointer-events-none" />
         
         {/* Centered Chat Layout */}
