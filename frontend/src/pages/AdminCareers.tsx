@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { fadeUp } from '../lib/motion';
+import { formatDateTime } from '../lib/formatDate';
 
 const TRAITS = [
   'analytical_thinking', 'creativity', 'communication', 'leadership',
@@ -473,7 +474,7 @@ export const AdminCareers: React.FC = () => {
                       <div className="flex justify-between"><span className="text-text-muted/60">Sub-domain:</span><span className="text-text/80">{detailCareer.sub_domain_code || '-'}</span></div>
                       <div className="flex justify-between"><span className="text-text-muted/60">Pathway tags:</span><span className="text-text/80">{(detailCareer.pathway_tags || []).join(', ') || '-'}</span></div>
                       <div className="flex justify-between"><span className="text-text-muted/60">Catalog parts:</span><span className="text-text/80">{(detailCareer.source_catalog_parts || []).join(', ') || '-'}</span></div>
-                      <div className="flex justify-between"><span className="text-text-muted/60">Imported at:</span><span className="text-text/80">{detailCareer.imported_at ? new Date(detailCareer.imported_at).toLocaleString() : 'N/A'}</span></div>
+                      <div className="flex justify-between"><span className="text-text-muted/60">Imported at:</span><span className="text-text/80">{detailCareer.imported_at ? formatDateTime(detailCareer.imported_at) : 'N/A'}</span></div>
                     </div>
 
                     {/* Inline Edit */}
