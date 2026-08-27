@@ -21,7 +21,7 @@ const makeProfile = (overrides: any = {}): StudentProfile => ({
     },
   },
   constraints: {
-    budget_tier: 3,
+
     study_duration_max: 4,
   },
   ...overrides,
@@ -45,7 +45,7 @@ describe('EligibilityEngineService', () => {
     expect(careerModel.find).toHaveBeenCalledWith({
       'eligibility.min_maths': { $lte: 80 },
       'eligibility.min_science': { $lte: 70 },
-      'eligibility.max_budget_tier': { $gte: 3 },
+
       'eligibility.min_study_duration_years': { $lte: 4 },
     });
   });
@@ -60,12 +60,12 @@ describe('EligibilityEngineService', () => {
     expect(careerModel.find).toHaveBeenCalledWith({
       'eligibility.min_maths': { $lte: 0 },
       'eligibility.min_science': { $lte: 0 },
-      'eligibility.max_budget_tier': { $gte: 3 },
+
       'eligibility.min_study_duration_years': { $lte: 4 },
     });
   });
 
-  it('defaults budget_tier to 4 and study_duration_max to 5 when constraints missing', async () => {
+  it('defaults study_duration_max to 5 when constraints missing', async () => {
     execMock.mockResolvedValue([]);
     const profile = makeProfile({ constraints: undefined });
     await service.getEligibleCareers(profile);
@@ -73,7 +73,7 @@ describe('EligibilityEngineService', () => {
     expect(careerModel.find).toHaveBeenCalledWith({
       'eligibility.min_maths': { $lte: 80 },
       'eligibility.min_science': { $lte: 70 },
-      'eligibility.max_budget_tier': { $gte: 4 },
+
       'eligibility.min_study_duration_years': { $lte: 5 },
     });
   });

@@ -20,7 +20,7 @@ export class EligibilityEngineService {
 
     const mathsScore = student.academic?.class10?.subjects?.maths ?? 0;
     const scienceScore = student.academic?.class10?.subjects?.science ?? 0;
-    const budgetTier = student.constraints?.budget_tier ?? 4;
+
     const studyDurationMax = student.constraints?.study_duration_max ?? 5;
 
     // Extra fields to check from eligibility schema
@@ -31,7 +31,7 @@ export class EligibilityEngineService {
     const query = {
       'eligibility.min_maths': { $lte: mathsScore },
       'eligibility.min_science': { $lte: scienceScore },
-      'eligibility.max_budget_tier': { $gte: budgetTier },
+
       'eligibility.min_study_duration_years': { $lte: studyDurationMax },
     };
 
