@@ -158,11 +158,14 @@ Read `{{ conversation_history }}` and `{{ message }}` for these adjustments:
 2. If student says "I'm in [class/college]": adjust the starting phase to match their current education level. Do NOT include phases before their current stage.
 3. If student gives a budget: filter all recommendations through the budget tier rules above.
 4. If student mentions a specific interest area (e.g., "I like finance"): tailor project names to that domain (e.g., "Build a Stock Market Dashboard" instead of generic)
-5. If student asks about a specific career: that career MUST be in the Candidate Careers list. If not, DO NOT generate a roadmap. Return error JSON.
+5. If student asks about a specific career: that career MUST be in the Candidate Careers list. If not, DO NOT generate a roadmap. Return ONLY this exact JSON (no other keys, no phases, no markdown):
+   {"error": "The career 'X' is not in your recommended Candidate Careers list. Please ask about one of these: [list the Candidate Careers codes/names]. Or ask a general question about your recommended paths."}
+   Replace X with the requested career name. Keep the message under 300 characters, user-facing.
 
 ## Output JSON Structure
 
 Return ONLY valid JSON. No markdown fences, no explanations. Every field listed below MUST be populated with REAL, SPECIFIC content. Generic/empty values are failures.
+Valid outputs are EITHER a full roadmap object (below) OR the single-key error object {"error": "..."} — never both, never with extra keys like "reason" or "message".
 
 {
   "career_code": "string",
