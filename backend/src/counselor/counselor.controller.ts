@@ -2,6 +2,7 @@ import {
   Controller,
   Post,
   Get,
+  Delete,
   Param,
   Body,
   Request,
@@ -45,6 +46,12 @@ export class CounselorController {
   @Get('conversations/:id')
   async getHistory(@Request() req: any, @Param('id') id: string) {
     return this.counselorService.getSessionHistory(req.user.user_id, id);
+  }
+
+  @Delete('conversations/:id')
+  async deleteConversation(@Request() req: any, @Param('id') id: string) {
+    await this.counselorService.deleteSession(req.user.user_id, id);
+    return { success: true, message: 'Conversation deleted' };
   }
 
   @Post('feedback')
