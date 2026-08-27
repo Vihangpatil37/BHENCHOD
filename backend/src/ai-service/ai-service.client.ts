@@ -89,6 +89,7 @@ export class AIServiceClient {
     }
 
     // 5. Validate and repair JSON against the schema for this task type
+    // ponytail: JsonValidatorService returns {error:string} for LLM refusals instead of throwing
     let finalData = response.data;
     try {
       finalData = this.jsonValidatorService.validateAndRepair(
@@ -114,6 +115,9 @@ export class AIServiceClient {
       throw err;
     }
 
+    const isRefusal =
+      finalData && typeof finalData === 'object' && typeof (finalData as any).error === 'string';
+
     const finalResponse: AIResponse<T> = {
       provider: response.provider,
       model: response.model,
@@ -129,7 +133,7 @@ export class AIServiceClient {
       cached: false,
     };
 
-    // 6. Write log & save to cache
+    // 6. Write log & save to cache (skip cache for refusals — they are context-dependent)
     await this.tokenLoggerService.log({
       task_type: taskType,
       provider: response.provider,
@@ -142,7 +146,11 @@ export class AIServiceClient {
       cached: false,
     });
 
-    this.cacheService.set(cacheKey, finalResponse);
+    if (!isRefusal) {
+      this.cacheService.set(cacheKey, finalResponse);
+    } else {
+      this.logger.warn(`Skipping cache for refusal response: task=${taskType}`);
+    }
 
     return finalResponse;
   }
