@@ -68,11 +68,30 @@ export class JsonValidatorService {
       try {
         parsed = JSON.parse(this.repairJson(text));
       } catch {
+        // 3b. Plain-text refusal fallback — LLM returned text like "I cannot..." instead of JSON
+        const refusalHint =
+          /cannot|unable|not able|blocked|safety|refuse|sorry|insufficient|not in your|not found|candidate list/i.test(
+            rawText,
+          );
+        if (refusalHint) {
+          const msg = rawText.trim().slice(0, 1000) || 'AI provider returned a non-JSON refusal';
+          this.logger.warn(`LLM plain-text refusal detected for ${taskType}: ${msg.slice(0, 200)}`);
+          return { error: msg };
+        }
         this.logger.error(`JSON Parsing failed. Raw text: ${rawText}`);
         throw new BadRequestException(
           'AI provider response is not valid JSON and could not be repaired',
         );
       }
+    }
+
+    // 3c. Structured refusal — LLM obeyed prompt instruction e.g. {"error":"Career not in candidate list"}
+    // Bypass strict schema validation so the caller can render a user-facing message instead of crashing
+    if (parsed && typeof parsed === 'object' && !Array.isArray(parsed) && typeof (parsed as any).error === 'string') {
+      const msg = (parsed as any).error.trim().slice(0, 1000);
+      this.logger.warn(`LLM structured refusal detected for ${taskType}: ${msg.slice(0, 200)}`);
+      // ponytail: normalize to {error:string} — extra keys like "reason"/"message" are ignored, keep only error
+      return { error: msg };
     }
 
     // 4. Validate schema structure if taskType is provided

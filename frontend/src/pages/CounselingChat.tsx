@@ -7,7 +7,6 @@ import {
   Send,
   RefreshCw,
   ThumbsUp,
-  Plus,
   Sparkles,
   User,
   Bot,
@@ -17,10 +16,9 @@ import {
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChatMarkdown } from '../components/ChatMarkdown';
 import { fadeUp } from '../lib/motion';
-import { formatDateOnly, formatTimeOnly } from '../lib/formatDate';
+import { formatTimeOnly } from '../lib/formatDate';
 import { GlassCard } from '../components/ui/GlassCard';
 import { Button } from '../components/ui/Button';
-import { Skeleton } from '../components/ui/Skeleton';
 
 interface Message {
   role: 'user' | 'assistant' | 'student' | 'counselor';
@@ -30,15 +28,6 @@ interface Message {
     rating: number;
     explanation?: string;
   };
-}
-
-interface Conversation {
-  _id: string;
-  user_id: string;
-  summary?: string;
-  updated_at: string;
-  last_message_at?: string;
-  messages_count: number;
 }
 
 const SUGGESTED_QUESTIONS = [
@@ -51,13 +40,11 @@ const SUGGESTED_QUESTIONS = [
 export const CounselingChat: React.FC = () => {
   const navigate = useNavigate();
   const { clearAuth } = useAuthStore();
-  const [conversations, setConversations] = useState<Conversation[]>([]);
   const [activeConvId, setActiveConvId] = useState<string>('');
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputText, setInputText] = useState('');
-  
+
   // Loading states
-  const [loadingList, setLoadingList] = useState(true);
   const [sending, setSending] = useState(false);
   const [regenerating, setRegenerating] = useState(false);
 
@@ -70,7 +57,7 @@ export const CounselingChat: React.FC = () => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    fetchConversations();
+    initializeChat();
   }, []);
 
   useEffect(() => {
@@ -87,21 +74,18 @@ export const CounselingChat: React.FC = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
 
-  const fetchConversations = async () => {
-    setLoadingList(true);
+  const initializeChat = async () => {
     try {
       const res: any = await client.get('/counselor/conversations');
-      setConversations(res);
-      if (res.length > 0) {
-        setActiveConvId(res[0]._id);
+      const convs = Array.isArray(res) ? res : res.data || [];
+      if (convs.length > 0) {
+        setActiveConvId(convs[0]._id);
       }
     } catch (err: any) {
       if (err.response?.status === 401) {
         clearAuth();
         navigate('/login');
       }
-    } finally {
-      setLoadingList(false);
     }
   };
 
@@ -117,12 +101,6 @@ export const CounselingChat: React.FC = () => {
     } catch (err) {
       console.error('Failed to load messages:', err);
     }
-  };
-
-  const handleStartNewChat = async () => {
-    setActiveConvId('');
-    setMessages([]);
-    setInputText('');
   };
 
   const handleSendMessage = async (textToSend?: string) => {
@@ -144,13 +122,14 @@ export const CounselingChat: React.FC = () => {
       if (activeConvId) {
         payload.conversation_id = activeConvId;
       }
-      
+
       const res: any = await client.post('/counselor/chat', payload);
-      
+
       if (!activeConvId && res.conversation_id) {
         setActiveConvId(res.conversation_id);
-        fetchConversations();
-      } else {
+      }
+
+      if (res.response) {
         const resConv: any = await client.get(`/counselor/conversations/${activeConvId}`);
         const rawMsgs = Array.isArray(resConv) ? resConv : resConv.messages || [];
         const mapped = rawMsgs.map((m: any) => ({
@@ -206,68 +185,14 @@ export const CounselingChat: React.FC = () => {
   };
 
   return (
-    <motion.div variants={fadeUp} initial="hidden" animate="visible" className="flex-grow flex flex-col md:flex-row min-w-0 h-full p-4 md:p-8">
-      {/* Left Column: Conversations List */}
-      <section className="w-full md:w-64 border-b md:border-b-0 md:border-r border-solid border-white/[0.08] p-4 flex flex-col justify-between shrink-0 space-y-6">
-        <div className="space-y-4 flex-grow flex flex-col overflow-hidden">
-          <div className="flex justify-between items-center shrink-0">
-            <h2 className="text-xs font-bold text-text-secondary uppercase tracking-widest">Conversations</h2>
-            <button
-              onClick={handleStartNewChat}
-              className="p-1.5 rounded-xl bg-brand hover:bg-brand/90 text-white shadow-md shadow-brand/10 transition-all cursor-pointer focus:outline-none"
-            >
-              <Plus className="h-4 w-4" />
-            </button>
-          </div>
-
-          {loadingList ? (
-            <div className="space-y-3 pt-2">
-              <Skeleton className="h-16 w-full" />
-              <Skeleton className="h-16 w-full" />
-              <Skeleton className="h-16 w-full" />
-            </div>
-          ) : (
-            <div className="flex-grow overflow-y-auto space-y-2 pr-2 max-h-[45dvh] md:max-h-none">
-              {conversations.length === 0 ? (
-                <p className="text-xs text-text-secondary/60 text-center py-8">No previous chats. Start a new thread!</p>
-              ) : (
-                conversations.map((c) => {
-                  const isActive = c._id === activeConvId;
-                  return (
-                    <button
-                      key={c._id}
-                      onClick={() => setActiveConvId(c._id)}
-                      className={`w-full p-4 rounded-[18px] border border-solid text-left transition-all cursor-pointer focus:outline-none ${
-                        isActive
-                          ? 'bg-brand/10 border-brand text-brand shadow-[0_4px_12px_rgba(91,124,250,0.15)]'
-                          : 'bg-white/[0.02] border-white/[0.06] text-text-secondary hover:border-white/[0.12] hover:bg-white/[0.04]'
-                      }`}
-                    >
-                      <div className="space-y-1">
-                        <p className="text-xs font-bold text-text-primary line-clamp-1">
-                          {c.summary || 'AI Career Counseling'}
-                        </p>
-                        <div className="flex justify-between items-center text-[10px] text-text-secondary">
-                          <span>{c.messages_count} messages</span>
-                          <span>{formatDateOnly(c.last_message_at || c.updated_at)}</span>
-                        </div>
-                      </div>
-                    </button>
-                  );
-                })
-              )}
-            </div>
-          )}
-        </div>
-      </section>
-
-      {/* Right Column: Chat Box */}
-      <section className="flex-grow flex flex-col h-[calc(100dvh-128px)] md:h-full relative overflow-hidden p-4 md:p-6 lg:p-8">
+    <motion.div variants={fadeUp} initial="hidden" animate="visible" className="flex-grow flex flex-col min-w-0 h-full p-4 md:p-8">
+      {/* Main Chat Box */}
+      <section className="flex-grow flex flex-col h-[calc(100dvh-128px)] md:h-full relative overflow-hidden">
         <div className="absolute top-0 right-0 w-96 h-96 bg-brand/5 rounded-full blur-3xl pointer-events-none" />
-        
+
         {/* Centered Chat Layout */}
         <div className="flex-grow flex flex-col w-full max-w-5xl mx-auto overflow-hidden relative z-10">
-          
+
           {/* Active Thread Header */}
           <div className="shrink-0 flex justify-between items-center border-b border-solid border-white/[0.08] pb-4 mb-4">
             <div className="flex items-center space-x-3">
@@ -319,15 +244,14 @@ export const CounselingChat: React.FC = () => {
               </div>
             ) : (
               messages.map((m, idx) => {
-              const isUser = m.role === 'user' || m.role === 'student';
+                const isUser = m.role === 'user' || m.role === 'student';
                 return (
                   <div key={idx} className="flex items-start space-x-4 py-4 border-b border-solid border-white/[0.03] last:border-b-0">
                     {/* Avatar */}
-                    <div className={`h-8 w-8 rounded-full flex items-center justify-center shrink-0 border border-solid ${
-                      isUser 
-                        ? 'bg-white/[0.05] border-white/[0.1] text-text-primary' 
+                    <div className={`h-8 w-8 rounded-full flex items-center justify-center shrink-0 border border-solid ${isUser
+                        ? 'bg-white/[0.05] border-white/[0.1] text-text-primary'
                         : 'bg-brand/10 border-brand/20 text-brand'
-                    }`}>
+                      }`}>
                       {isUser ? <User className="h-4 w-4" /> : <Bot className="h-4 w-4" />}
                     </div>
 
@@ -339,7 +263,7 @@ export const CounselingChat: React.FC = () => {
                         </span>
                         <span>•</span>
                         <span>{formatTimeOnly(m.timestamp)}</span>
-                        
+
                         {!isUser && m.feedback && (
                           <span className="text-brand font-bold bg-brand/10 border border-brand/20 px-1.5 py-0.5 rounded text-[8px]">
                             Rated {m.feedback.rating}★
@@ -387,7 +311,7 @@ export const CounselingChat: React.FC = () => {
                 </div>
               </div>
             )}
-            
+
             <div ref={messagesEndRef} />
           </div>
 
@@ -432,16 +356,15 @@ export const CounselingChat: React.FC = () => {
                 >
                   <Paperclip className="h-4 w-4" />
                 </button>
-                
+
                 {/* Bottom Right Send button */}
                 <button
                   onClick={() => handleSendMessage()}
                   disabled={sending || !inputText.trim()}
-                  className={`p-2 rounded-xl transition-all cursor-pointer focus:outline-none flex items-center justify-center ${
-                    inputText.trim() 
-                      ? 'bg-brand hover:bg-brand/90 text-white' 
+                  className={`p-2 rounded-xl transition-all cursor-pointer focus:outline-none flex items-center justify-center ${inputText.trim()
+                      ? 'bg-brand hover:bg-brand/90 text-white'
                       : 'bg-white/[0.03] text-text-muted cursor-not-allowed'
-                  }`}
+                    }`}
                 >
                   <Send className="h-3.5 w-3.5" />
                 </button>
@@ -472,7 +395,7 @@ export const CounselingChat: React.FC = () => {
                     <X className="h-4 w-4" />
                   </button>
                 </div>
-                
+
                 <div className="space-y-2">
                   <label className="text-xs text-text-secondary font-bold block">Rating (1 to 5 Stars)</label>
                   <div className="flex space-x-2 justify-center py-2.5 bg-white/[0.02] rounded-[18px] border border-solid border-white/[0.06]">

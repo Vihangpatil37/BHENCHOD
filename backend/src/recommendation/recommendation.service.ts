@@ -242,6 +242,10 @@ export class RecommendationService implements OnModuleInit {
         },
       );
 
+      if (aiResponse.data && typeof (aiResponse.data as any).error === 'string') {
+        throw new BadRequestException((aiResponse.data as any).error);
+      }
+
       if (
         !aiResponse.success ||
         !aiResponse.data ||
@@ -415,6 +419,10 @@ export class RecommendationService implements OnModuleInit {
         ],
       },
     );
+
+    if (aiResponse.data && typeof (aiResponse.data as any).error === 'string') {
+      throw new BadRequestException((aiResponse.data as any).error);
+    }
 
     if (
       !aiResponse.success ||

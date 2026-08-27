@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
+import { Eye, EyeOff } from 'lucide-react';
 import { client } from '../api/client';
 import { AuthLayout } from '../components/layout/AuthLayout';
 import { GlassCard } from '../components/ui/GlassCard';
@@ -12,8 +13,16 @@ export const Register = () => {
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const passwordReqs = [
+    { label: 'At least 8 characters', met: password.length >= 8 },
+    { label: 'At least 1 lowercase character', met: /[a-z]/.test(password) },
+    { label: 'At least 1 uppercase character', met: /[A-Z]/.test(password) },
+    { label: 'At least 1 number or special character', met: /[^a-zA-Z]/.test(password) }
+  ];
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -66,16 +75,36 @@ export const Register = () => {
                 placeholder="you@example.com"
               />
             </div>
-            <div className="space-y-2">
-              <label className="block text-xs font-semibold uppercase tracking-wider text-text-secondary">Password</label>
-              <input
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                className="w-full px-4 py-3 bg-white/[0.05] border border-solid border-white/[0.08] rounded-[18px] text-text-primary placeholder-white/30 focus:outline-none focus:border-ai-cyan/50 focus:ring-1 focus:ring-ai-cyan/50 transition-all duration-180"
-                placeholder="•••••••• (min 6 characters)"
-              />
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <label className="block text-xs font-semibold uppercase tracking-wider text-text-secondary">Password</label>
+                <div className="relative">
+                  <input
+                    type={showPassword ? "text" : "password"}
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    required
+                    className="w-full px-4 py-3 bg-white/[0.05] border border-solid border-white/[0.08] rounded-[18px] text-text-primary placeholder-white/30 focus:outline-none focus:border-ai-cyan/50 focus:ring-1 focus:ring-ai-cyan/50 transition-all duration-180 pr-12"
+                    placeholder="••••••••"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-4 top-1/2 -translate-y-1/2 text-black hover:text-black/80 transition-colors flex items-center justify-center"
+                  >
+                    {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                  </button>
+                </div>
+              </div>
+              <div className="mt-4 text-sm text-text-secondary space-y-2 bg-white/[0.02] p-4 rounded-xl border border-solid border-white/[0.05]">
+                <p className="font-medium text-text-primary mb-3">New password must contain:</p>
+                {passwordReqs.map((req, idx) => (
+                  <div key={idx} className="flex items-center gap-2.5">
+                    <div className={`w-1.5 h-1.5 rounded-full ${req.met ? 'bg-[#10B981]' : 'bg-text-secondary/50'}`} />
+                    <span className={req.met ? 'text-text-primary' : 'text-text-secondary'}>{req.label}</span>
+                  </div>
+                ))}
+              </div>
             </div>
             <Button type="submit" loading={loading} className="w-full py-4 text-base mt-2">
               Create Account
