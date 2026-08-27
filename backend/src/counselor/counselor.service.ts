@@ -53,29 +53,6 @@ export class CounselorService {
   ): Promise<ConversationDocument> {
     this.logger.log(`Starting counseling session for user: ${userId}`);
 
-    // Prune expired sessions first
-    await this.pruneSessions(userId);
-
-    // Limit active conversations per user to a maximum of 2.
-    // If they already have 2, keep the newest one and delete the rest.
-    const existing = await this.conversationModel
-      .find({ user_id: userId })
-      .sort({ last_message_at: -1 })
-      .exec();
-
-    if (existing.length >= 2) {
-      this.logger.log(
-        `User ${userId} has ${existing.length} sessions. Deleting oldest to enforce limit of 2.`,
-      );
-      const toDelete = existing.slice(1); // Keep the newest one (index 0), delete the rest
-      for (const conv of toDelete) {
-        await this.conversationModel.findByIdAndDelete(conv._id).exec();
-        await this.messageModel
-          .deleteMany({ conversation_id: String(conv._id) })
-          .exec();
-      }
-    }
-
     // Create new conversation
     const conversation = new this.conversationModel({
       user_id: userId,
@@ -99,7 +76,6 @@ export class CounselorService {
   }
 
   async getSessions(userId: string): Promise<Conversation[]> {
-    await this.pruneSessions(userId);
     return this.conversationModel
       .find({ user_id: userId })
       .sort({ last_message_at: -1 })
@@ -110,7 +86,6 @@ export class CounselorService {
     userId: string,
     sessionId: string,
   ): Promise<ConversationMessage[]> {
-    await this.pruneSessions(userId);
     const conversation = await this.conversationModel
       .findById(sessionId)
       .exec();
@@ -128,7 +103,6 @@ export class CounselorService {
     sessionId: string,
     messageText: string,
   ): Promise<ChatResponseDto> {
-    await this.pruneSessions(userId);
     const conversation = await this.conversationModel
       .findById(sessionId)
       .exec();
@@ -247,14 +221,63 @@ export class CounselorService {
       };
     }
 
-    const aiResponse = await this.aiServiceClient.run(
-      promptName,
-      aiContext,
-      fallbackObj,
-    );
+    // 5b. Call AI — JsonValidatorService now returns {error:string} for refusals instead of crashing (see json-validator.service.ts:3c)
+    let aiResponse: any;
+    try {
+      aiResponse = await this.aiServiceClient.run(
+        promptName,
+        aiContext,
+        fallbackObj,
+      );
+    } catch (e: any) {
+      const rawMsg = e.message || e.response?.message || 'AI Counselor failed to respond.';
+      // Convert technical validator errors into a friendly counselor reply (200) instead of 400 crash
+      const isSchemaError =
+        rawMsg.includes('must NOT have additional properties') ||
+        rawMsg.includes('must have required property') ||
+        rawMsg.includes('failed schema validation') ||
+        rawMsg.includes('not valid JSON');
+      const friendly = isSchemaError
+        ? "I couldn't generate a structured roadmap at this time due to an unexpected AI response format. Please try rephrasing your question or ask about one of your recommended careers."
+        : rawMsg.slice(0, 1000);
+      this.logger.warn(`AI call failed, returning friendly fallback: ${friendly.slice(0, 200)}`);
+      const fallbackMsg = new this.messageModel({
+        conversation_id: sessionId,
+        role: 'counselor',
+        content: friendly,
+        intent,
+        is_structured: false,
+      });
+      await fallbackMsg.save();
+      return {
+        response: friendly,
+        model_used: 'fallback',
+        cached: false,
+        latency_ms: 0,
+      };
+    }
 
     if (!aiResponse.success || !aiResponse.data) {
       throw new BadRequestException('AI Counselor failed to respond.');
+    }
+
+    // 5c. Handle LLM refusal gracefully — rendered as normal counselor message, not a 400
+    if (aiResponse.data && typeof aiResponse.data.error === 'string') {
+      const refusalText = aiResponse.data.error.trim();
+      const counselorMessage = new this.messageModel({
+        conversation_id: sessionId,
+        role: 'counselor',
+        content: refusalText,
+        intent,
+        is_structured: false,
+      });
+      await counselorMessage.save();
+      return {
+        response: refusalText,
+        model_used: aiResponse.model,
+        cached: aiResponse.cached,
+        latency_ms: aiResponse.latency_ms,
+      };
     }
 
     let replyText = '';
@@ -287,6 +310,9 @@ export class CounselorService {
   }
 
   private buildRoadmapReply(data: any): string {
+    if (data && typeof data.error === 'string') {
+      return data.error;
+    }
     if (!data.phases || data.phases.length === 0) {
       return "I couldn't generate a structured roadmap at this time. Please try again.";
     }
@@ -444,25 +470,13 @@ export class CounselorService {
     return cleanText;
   }
 
-  private async pruneSessions(userId: string): Promise<void> {
-    const thirtyMinutesAgo = new Date(Date.now() - 30 * 60 * 1000);
-    const expiredSessions = await this.conversationModel
-      .find({
-        user_id: userId,
-        last_message_at: { $lt: thirtyMinutesAgo },
-      })
-      .exec();
-
-    if (expiredSessions.length > 0) {
-      this.logger.log(
-        `Pruning ${expiredSessions.length} expired sessions for user: ${userId}`,
-      );
-      for (const session of expiredSessions) {
-        await this.conversationModel.findByIdAndDelete(session._id).exec();
-        await this.messageModel
-          .deleteMany({ conversation_id: String(session._id) })
-          .exec();
-      }
+  async deleteSession(userId: string, sessionId: string): Promise<void> {
+    const conversation = await this.conversationModel.findById(sessionId).exec();
+    if (!conversation || conversation.user_id !== userId) {
+      throw new NotFoundException('Conversation not found or unauthorized');
     }
+    
+    await this.conversationModel.findByIdAndDelete(sessionId).exec();
+    await this.messageModel.deleteMany({ conversation_id: sessionId }).exec();
   }
 }
