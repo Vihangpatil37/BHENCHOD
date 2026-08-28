@@ -1,4 +1,10 @@
-import { IsEmail, IsNotEmpty, IsString, MinLength } from 'class-validator';
+import {
+  IsEmail,
+  IsNotEmpty,
+  IsString,
+  MinLength,
+  Matches,
+} from 'class-validator';
 
 export class RegisterDto {
   @IsEmail({}, { message: 'email must be a valid email address' })
@@ -7,10 +13,13 @@ export class RegisterDto {
 
   @IsString()
   @IsNotEmpty()
-  @MinLength(6, { message: 'password must be at least 6 characters long' })
+  @MinLength(8, { message: 'password must be at least 8 characters long' })
+  @Matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/, {
+    message: 'password must contain at least one uppercase, one lowercase, and one number',
+  })
   password: string;
 
   @IsString()
   @IsNotEmpty()
-  full_name: string; // Wait, snake_case on the wire? In class-validator / DTO, if it's snake_case on the wire, the property should be full_name!
+  full_name: string;
 }

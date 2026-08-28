@@ -8,6 +8,7 @@ import {
   HttpCode,
   HttpStatus,
 } from '@nestjs/common';
+import { ThrottlerGuard } from '@nestjs/throttler';
 import { AuthService } from './auth.service';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
@@ -19,12 +20,14 @@ export class AuthController {
   constructor(private authService: AuthService) {}
 
   @Public()
+  @UseGuards(ThrottlerGuard)
   @Post('register')
   async register(@Body() dto: RegisterDto) {
     return this.authService.register(dto);
   }
 
   @Public()
+  @UseGuards(ThrottlerGuard)
   @Post('login')
   @HttpCode(HttpStatus.OK)
   async login(@Body() dto: LoginDto) {
@@ -32,6 +35,7 @@ export class AuthController {
   }
 
   @Public()
+  @UseGuards(ThrottlerGuard)
   @Post('refresh')
   @HttpCode(HttpStatus.OK)
   async refresh(@Body('refresh_token') refreshToken: string) {
