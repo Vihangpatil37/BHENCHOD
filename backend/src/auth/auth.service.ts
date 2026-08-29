@@ -11,13 +11,15 @@ import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
-import { randomUUID } from 'crypto';
+import { randomUUID, randomBytes, createHash } from 'crypto';
+import { EmailService } from '../common/services/email.service';
 
 @Injectable()
 export class AuthService {
   constructor(
     @InjectModel(User.name) private userModel: Model<User>,
     private jwtService: JwtService,
+    private emailService: EmailService,
   ) {}
 
   async register(dto: RegisterDto) {
@@ -146,5 +148,49 @@ export class AuthService {
       created_at: user.get('created_at'),
       updated_at: user.get('updated_at'),
     };
+  }
+
+  async forgotPassword(email: string) {
+    const user = await this.userModel.findOne({ email: email.toLowerCase() }).exec();
+    if (!user) {
+      // Don't leak whether the email exists
+      return { success: true };
+    }
+
+    const resetToken = randomBytes(32).toString('hex');
+    const hashedToken = createHash('sha256').update(resetToken).digest('hex');
+
+    user.reset_password_token = hashedToken;
+    user.reset_password_expires = new Date(Date.now() + 10 * 60 * 1000); // 10 mins
+    await user.save();
+
+    await this.emailService.sendPasswordResetEmail(user.email, resetToken);
+    return { success: true };
+  }
+
+  async resetPassword(token: string, newPassword: string) {
+    const hashedToken = createHash('sha256').update(token).digest('hex');
+    const user = await this.userModel
+      .findOne({
+        reset_password_token: hashedToken,
+        reset_password_expires: { $gt: new Date() },
+      })
+      .exec();
+
+    if (!user) {
+      throw new BadRequestException('Invalid or expired reset token');
+    }
+
+    const salt = await bcrypt.genSalt(10);
+    user.password_hash = await bcrypt.hash(newPassword, salt);
+    user.reset_password_token = undefined;
+    user.reset_password_expires = undefined;
+    
+    // Unlock account if it was locked
+    user.failed_login_attempts = 0;
+    user.locked_until = undefined;
+
+    await user.save();
+    return { success: true };
   }
 }

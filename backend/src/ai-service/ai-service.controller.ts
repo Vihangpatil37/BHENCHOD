@@ -1,7 +1,6 @@
 import { Controller, Get } from '@nestjs/common';
 import { KeyPoolService } from './key-pool.service';
 import { providerModels } from './config/provider-models.config';
-import { Public } from '../auth/decorators/public.decorator';
 import { Roles } from '../common/decorators/roles.decorator';
 import axios from 'axios';
 
@@ -36,7 +35,6 @@ export class AIServiceController {
   constructor(private readonly keyPoolService: KeyPoolService) {}
 
   @Get('health')
-  @Public()
   @Roles('admin')
   async getHealth() {
     if (healthCache && Date.now() - healthCache.timestamp < HEALTH_CACHE_TTL) {

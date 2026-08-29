@@ -1,12 +1,11 @@
-import { INestApplication, ValidationPipe } from '@nestjs/common';
+import { INestApplication } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import { getConnectionToken } from '@nestjs/mongoose';
 import { Connection } from 'mongoose';
 import request from 'supertest';
 import { AppModule } from '../src/app.module';
 import { AIServiceClient } from '../src/ai-service/ai-service.client';
-import { TransformInterceptor } from '../src/common/interceptors/transform.interceptor';
-import { HttpExceptionFilter } from '../src/common/filters/http-exception.filter';
+import { createTestApp } from './test-app.helper';
 
 const aiClientStub = {
   run: jest.fn().mockRejectedValue(new Error('offline in e2e')),
@@ -24,18 +23,7 @@ describe('Security — Career Data Exposure (e2e)', () => {
       .useValue(aiClientStub)
       .compile();
 
-    app = moduleRef.createNestApplication();
-    app.setGlobalPrefix('api');
-    app.useGlobalPipes(
-      new ValidationPipe({
-        whitelist: true,
-        transform: true,
-        forbidNonWhitelisted: true,
-      }),
-    );
-    app.useGlobalInterceptors(new TransformInterceptor());
-    app.useGlobalFilters(new HttpExceptionFilter());
-    await app.init();
+    app = await createTestApp(moduleRef);
 
     connection = app.get<Connection>(getConnectionToken());
   });

@@ -1,12 +1,11 @@
-import { INestApplication, ValidationPipe } from '@nestjs/common';
+import { INestApplication } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import { getConnectionToken } from '@nestjs/mongoose';
 import { Connection } from 'mongoose';
 import request from 'supertest';
 import { AppModule } from '../src/app.module';
 import { AIServiceClient } from '../src/ai-service/ai-service.client';
-import { TransformInterceptor } from '../src/common/interceptors/transform.interceptor';
-import { HttpExceptionFilter } from '../src/common/filters/http-exception.filter';
+import { createTestApp } from './test-app.helper';
 
 // ponytail: mock the AI client to reject so tests exercise the deterministic
 // offline scenario fallback (no network, no provider keys, fast, deterministic)
@@ -28,18 +27,7 @@ describe('API (e2e)', () => {
       .useValue(aiClientStub)
       .compile();
 
-    app = moduleRef.createNestApplication();
-    app.setGlobalPrefix('api');
-    app.useGlobalPipes(
-      new ValidationPipe({
-        whitelist: true,
-        transform: true,
-        forbidNonWhitelisted: true,
-      }),
-    );
-    app.useGlobalInterceptors(new TransformInterceptor());
-    app.useGlobalFilters(new HttpExceptionFilter());
-    await app.init();
+    app = await createTestApp(moduleRef);
 
     connection = app.get<Connection>(getConnectionToken());
   });
@@ -59,13 +47,13 @@ describe('API (e2e)', () => {
 
       const reg = await request(app.getHttpServer())
         .post('/api/auth/register')
-        .send({ email, password: 'password123', full_name: 'E2E User' });
+        .send({ email, password: 'Password1', full_name: 'E2E User' });
       expect(reg.status).toBe(201);
       expect(reg.body.data.email).toBe(email);
 
       const login = await request(app.getHttpServer())
         .post('/api/auth/login')
-        .send({ email, password: 'password123' });
+        .send({ email, password: 'Password1' });
       expect(login.status).toBe(200);
       expect(login.body.data.access_token).toBeDefined();
       expect(login.body.data.refresh_token).toBeDefined();
@@ -74,7 +62,7 @@ describe('API (e2e)', () => {
     it('rejects login with wrong password', async () => {
       await request(app.getHttpServer()).post('/api/auth/register').send({
         email: 'bad@test.com',
-        password: 'password123',
+        password: 'Password1',
         full_name: 'Bad',
       });
       const res = await request(app.getHttpServer())
@@ -89,10 +77,10 @@ describe('API (e2e)', () => {
       const email = `e2e-${Date.now()}@test.com`;
       await request(app.getHttpServer())
         .post('/api/auth/register')
-        .send({ email, password: 'password123', full_name: 'E2E User' });
+        .send({ email, password: 'Password1', full_name: 'E2E User' });
       const login = await request(app.getHttpServer())
         .post('/api/auth/login')
-        .send({ email, password: 'password123' });
+        .send({ email, password: 'Password1' });
       accessToken = login.body.data.access_token;
       refreshToken = login.body.data.refresh_token;
     });

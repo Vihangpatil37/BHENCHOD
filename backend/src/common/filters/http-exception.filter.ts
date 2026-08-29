@@ -59,11 +59,11 @@ export class HttpExceptionFilter implements ExceptionFilter {
       }
     } else if (exception instanceof Error) {
       message = exception.message;
-      // ponytail: never expose stack traces to client
+      // ponytail: never expose stack traces to client in prod/test
       detail =
-        process.env.NODE_ENV === 'production'
-          ? undefined
-          : exception.stack;
+        process.env.NODE_ENV === 'development'
+          ? exception.stack
+          : undefined;
     } else {
       message = String(exception);
     }

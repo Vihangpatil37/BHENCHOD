@@ -7,6 +7,8 @@ import { ErrorBoundary } from './components/shared/ErrorBoundary';
 
 const Login = lazy(() => import('./pages/Login').then(m => ({ default: m.Login })));
 const Register = lazy(() => import('./pages/Register').then(m => ({ default: m.Register })));
+const ForgotPassword = lazy(() => import('./pages/ForgotPassword').then(m => ({ default: m.ForgotPassword })));
+const ResetPassword = lazy(() => import('./pages/ResetPassword').then(m => ({ default: m.ResetPassword })));
 const Dashboard = lazy(() => import('./pages/Dashboard').then(m => ({ default: m.Dashboard })));
 const Onboarding = lazy(() => import('./pages/Onboarding').then(m => ({ default: m.Onboarding })));
 const CareerExplorer = lazy(() => import('./pages/CareerExplorer').then(m => ({ default: m.CareerExplorer })));
@@ -61,6 +63,8 @@ const App: React.FC = () => {
             <Routes>
               <Route path="/login" element={<AuthRoute><Login /></AuthRoute>} />
               <Route path="/register" element={<AuthRoute><Register /></AuthRoute>} />
+              <Route path="/forgot-password" element={<AuthRoute><ForgotPassword /></AuthRoute>} />
+              <Route path="/reset-password" element={<AuthRoute><ResetPassword /></AuthRoute>} />
               <Route path="/" element={<HomeRoute />} />
               <Route path="/onboarding" element={<ProtectedRoute><AppShell><Onboarding /></AppShell></ProtectedRoute>} />
               <Route path="/careers" element={<ProtectedRoute><AppShell><CareerExplorer /></AppShell></ProtectedRoute>} />

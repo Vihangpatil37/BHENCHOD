@@ -23,8 +23,8 @@ import { RolesGuard } from './common/guards/roles.guard';
       envFilePath: '.env',
     }),
     ThrottlerModule.forRoot([
-      { name: 'auth', ttl: 60000, limit: 20 },
-      { name: 'default', ttl: 60000, limit: 100 },
+      { name: 'auth', ttl: 60000, limit: parseInt(process.env.THROTTLE_AUTH_LIMIT || '20', 10) },
+      { name: 'default', ttl: 60000, limit: parseInt(process.env.THROTTLE_DEFAULT_LIMIT || '100', 10) },
     ]),
     MongooseModule.forRootAsync({
       imports: [ConfigModule],
