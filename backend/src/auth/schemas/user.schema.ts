@@ -15,7 +15,7 @@ export class User extends Document {
   @Prop({ required: false, default: false })
   email_verified: boolean;
 
-  @Prop({ required: true })
+  @Prop({ required: true, select: false })
   password_hash: string;
 
   @Prop({ required: true, default: 'local' })
@@ -35,6 +35,12 @@ export class User extends Document {
 
   @Prop({ required: false, type: Date })
   last_login?: Date;
+
+  @Prop({ required: false, select: false })
+  reset_password_token?: string;
+
+  @Prop({ required: false, type: Date })
+  reset_password_expires?: Date;
 }
 
 export const UserSchema = SchemaFactory.createForClass(User);

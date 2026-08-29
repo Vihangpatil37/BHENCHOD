@@ -6,5 +6,8 @@
   "transform": {
     "^.+\\.(t|j)s$": "ts-jest"
   },
-  "setupFiles": ["<rootDir>/jest-e2e-setup.ts"]
+  "setupFiles": ["<rootDir>/jest-e2e-setup.ts"],
+  "globalSetup": "<rootDir>/globalSetup.ts",
+  "globalTeardown": "<rootDir>/globalTeardown.ts",
+  "testTimeout": 60000
 }

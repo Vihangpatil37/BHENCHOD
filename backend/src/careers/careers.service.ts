@@ -157,14 +157,21 @@ export class CareersService implements OnModuleInit {
   }
 
   async findAll(category?: string, search?: string) {
-    const filter: any = {};
+    const filter: any = { is_active: true };
     if (category) {
       filter.category_code = category;
     }
     if (search) {
-      filter.name = { $regex: search, $options: 'i' };
+      // Escape regex special chars to prevent ReDoS / injection
+      const escaped = search.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      filter.name = { $regex: escaped, $options: 'i' };
     }
-    return this.careerModel.find(filter).exec();
+    return this.careerModel
+      .find(filter)
+      .select(
+        '-trait_weights_draft -eligibility_draft -backfill_status -needs_enrichment -source_catalog_parts',
+      )
+      .exec();
   }
 
   async findCategories() {
@@ -187,13 +194,22 @@ export class CareersService implements OnModuleInit {
       .find({
         category_code: career.category_code,
         career_code: { $ne: careerCode },
+        is_active: true,
       })
+      .select(
+        '-trait_weights_draft -eligibility_draft -backfill_status -needs_enrichment -source_catalog_parts',
+      )
       .limit(5)
       .exec();
   }
 
   async findByCodes(codes: string[]) {
-    return this.careerModel.find({ career_code: { $in: codes } }).exec();
+    return this.careerModel
+      .find({ career_code: { $in: codes }, is_active: true })
+      .select(
+        '-trait_weights_draft -eligibility_draft -backfill_status -needs_enrichment -source_catalog_parts',
+      )
+      .exec();
   }
 
   // Saved careers
@@ -395,7 +411,8 @@ export class CareersService implements OnModuleInit {
       query.is_active = filters.is_active;
     }
     if (filters.search) {
-      query.name = { $regex: filters.search, $options: 'i' };
+      const escaped = filters.search.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      query.name = { $regex: escaped, $options: 'i' };
     }
 
     const total = await this.careerModel.countDocuments(query).exec();

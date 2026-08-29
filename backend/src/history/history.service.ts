@@ -38,6 +38,8 @@ export class HistoryService {
     page: number;
     limit: number;
   }> {
+    // Clamp limit to prevent memory DoS
+    limit = Math.min(Math.max(1, limit), 100);
     this.logger.log(
       `Fetching history type=${type} page=${page} for user: ${userId}`,
     );

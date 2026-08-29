@@ -17,7 +17,7 @@ const mockModel = () => {
       field === 'created_at' || field === 'updated_at' ? new Date() : undefined;
     this.save = jest.fn().mockResolvedValue(undefined);
   };
-  fn.findOne = jest.fn(() => ({ exec: execMock }));
+  fn.findOne = jest.fn(() => ({ exec: execMock, select: () => ({ exec: execMock }) }));
   return fn;
 };
 
@@ -60,7 +60,7 @@ describe('AuthService', () => {
       await expect(
         service.register({
           email: 't@t.com',
-          password: '123456',
+          password: 'Password1',
           full_name: 'T',
         }),
       ).rejects.toThrow(ConflictException);
@@ -70,7 +70,7 @@ describe('AuthService', () => {
       execMock.mockResolvedValue(null);
       const result = await service.register({
         email: 'new@t.com',
-        password: '123456',
+        password: 'Password1',
         full_name: 'New',
       });
       expect(result.email).toBe('new@t.com');

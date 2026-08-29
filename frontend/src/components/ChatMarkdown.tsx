@@ -1,17 +1,18 @@
 import { useEffect, useRef, useId } from 'react';
 import ReactMarkdown from 'react-markdown';
 import mermaid from 'mermaid';
+import DOMPurify from 'dompurify';
 
 mermaid.initialize({
   startOnLoad: false,
   theme: 'dark',
   themeVariables: {
-    primaryColor: '#5B7CFA', // Brand Blue
+    primaryColor: '#5B7CFA',
     primaryTextColor: '#FFFFFF',
     primaryBorderColor: '#5B7CFA',
-    lineColor: '#70E1FF', // AI Cyan
-    secondaryColor: '#0A0A0F', // bg-secondary
-    tertiaryColor: '#10131A', // bg-tertiary
+    lineColor: '#70E1FF',
+    secondaryColor: '#0A0A0F',
+    tertiaryColor: '#10131A',
     fontSize: '14px',
   },
   flowchart: { useMaxWidth: true, htmlLabels: true },
@@ -24,7 +25,7 @@ function MermaidBlock({ diagram }: { diagram: string }) {
   useEffect(() => {
     if (!diagram || !ref.current) return;
     mermaid.render(`mermaid-${id.replace(/[^a-zA-Z0-9]/g, '')}`, diagram).then(({ svg }) => {
-      if (ref.current) ref.current.innerHTML = svg;
+      if (ref.current) ref.current.innerHTML = DOMPurify.sanitize(svg);
     });
   }, [diagram, id]);
 

@@ -68,7 +68,10 @@ export const Login = () => {
             </div>
             <div className="space-y-4">
               <div className="space-y-2">
-                <label className="block text-xs font-semibold uppercase tracking-wider text-text-secondary">Password</label>
+                <div className="flex justify-between items-center">
+                  <label className="block text-xs font-semibold uppercase tracking-wider text-text-secondary">Password</label>
+                  <Link to="/forgot-password" className="text-xs font-medium text-brand hover:underline">Forgot password?</Link>
+                </div>
                 <div className="relative">
                   <input
                     type={showPassword ? "text" : "password"}

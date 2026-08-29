@@ -1,11 +1,10 @@
 import { Controller, Get } from '@nestjs/common';
 import { KeyPoolService } from './key-pool.service';
 import { providerModels } from './config/provider-models.config';
-import { Public } from '../auth/decorators/public.decorator';
+import { Roles } from '../common/decorators/roles.decorator';
 import axios from 'axios';
 
 interface ProviderHealth {
-  loaded_keys_count: number;
   status: 'healthy' | 'degraded' | 'down' | 'unknown';
   latency_ms?: number;
   error?: string;
@@ -36,7 +35,7 @@ export class AIServiceController {
   constructor(private readonly keyPoolService: KeyPoolService) {}
 
   @Get('health')
-  @Public()
+  @Roles('admin')
   async getHealth() {
     if (healthCache && Date.now() - healthCache.timestamp < HEALTH_CACHE_TTL) {
       return { status: 'OK', providers: healthCache.data };
@@ -44,7 +43,7 @@ export class AIServiceController {
 
     const providers = Object.keys(this.providerEndpoints);
     const statusMap: Record<string, ProviderHealth> = {};
-    const results = await Promise.allSettled(
+    await Promise.allSettled(
       providers.map(async (name) => {
         const cfg = this.providerEndpoints[name];
         const keys = this.keyPoolService.getKeysForProvider(name);
@@ -64,7 +63,6 @@ export class AIServiceController {
           }
           await axios.get(url, { headers, timeout: 5000 });
           statusMap[name] = {
-            loaded_keys_count: keys.length,
             status: 'healthy',
             latency_ms: Date.now() - start,
           };
@@ -72,10 +70,9 @@ export class AIServiceController {
           const status = err.response?.status;
           const isAuth = status === 401 || status === 403;
           statusMap[name] = {
-            loaded_keys_count: keys.length,
             status: keys.length === 0 ? 'down' : isAuth ? 'degraded' : 'down',
             latency_ms: Date.now() - start,
-            error: err.response?.data?.error?.message || err.message,
+            // ponytail: never expose provider error details to client
           };
         }
       }),
