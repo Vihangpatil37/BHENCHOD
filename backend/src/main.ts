@@ -1,6 +1,7 @@
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { TransformInterceptor } from './common/interceptors/transform.interceptor';
+import { SanitizationInterceptor } from './common/interceptors/sanitization.interceptor';
 import { HttpExceptionFilter } from './common/filters/http-exception.filter';
 import { ValidationPipe } from '@nestjs/common';
 import helmet from 'helmet';
@@ -32,8 +33,11 @@ async function bootstrap() {
     }),
   );
 
-  // Register global interceptor
-  app.useGlobalInterceptors(new TransformInterceptor());
+  // Register global interceptors
+  app.useGlobalInterceptors(
+    new TransformInterceptor(),
+    new SanitizationInterceptor(),
+  );
 
   // Register global exception filter
   app.useGlobalFilters(new HttpExceptionFilter());
@@ -57,6 +61,9 @@ async function bootstrap() {
   }
   if (!process.env.MONGODB_URI) {
     throw new Error('MONGODB_URI must be set');
+  }
+  if (!process.env.DB_ENCRYPTION_KEY || process.env.DB_ENCRYPTION_KEY.length < 64) {
+    throw new Error('DB_ENCRYPTION_KEY must be a 64-character hex string (32 bytes)');
   }
 
   const port = process.env.PORT ?? 3000;
