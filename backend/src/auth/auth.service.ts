@@ -11,15 +11,16 @@ import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
-import { randomUUID, randomBytes, createHash } from 'crypto';
-import { EmailService } from '../common/services/email.service';
+import { randomUUID, randomBytes } from 'crypto';
+import { authenticator } from 'otplib';
+import * as qrcode from 'qrcode';
+import axios from 'axios';
 
 @Injectable()
 export class AuthService {
   constructor(
     @InjectModel(User.name) private userModel: Model<User>,
     private jwtService: JwtService,
-    private emailService: EmailService,
   ) {}
 
   async register(dto: RegisterDto) {
@@ -41,25 +42,101 @@ export class AuthService {
       password_hash: passwordHash,
       role: 'student',
       provider: 'local',
-      email_verified: false,
       failed_login_attempts: 0,
+      is_two_factor_enabled: false,
     });
 
     await user.save();
-    return this.sanitizeUser(user);
+    
+    // Instead of full tokens, return a setup token for 2FA
+    const setupToken = this.jwtService.sign(
+      { sub: user.user_id, email: user.email, setup_2fa: true },
+      { secret: process.env.JWT_ACCESS_SECRET, expiresIn: '15m' }
+    );
+
+    return {
+      message: 'Registration successful. Please complete 2FA setup.',
+      setup_token: setupToken,
+    };
+  }
+
+  async loginWithGoogle(idToken: string) {
+    try {
+      const response = await axios.get(`https://oauth2.googleapis.com/tokeninfo?id_token=${idToken}`);
+      const data = response.data;
+      
+      if (data.aud !== process.env.GOOGLE_CLIENT_ID) {
+        throw new UnauthorizedException('Invalid Google Client ID');
+      }
+      
+      if (data.email_verified !== 'true') {
+        throw new UnauthorizedException('Google email not verified');
+      }
+
+      let user = await this.userModel.findOne({
+        $or: [{ google_id: data.sub }, { email: data.email.toLowerCase() }]
+      }).select('+is_two_factor_enabled').exec();
+
+      if (!user) {
+        const userId = randomUUID().replace(/-/g, '');
+        user = new this.userModel({
+          user_id: userId,
+          email: data.email.toLowerCase(),
+          full_name: data.name || data.email,
+          google_id: data.sub,
+          provider: 'google',
+          role: 'student',
+          failed_login_attempts: 0,
+          is_two_factor_enabled: false,
+        });
+        await user.save();
+      } else if (!user.google_id) {
+        user.google_id = data.sub;
+        await user.save();
+      }
+
+      if (user.locked_until && user.locked_until > new Date()) {
+        const waitTime = Math.ceil((user.locked_until.getTime() - Date.now()) / 1000 / 60);
+        throw new UnauthorizedException(`Account is locked. Try again in ${waitTime} minutes.`);
+      }
+
+      user.last_login = new Date();
+      await user.save();
+
+      if (!user.is_two_factor_enabled) {
+        const setupToken = this.jwtService.sign(
+          { sub: user.user_id, email: user.email, setup_2fa: true },
+          { secret: process.env.JWT_ACCESS_SECRET, expiresIn: '15m' }
+        );
+        return {
+          requires_2fa_setup: true,
+          setup_token: setupToken,
+        };
+      }
+
+      const twoFactorToken = this.jwtService.sign(
+        { sub: user.user_id, email: user.email, verify_2fa: true },
+        { secret: process.env.JWT_ACCESS_SECRET, expiresIn: '5m' }
+      );
+
+      return {
+        requires_2fa: true,
+        two_factor_token: twoFactorToken,
+      };
+    } catch (error) {
+      throw new UnauthorizedException('Invalid Google token');
+    }
   }
 
   async login(dto: LoginDto) {
-    // select password_hash explicitly since schema has select:false
     const user = await this.userModel
       .findOne({ email: dto.email.toLowerCase() })
-      .select('+password_hash')
+      .select('+password_hash +is_two_factor_enabled')
       .exec();
     if (!user) {
       throw new UnauthorizedException('Invalid credentials');
     }
 
-    // Check lock status
     if (user.locked_until && user.locked_until > new Date()) {
       const waitTime = Math.ceil(
         (user.locked_until.getTime() - Date.now()) / 1000 / 60,
@@ -87,11 +164,146 @@ export class AuthService {
     user.last_login = new Date();
     await user.save();
 
+    if (!user.is_two_factor_enabled) {
+      // If they somehow skipped 2FA, force them into setup
+      const setupToken = this.jwtService.sign(
+        { sub: user.user_id, email: user.email, setup_2fa: true },
+        { secret: process.env.JWT_ACCESS_SECRET, expiresIn: '15m' }
+      );
+      return {
+        requires_2fa_setup: true,
+        setup_token: setupToken,
+      };
+    }
+
+    // Return a temporary token for 2FA verification
+    const twoFactorToken = this.jwtService.sign(
+      { sub: user.user_id, email: user.email, verify_2fa: true },
+      { secret: process.env.JWT_ACCESS_SECRET, expiresIn: '5m' }
+    );
+
+    return {
+      requires_2fa: true,
+      two_factor_token: twoFactorToken,
+    };
+  }
+
+  async setup2fa(userId: string) {
+    const user = await this.userModel.findOne({ user_id: userId }).exec();
+    if (!user) {
+      throw new UnauthorizedException('User not found');
+    }
+    if (user.is_two_factor_enabled) {
+      throw new BadRequestException('2FA is already enabled');
+    }
+
+    const secret = authenticator.generateSecret();
+    const otpauthUrl = authenticator.keyuri(
+      user.email,
+      'SCPR App',
+      secret
+    );
+
+    user.two_factor_secret = secret;
+    await user.save();
+
+    const qrCodeDataUrl = await qrcode.toDataURL(otpauthUrl);
+
+    return {
+      secret,
+      qr_code: qrCodeDataUrl,
+    };
+  }
+
+  async verify2faSetup(userId: string, code: string) {
+    const user = await this.userModel.findOne({ user_id: userId }).select('+two_factor_secret').exec();
+    if (!user || !user.two_factor_secret) {
+      throw new BadRequestException('2FA setup not initiated');
+    }
+
+    const isValid = authenticator.verify({
+      token: code,
+      secret: user.two_factor_secret,
+    });
+
+    if (!isValid) {
+      throw new UnauthorizedException('Invalid 2FA code');
+    }
+
+    user.is_two_factor_enabled = true;
+    
+    // Generate recovery codes
+    const recoveryCodes = Array.from({ length: 10 }, () => randomBytes(4).toString('hex'));
+    const hashedCodes = await Promise.all(
+      recoveryCodes.map(code => bcrypt.hash(code, 10))
+    );
+    user.recovery_codes = hashedCodes;
+    await user.save();
+
+    const tokens = await this.generateTokens(user);
+
+    return {
+      message: '2FA setup successful',
+      recovery_codes: recoveryCodes, // Only show once
+      user: this.sanitizeUser(user),
+      ...tokens,
+    };
+  }
+
+  async verify2fa(userId: string, code: string) {
+    const user = await this.userModel.findOne({ user_id: userId }).select('+two_factor_secret').exec();
+    if (!user || !user.two_factor_secret) {
+      throw new UnauthorizedException('2FA not enabled for this user');
+    }
+
+    const isValid = authenticator.verify({
+      token: code,
+      secret: user.two_factor_secret,
+    });
+
+    if (!isValid) {
+      throw new UnauthorizedException('Invalid 2FA code');
+    }
+
     const tokens = await this.generateTokens(user);
     return {
       user: this.sanitizeUser(user),
       ...tokens,
     };
+  }
+
+  async recoverAccount(email: string, recoveryCode: string, newPassword: string) {
+    const user = await this.userModel.findOne({ email: email.toLowerCase() }).select('+recovery_codes').exec();
+    if (!user || !user.recovery_codes || user.recovery_codes.length === 0) {
+      throw new BadRequestException('Invalid recovery attempt');
+    }
+
+    let matchedIndex = -1;
+    for (let i = 0; i < user.recovery_codes.length; i++) {
+      const isMatch = await bcrypt.compare(recoveryCode, user.recovery_codes[i]);
+      if (isMatch) {
+        matchedIndex = i;
+        break;
+      }
+    }
+
+    if (matchedIndex === -1) {
+      throw new UnauthorizedException('Invalid recovery code');
+    }
+
+    // Remove the used recovery code
+    user.recovery_codes.splice(matchedIndex, 1);
+
+    // Set new password
+    const salt = await bcrypt.genSalt(10);
+    user.password_hash = await bcrypt.hash(newPassword, salt);
+    
+    // Reset locks
+    user.failed_login_attempts = 0;
+    user.locked_until = undefined;
+
+    await user.save();
+    return { success: true, message: 'Password has been reset successfully.' };
   }
 
   async refresh(refreshToken: string) {
@@ -113,9 +325,7 @@ export class AuthService {
     }
   }
 
-  async logout(user: User) {
-    // In stateless JWT auth, logout usually just clears client-side state.
-    // If needed, token blacklist can be implemented. For now, returning success is sufficient.
+  async logout(user: any) {
     return { success: true };
   }
 
@@ -138,59 +348,15 @@ export class AuthService {
     };
   }
 
-  sanitizeUser(user: User) {
+  sanitizeUser(user: any) {
     return {
       user_id: user.user_id,
       email: user.email,
       full_name: user.full_name,
       role: user.role,
-      email_verified: user.email_verified,
-      created_at: user.get('created_at'),
-      updated_at: user.get('updated_at'),
+      is_two_factor_enabled: user.is_two_factor_enabled,
+      created_at: user.created_at || (user.get && user.get('created_at')),
+      updated_at: user.updated_at || (user.get && user.get('updated_at')),
     };
-  }
-
-  async forgotPassword(email: string) {
-    const user = await this.userModel.findOne({ email: email.toLowerCase() }).exec();
-    if (!user) {
-      // Don't leak whether the email exists
-      return { success: true };
-    }
-
-    const resetToken = randomBytes(32).toString('hex');
-    const hashedToken = createHash('sha256').update(resetToken).digest('hex');
-
-    user.reset_password_token = hashedToken;
-    user.reset_password_expires = new Date(Date.now() + 10 * 60 * 1000); // 10 mins
-    await user.save();
-
-    await this.emailService.sendPasswordResetEmail(user.email, resetToken);
-    return { success: true };
-  }
-
-  async resetPassword(token: string, newPassword: string) {
-    const hashedToken = createHash('sha256').update(token).digest('hex');
-    const user = await this.userModel
-      .findOne({
-        reset_password_token: hashedToken,
-        reset_password_expires: { $gt: new Date() },
-      })
-      .exec();
-
-    if (!user) {
-      throw new BadRequestException('Invalid or expired reset token');
-    }
-
-    const salt = await bcrypt.genSalt(10);
-    user.password_hash = await bcrypt.hash(newPassword, salt);
-    user.reset_password_token = undefined;
-    user.reset_password_expires = undefined;
-    
-    // Unlock account if it was locked
-    user.failed_login_attempts = 0;
-    user.locked_until = undefined;
-
-    await user.save();
-    return { success: true };
   }
 }
