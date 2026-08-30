@@ -24,6 +24,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     if (user.locked_until && user.locked_until > new Date()) {
       throw new UnauthorizedException('Account is temporarily locked');
     }
-    return user; // Attached to request.user
+    const userObj = user.toObject();
+    return { ...userObj, jwtPayload: payload }; // Attached to request.user
   }
 }
