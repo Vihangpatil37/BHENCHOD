@@ -25,7 +25,7 @@ import { Button } from '../components/ui/Button';
 import { Skeleton } from '../components/ui/Skeleton';
 import confetti from 'canvas-confetti';
 import { INDIA_STATES_CITIES } from '../lib/indiaStatesCities';
-import { NATIONAL_BOARDS, STATE_BOARDS, ALL_BOARDS } from '../lib/indiaSchoolBoards';
+import { NATIONAL_BOARDS, STATE_BOARDS } from '../lib/indiaSchoolBoards';
 
 const STEPS = [
   { key: 'personal', label: 'Personal', icon: User },
@@ -66,6 +66,17 @@ const SKILL_FIELDS = [
 ];
 
 const OPTION_SCORES: Record<string, number> = { A: 15, B: 5, C: -5, D: -10 };
+
+const calculateAge = (dobString: string): number => {
+  const birthDate = new Date(dobString);
+  const today = new Date();
+  let age = today.getFullYear() - birthDate.getFullYear();
+  const m = today.getMonth() - birthDate.getMonth();
+  if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
+    age--;
+  }
+  return age;
+};
 
 export const Onboarding: React.FC = () => {
   const navigate = useNavigate();
@@ -174,10 +185,11 @@ export const Onboarding: React.FC = () => {
       if (res.academic) {
         const hasNew = res.academic.class10 || res.academic.class12;
         if (hasNew) {
-          setAcademic({
-            class10: res.academic.class10 ? { ...academic.class10, ...res.academic.class10 } : academic.class10,
-            class12: res.academic.class12 ? { ...academic.class12, ...res.academic.class12 } : academic.class12,
-          });
+          setAcademic(prev => ({
+            ...prev,
+            class10: res.academic.class10 ? { ...prev.class10, ...res.academic.class10 } : prev.class10,
+            class12: res.academic.class12 ? { ...prev.class12, ...res.academic.class12 } : prev.class12,
+          }));
         }
       }
       if (res.interests) {
@@ -446,7 +458,17 @@ export const Onboarding: React.FC = () => {
                   <input
                     type="date"
                     value={personal.dob ? personal.dob.split('T')[0] : ''}
-                    onChange={(e) => setPersonal({ ...personal, dob: e.target.value })}
+                    onChange={(e) => {
+                      const newDob = e.target.value;
+                      let newAge = personal.age;
+                      if (newDob) {
+                        let calc = calculateAge(newDob);
+                        if (calc < 15) calc = 15;
+                        if (calc > 40) calc = 40;
+                        newAge = calc;
+                      }
+                      setPersonal({ ...personal, dob: newDob, age: newAge });
+                    }}
                     onClick={(e) => {
                       try { e.currentTarget.showPicker(); } catch (err) {}
                     }}
