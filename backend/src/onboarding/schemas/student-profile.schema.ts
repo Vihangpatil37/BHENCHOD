@@ -1,5 +1,6 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document, Schema as MongooseSchema } from 'mongoose';
+import { encrypt, decrypt } from '../../common/utils/crypto.util';
 
 export type StudentProfileDocument = StudentProfile & Document;
 
@@ -44,12 +45,12 @@ export class StudentDNA {
 
 export const StudentDNASchema = SchemaFactory.createForClass(StudentDNA);
 
-@Schema({ _id: false })
+@Schema({ _id: false, toJSON: { getters: true }, toObject: { getters: true } })
 export class PersonalInfo {
-  @Prop({ required: false })
+  @Prop({ required: false, get: decrypt, set: encrypt })
   name?: string;
 
-  @Prop({ required: false })
+  @Prop({ required: false, get: decrypt, set: encrypt })
   dob?: string;
 
   @Prop({ required: false })
@@ -58,13 +59,13 @@ export class PersonalInfo {
   @Prop({ required: false })
   gender?: string;
 
-  @Prop({ required: false })
+  @Prop({ required: false, get: decrypt, set: encrypt })
   city?: string;
 
-  @Prop({ required: false })
+  @Prop({ required: false, get: decrypt, set: encrypt })
   state?: string;
 
-  @Prop({ required: false })
+  @Prop({ required: false, get: decrypt, set: encrypt })
   board?: string; // e.g. "CBSE" | "ICSE" | "State Board"
 }
 
@@ -242,6 +243,8 @@ export class ScenarioResponse {
 @Schema({
   timestamps: { createdAt: 'created_at', updatedAt: 'updated_at' },
   collection: 'student_profiles',
+  toJSON: { getters: true },
+  toObject: { getters: true },
 })
 export class StudentProfile {
   @Prop({ required: true, unique: true, index: true })

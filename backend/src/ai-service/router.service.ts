@@ -9,19 +9,22 @@ export interface RouteConfig {
 @Injectable()
 export class RouterService {
   private readonly routes: Record<string, string[]> = {
-    career_recommendation: ['gemini', 'gemini', 'groq', 'groq'],
+    career_recommendation: ['gemini', 'groq', 'mistral', 'glm'],
     roadmap_generation: ['gemini', 'gemini', 'groq', 'groq'],
     counselor_chat: [
-      'openrouter', // primary (GPT-OSS 120B)
-      'openrouter', // fallback 1 (GPT-OSS 20B)
-      'openrouter', // fallback 2 (DeepSeek R1)
-      'openrouter', // fallback 3 (Qwen3 Coder)
-      'groq',       // Llama 3.3
-      'groq',       // Llama 3.1
-      'gemini',     // Gemini 2.5 Flash
-      'gemini',     // Gemini 2.5 Flash-Lite
-      'glm',        // GLM 4.7
-      'glm',        // GLM 4.5
+      'openrouter', // primary
+      'openrouter', // fallback 1
+      'openrouter', // fallback 2
+      'openrouter', // fallback 3
+      'openrouter', // fallback 4
+      'openrouter', // fallback 5
+      'openrouter', // fallback 6
+      'openrouter', // fallback 7
+      'openrouter', // fallback 8
+      'openrouter', // fallback 9
+      'openrouter', // fallback 10
+      'openrouter', // fallback 11
+      'openrouter', // fallback 12
     ],
     career_trait_backfill: ['gemini', 'gemini', 'groq', 'groq'],
     report_summary: ['mistral', 'gemini', 'gemini', 'groq', 'groq'],
