@@ -44,7 +44,7 @@ describe('Auth Security — JWT Secret Handling', () => {
       const content = readFile('auth.service.ts');
       // Find the sanitizeUser method and check its return object keys
       const sanitizeMatch = content.match(
-        /sanitizeUser\(user:\s*User\)\s*\{[\s\S]*?return\s*\{([\s\S]*?)\};[\s\S]*?\}/,
+        /sanitizeUser\(user:\s*any\)\s*\{[\s\S]*?return\s*\{([\s\S]*?)\};[\s\S]*?\}/,
       );
       expect(sanitizeMatch).toBeTruthy();
       if (sanitizeMatch) {

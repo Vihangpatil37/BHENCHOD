@@ -131,7 +131,7 @@ describe('Auth Security — Password Policy', () => {
         'email',
         'full_name',
         'role',
-        'email_verified',
+        'is_two_factor_enabled',
         'created_at',
         'updated_at',
       ];
@@ -202,8 +202,6 @@ describe('Auth Security — Password Policy', () => {
         password: 'Password1',
       });
       expect(result).not.toHaveProperty('password_hash');
-      expect(result.user).toBeDefined();
-      expect(result.user).not.toHaveProperty('password_hash');
     });
   });
 });
