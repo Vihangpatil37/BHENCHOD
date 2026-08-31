@@ -4,6 +4,8 @@ export interface ProviderResponse {
   input_tokens: number;
   output_tokens: number;
   error?: string;
+  statusCode?: number;
+  rawError?: any;
 }
 
 export interface AbstractLLMProvider {
@@ -14,5 +16,6 @@ export interface AbstractLLMProvider {
     prompt: string,
     systemInstruction?: string,
     jsonSchema?: any,
+    timeoutMs?: number,
   ): Promise<ProviderResponse>;
 }
