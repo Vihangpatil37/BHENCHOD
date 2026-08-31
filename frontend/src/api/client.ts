@@ -47,8 +47,10 @@ client.interceptors.response.use(
     const errorData = error.response?.data;
 
     // Check if unauthorized and we haven't retried yet
+    const isAuthExpired = error.response?.status === 401 || errorData?.errorCode === 'AUTH_EXPIRED';
+    
     if (
-      error.response?.status === 401 &&
+      isAuthExpired &&
       !originalRequest._retry &&
       useAuthStore.getState().refreshToken
     ) {
@@ -102,3 +104,20 @@ client.interceptors.response.use(
     return Promise.reject(errorData || { message: error.message });
   }
 );
+
+// Helper to poll job status
+export const pollJob = async (jobId: string, intervalMs = 2000, maxAttempts = 60): Promise<any> => {
+  let attempts = 0;
+  while (attempts < maxAttempts) {
+    const res: any = await client.get(`/jobs/${jobId}`);
+    if (res.status === 'completed') {
+      return res.result;
+    }
+    if (res.status === 'failed') {
+      throw new Error(res.error || 'Job failed');
+    }
+    await new Promise(resolve => setTimeout(resolve, intervalMs));
+    attempts++;
+  }
+  throw new Error('Polling timeout exceeded');
+};
