@@ -43,7 +43,7 @@ export class RouterService {
       return {
         taskType,
         maxAttempts: 8,
-        routes: this.getProviderRoutes(['anthropic', 'openrouter', 'gemini', 'groq', 'mistral']), // Deep reasoning for recommendations
+        routes: this.getProviderRoutes(['gemini', 'openrouter', 'groq', 'mistral', 'glm']), // Deep reasoning for recommendations
       };
     }
     
