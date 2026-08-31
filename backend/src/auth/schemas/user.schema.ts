@@ -21,8 +21,7 @@ export class User extends Document {
   @Prop({ required: false, select: false })
   password_hash: string;
 
-  @Prop({ required: false, unique: true, sparse: true })
-  google_id?: string;
+
 
   @Prop({ required: true, default: 'local' })
   provider: string; // "local" | etc.
