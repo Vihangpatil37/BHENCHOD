@@ -13,6 +13,7 @@ export class GeminiProvider implements AbstractLLMProvider {
     prompt: string,
     systemInstruction?: string,
     jsonSchema?: any,
+    timeoutMs?: number,
   ): Promise<ProviderResponse> {
     const apiVersion = providerModels.gemini.api_version ?? 'v1';
     const url = `https://generativelanguage.googleapis.com/${apiVersion}/models/${model}:generateContent?key=${apiKey}`;
@@ -34,7 +35,7 @@ export class GeminiProvider implements AbstractLLMProvider {
     try {
       const response = await axios.post(url, body, {
         headers: { 'Content-Type': 'application/json' },
-        timeout: parseInt(process.env.AI_SERVICE_DEFAULT_TIMEOUT_MS || '15000'),
+        timeout: timeoutMs || parseInt(process.env.AI_SERVICE_DEFAULT_TIMEOUT_MS || '15000'),
       });
 
       const candidate = response.data?.candidates?.[0];
@@ -74,6 +75,8 @@ export class GeminiProvider implements AbstractLLMProvider {
         input_tokens: 0,
         output_tokens: 0,
         error: error.response?.data?.error?.message || error.message,
+        statusCode: error.response?.status,
+        rawError: error,
       };
     }
   }
