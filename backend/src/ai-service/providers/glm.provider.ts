@@ -12,6 +12,7 @@ export class GLMProvider implements AbstractLLMProvider {
     prompt: string,
     systemInstruction?: string,
     jsonSchema?: any,
+    timeoutMs?: number,
   ): Promise<ProviderResponse> {
     const url = 'https://open.bigmodel.cn/api/paas/v4/chat/completions';
 
@@ -36,7 +37,7 @@ export class GLMProvider implements AbstractLLMProvider {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${apiKey}`,
         },
-        timeout: parseInt(process.env.AI_SERVICE_DEFAULT_TIMEOUT_MS || '15000'),
+        timeout: timeoutMs || parseInt(process.env.AI_SERVICE_DEFAULT_TIMEOUT_MS || '15000'),
       });
 
       const choice = response.data?.choices?.[0];
@@ -79,6 +80,8 @@ export class GLMProvider implements AbstractLLMProvider {
         input_tokens: 0,
         output_tokens: 0,
         error: error.response?.data?.error?.message || error.message,
+        statusCode: error.response?.status,
+        rawError: error,
       };
     }
   }
