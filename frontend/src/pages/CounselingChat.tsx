@@ -79,7 +79,8 @@ export const CounselingChat: React.FC = () => {
       const res: any = await client.get('/counselor/conversations');
       const convs = Array.isArray(res) ? res : res.data || [];
       if (convs.length > 0) {
-        setActiveConvId(convs[0]._id);
+        const id = typeof convs[0]._id === 'object' ? String(convs[0]._id) : convs[0]._id;
+        setActiveConvId(id);
       }
     } catch (err: any) {
       if (err.response?.status === 401) {
