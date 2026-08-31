@@ -8,10 +8,12 @@ import { GLMProvider } from './providers/glm.provider';
 import { OpenRouterProvider } from './providers/openrouter.provider';
 import { RouteConfig } from './router.service';
 import { describe, it, expect, beforeEach, afterEach, jest } from '@jest/globals';
+import { AiHealthService } from './ai-health.service';
 
 describe('Career Recommendation Retry Integration (Controlled Reproduction)', () => {
   let service: RetryManagerService;
   let keyPoolService: jest.Mocked<KeyPoolService>;
+  let aiHealthService: jest.Mocked<AiHealthService>;
   let geminiProvider: jest.Mocked<GeminiProvider>;
   let mistralProvider: jest.Mocked<MistralProvider>;
   let glmProvider: jest.Mocked<GLMProvider>;
@@ -19,6 +21,12 @@ describe('Career Recommendation Retry Integration (Controlled Reproduction)', ()
   beforeEach(async () => {
     keyPoolService = {
       getKeysForProvider: jest.fn(),
+    } as any;
+    aiHealthService = {
+      isHealthy: jest.fn().mockResolvedValue(true),
+      markHealthy: jest.fn().mockResolvedValue(undefined),
+      markRateLimited: jest.fn().mockResolvedValue(undefined),
+      markInvalid: jest.fn().mockResolvedValue(undefined),
     } as any;
     geminiProvider = { call: jest.fn() } as any;
     mistralProvider = { call: jest.fn() } as any;
@@ -28,6 +36,7 @@ describe('Career Recommendation Retry Integration (Controlled Reproduction)', ()
       providers: [
         RetryManagerService,
         { provide: KeyPoolService, useValue: keyPoolService },
+        { provide: AiHealthService, useValue: aiHealthService },
         { provide: GeminiProvider, useValue: geminiProvider },
         { provide: GroqProvider, useValue: {} },
         { provide: MistralProvider, useValue: mistralProvider },
@@ -45,9 +54,9 @@ describe('Career Recommendation Retry Integration (Controlled Reproduction)', ()
 
   it('should reproduce controlled failure and fallback correctly', async () => {
     keyPoolService.getKeysForProvider.mockImplementation((p) => {
-      if (p === 'mistral') return ['mistral-key-0', 'mistral-key-1'];
-      if (p === 'gemini') return ['gemini-key-0'];
-      if (p === 'glm') return ['glm-key-0', 'glm-key-1', 'glm-key-2'];
+      if (p === 'mistral') return ['mistralA-key', 'mistralB-key'];
+      if (p === 'gemini') return ['geminiA-key'];
+      if (p === 'glm') return ['glmKeyA-0', 'glmKeyB-1', 'glmKeyC-2'];
       return [];
     });
 
