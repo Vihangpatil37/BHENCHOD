@@ -98,7 +98,14 @@ export const CareerExplorer: React.FC = () => {
     setRegenerating(true);
     try {
       const res: any = await client.post('/recommendations/regenerate');
-      setLatestRec(res);
+      if (res.jobId) {
+        // Import pollJob at the top of the file if needed, or assume it's available from client.ts
+        const { pollJob } = await import('../api/client');
+        const result = await pollJob(res.jobId);
+        setLatestRec(result);
+      } else {
+        setLatestRec(res);
+      }
     } catch (err: any) {
       alert(err.message || 'Regeneration failed');
     } finally {
