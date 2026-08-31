@@ -20,8 +20,11 @@ const PROVIDERS: Array<{
 const PROMPT = 'Reply with the single word OK.';
 
 function getKeys(provider: string): string[] {
-  const envVarName = `${provider.toUpperCase()}_API_KEYS`;
-  const envVal = process.env[envVarName];
+  const p = provider.toUpperCase();
+  const envVal =
+    process.env[`${p}_API_KEYS`] ||
+    process.env[`${p}_API_KEY`] ||
+    (provider === 'glm' ? process.env['ZHIPU_API_KEY'] : undefined);
   return (envVal || '')
     .split(',')
     .map((k) => k.trim())
