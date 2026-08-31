@@ -59,8 +59,9 @@ export class AIServiceClient {
       context,
     );
 
-    // 3. Resolve routing
-    const routes = this.routerService.getRoute(taskType);
+    // 3. Resolve routing config for this specific task
+    const taskConfig = this.routerService.getTaskConfig(taskType);
+    const routes = taskConfig.routes;
 
     // 4. Execute with retries and fallbacks
     let response: any;
@@ -71,6 +72,7 @@ export class AIServiceClient {
         prompt,
         systemInstruction,
         jsonSchema,
+        taskConfig.maxAttempts,
       );
     } catch (e: any) {
       // Log failed request attempt
