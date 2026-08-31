@@ -12,6 +12,7 @@ export class OpenRouterProvider implements AbstractLLMProvider {
     prompt: string,
     systemInstruction?: string,
     jsonSchema?: any,
+    timeoutMs?: number,
   ): Promise<ProviderResponse> {
     const url = 'https://openrouter.ai/api/v1/chat/completions';
 
@@ -38,7 +39,7 @@ export class OpenRouterProvider implements AbstractLLMProvider {
           'HTTP-Referer': process.env.APP_URL || 'http://localhost:3000',
           'X-Title': 'SCPR AI Counselor',
         },
-        timeout: parseInt(process.env.AI_SERVICE_DEFAULT_TIMEOUT_MS || '15000'),
+        timeout: timeoutMs || parseInt(process.env.AI_SERVICE_DEFAULT_TIMEOUT_MS || '15000'),
       });
 
       const choice = response.data?.choices?.[0];
@@ -76,6 +77,8 @@ export class OpenRouterProvider implements AbstractLLMProvider {
         input_tokens: 0,
         output_tokens: 0,
         error: error.response?.data?.error?.message || error.message,
+        statusCode: error.response?.status,
+        rawError: error,
       };
     }
   }
