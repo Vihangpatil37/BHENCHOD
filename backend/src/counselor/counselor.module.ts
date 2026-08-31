@@ -15,6 +15,8 @@ import { CareersModule } from '../careers/careers.module';
 import { OnboardingModule } from '../onboarding/onboarding.module';
 import { RecommendationModule } from '../recommendation/recommendation.module';
 import { AIServiceModule } from '../ai-service/ai-service.module';
+import { QueueModule } from '../queue/queue.module';
+import { forwardRef } from '@nestjs/common';
 
 @Module({
   imports: [
@@ -24,8 +26,9 @@ import { AIServiceModule } from '../ai-service/ai-service.module';
     ]),
     CareersModule,
     OnboardingModule,
-    RecommendationModule,
+    forwardRef(() => RecommendationModule),
     AIServiceModule,
+    forwardRef(() => QueueModule),
   ],
   controllers: [CounselorController],
   providers: [CounselorService, ContextBuilderService],

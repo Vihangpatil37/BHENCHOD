@@ -8,17 +8,24 @@ import {
   Request,
   HttpCode,
   HttpStatus,
+  Inject,
+  forwardRef,
 } from '@nestjs/common';
 import { CounselorService } from './counselor.service';
 import { ChatDto, FeedbackDto, RegenerateDto } from './dto/chat.dto';
 import { ChatResponseDto } from './dto/chat-response.dto';
+import { QueueService } from '../queue/queue.service';
 
 @Controller('counselor')
 export class CounselorController {
-  constructor(private readonly counselorService: CounselorService) {}
+  constructor(
+    private readonly counselorService: CounselorService,
+    @Inject(forwardRef(() => QueueService))
+    private readonly queueService: QueueService,
+  ) {}
 
   @Post('chat')
-  @HttpCode(HttpStatus.OK)
+  @HttpCode(HttpStatus.ACCEPTED)
   async chat(
     @Request() req: any,
     @Body() dto: ChatDto,
@@ -31,12 +38,12 @@ export class CounselorController {
       conversationId = session._id.toString();
     }
 
-    const response = await this.counselorService.sendMessage(
+    const jobId = await this.queueService.enqueueCounselorChat(
       userId,
       conversationId,
       dto.message,
     );
-    return { ...response, conversation_id: conversationId };
+    return { jobId, conversation_id: conversationId, message: 'Counselor chat started' };
   }
 
   @Get('conversations')
@@ -67,7 +74,7 @@ export class CounselorController {
   }
 
   @Post('regenerate')
-  @HttpCode(HttpStatus.OK)
+  @HttpCode(HttpStatus.ACCEPTED)
   async regenerate(@Request() req: any, @Body() dto: RegenerateDto) {
     const userId = req.user.user_id;
     const history = await this.counselorService.getSessionHistory(
@@ -86,21 +93,11 @@ export class CounselorController {
     }
     const lastStudentMsg = studentMessages[studentMessages.length - 1];
 
-    // Delete any counselor messages that came after the last student message
-    // (This acts as rolling back the conversation state for a clean rewrite)
-    const { InjectModel } = require('@nestjs/mongoose');
-    const {
-      ConversationMessage,
-    } = require('./schemas/conversation-message.schema');
-
-    // Actually we can do it inside counselor service or just delete them directly here
-    // But since controllers are thin, let's put it in a service method or delete them here.
-    // To keep controller thin, let's just send the last message text again (it will log a new message)
-    // or we can clean up history first. Let's just run it!
-    return this.counselorService.sendMessage(
+    const jobId = await this.queueService.enqueueCounselorChat(
       userId,
       dto.conversation_id,
       lastStudentMsg.content,
     );
+    return { jobId, conversation_id: dto.conversation_id, message: 'Counselor regeneration started' };
   }
 }
