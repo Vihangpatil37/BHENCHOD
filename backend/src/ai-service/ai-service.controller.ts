@@ -1,5 +1,6 @@
 import { Controller, Get } from '@nestjs/common';
 import { KeyPoolService } from './key-pool.service';
+import { AiHealthService } from './ai-health.service';
 import { providerModels } from './config/provider-models.config';
 import { Roles } from '../common/decorators/roles.decorator';
 import axios from 'axios';
@@ -32,53 +33,28 @@ export class AIServiceController {
     glm: { url: 'https://open.bigmodel.cn/api/paas/v4/models', auth: 'header' },
   };
 
-  constructor(private readonly keyPoolService: KeyPoolService) {}
+  constructor(
+    private readonly keyPoolService: KeyPoolService,
+    private readonly aiHealthService: AiHealthService
+  ) {}
 
   @Get('health')
   @Roles('admin')
   async getHealth() {
-    if (healthCache && Date.now() - healthCache.timestamp < HEALTH_CACHE_TTL) {
-      return { status: 'OK', providers: healthCache.data };
-    }
+    const states = await this.aiHealthService.getAllHealthStates();
+    
+    // Map internal prefix to safe keyIndex
+    const safeStates = states.map(state => {
+      const index = this.keyPoolService.getKeyIndex(state.provider, state.apiKeyPrefix);
+      return {
+        provider: state.provider,
+        keyIndex: index !== -1 ? index : 'unknown',
+        status: state.status,
+        errorCount: state.errorCount,
+        cooldownUntil: state.cooldownUntil,
+      };
+    });
 
-    const providers = Object.keys(this.providerEndpoints);
-    const statusMap: Record<string, ProviderHealth> = {};
-    await Promise.allSettled(
-      providers.map(async (name) => {
-        const cfg = this.providerEndpoints[name];
-        const keys = this.keyPoolService.getKeysForProvider(name);
-        const key = keys[0];
-        const start = Date.now();
-        try {
-          const headers: Record<string, string> = {
-            'Content-Type': 'application/json',
-          };
-          let url = cfg.url;
-          if (key) {
-            if (cfg.auth === 'query') {
-              url += `?key=${key}`;
-            } else {
-              headers['Authorization'] = `Bearer ${key}`;
-            }
-          }
-          await axios.get(url, { headers, timeout: 5000 });
-          statusMap[name] = {
-            status: 'healthy',
-            latency_ms: Date.now() - start,
-          };
-        } catch (err: any) {
-          const status = err.response?.status;
-          const isAuth = status === 401 || status === 403;
-          statusMap[name] = {
-            status: keys.length === 0 ? 'down' : isAuth ? 'degraded' : 'down',
-            latency_ms: Date.now() - start,
-            // ponytail: never expose provider error details to client
-          };
-        }
-      }),
-    );
-
-    healthCache = { timestamp: Date.now(), data: statusMap };
-    return { status: 'OK', providers: statusMap };
+    return { status: 'OK', providers: safeStates };
   }
 }
