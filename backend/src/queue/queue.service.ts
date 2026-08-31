@@ -52,17 +52,33 @@ export class QueueService implements OnModuleInit, OnModuleDestroy {
   }
 
   async enqueueRecommendationGeneration(userId: string) {
+    const existingJobs = await (this.agenda.db as any).collection.find({
+      name: 'generate-recommendation',
+      'data.userId': userId,
+      lastFinishedAt: null,
+    }).toArray();
+    if (existingJobs && existingJobs.length > 0) {
+      return existingJobs[0]._id!.toString();
+    }
+    
     const job = this.agenda.create('generate-recommendation', { userId });
     job.schedule('now');
-    job.unique({ 'name': 'generate-recommendation', 'data.userId': userId, 'lockedAt': null, 'lastFinishedAt': null });
     await job.save();
     return job.attrs._id!.toString();
   }
 
   async enqueueRecommendationRegeneration(userId: string) {
+    const existingJobs = await (this.agenda.db as any).collection.find({
+      name: 'regenerate-recommendation',
+      'data.userId': userId,
+      lastFinishedAt: null,
+    }).toArray();
+    if (existingJobs && existingJobs.length > 0) {
+      return existingJobs[0]._id!.toString();
+    }
+
     const job = this.agenda.create('regenerate-recommendation', { userId });
     job.schedule('now');
-    job.unique({ 'name': 'regenerate-recommendation', 'data.userId': userId, 'lockedAt': null, 'lastFinishedAt': null });
     await job.save();
     return job.attrs._id!.toString();
   }
