@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { Eye, EyeOff } from 'lucide-react';
 import { client } from '../api/client';
@@ -18,52 +18,7 @@ export const Register = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    const handleGoogleResponse = async (response: any) => {
-      setLoading(true);
-      setError(null);
-      try {
-        const data: any = await client.post('/auth/google', { id_token: response.credential });
-        
-        // Since google user is automatically registered if they don't exist
-        // we can share the same flow as Login
-        if (data.requires_2fa_setup) {
-          useAuthStore.getState().updateAccessToken(data.setup_token);
-          navigate('/setup-2fa');
-        } else if (data.requires_2fa) {
-          useAuthStore.getState().updateAccessToken(data.two_factor_token);
-          // Register screen shouldn't normally hit this, but just in case they click it here
-          navigate('/login'); 
-        } else {
-          useAuthStore.getState().setAuth(data.user, data.access_token, data.refresh_token);
-          navigate('/');
-        }
-      } catch (err: any) {
-        setError(err.message || 'Google registration failed');
-      } finally {
-        setLoading(false);
-      }
-    };
 
-    let attempts = 0;
-    const initGoogle = () => {
-      if ((window as any).google?.accounts?.id) {
-        (window as any).google.accounts.id.initialize({
-          client_id: import.meta.env.VITE_GOOGLE_CLIENT_ID,
-          callback: handleGoogleResponse
-        });
-        (window as any).google.accounts.id.renderButton(
-          document.getElementById('google-btn-register'),
-          { theme: 'filled_black', size: 'large', shape: 'pill' }
-        );
-      } else if (attempts < 20) {
-        attempts++;
-        setTimeout(initGoogle, 100);
-      }
-    };
-    
-    initGoogle();
-  }, [navigate]);
 
   const passwordReqs = [
     { label: 'At least 8 characters', met: password.length >= 8 },
@@ -159,12 +114,7 @@ export const Register = () => {
             <Button type="submit" loading={loading} className="w-full py-4 text-base mt-2">
               Create Account
             </Button>
-            <div className="flex items-center my-4">
-              <div className="flex-1 border-t border-white/[0.08]"></div>
-              <span className="px-3 text-xs font-semibold text-text-secondary uppercase">OR</span>
-              <div className="flex-1 border-t border-white/[0.08]"></div>
-            </div>
-            <div id="google-btn-register" className="w-full overflow-hidden rounded-[18px] flex justify-center"></div>
+
           </form>
 
           <div className="mt-8 text-center text-sm text-text-secondary">
