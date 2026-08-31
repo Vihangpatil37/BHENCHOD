@@ -18,6 +18,7 @@ import {
 } from './types/retry.types';
 import { AIServiceExhaustedError } from './errors/ai-service-exhausted.error';
 import { classifyAIError, getRetryPolicy } from './utils/error-classifier';
+import { AiHealthService } from './ai-health.service';
 
 // Create a simple event emitter for cross-module events (e.g. analytics)
 export const aiServiceEvents = new EventEmitter();
@@ -34,6 +35,7 @@ export class RetryManagerService {
 
   constructor(
     private readonly keyPoolService: KeyPoolService,
+    private readonly aiHealthService: AiHealthService,
     gemini: GeminiProvider,
     groq: GroqProvider,
     mistral: MistralProvider,
@@ -49,19 +51,24 @@ export class RetryManagerService {
 
   public buildAttemptPlan(routes: RouteConfig[]): AttemptPlanItem[] {
     const plan: AttemptPlanItem[] = [];
+    const seen = new Set<string>();
 
     for (const route of routes) {
       const keys = this.keyPoolService.getKeysForProvider(route.provider);
       if (keys.length === 0) continue;
 
       for (let k = 0; k < keys.length; k++) {
-        plan.push({
-          provider: route.provider,
-          model: route.model,
-          keyIndex: k,
-          totalKeysForProvider: keys.length,
-          apiKey: keys[k],
-        });
+        const keyHash = `${route.provider}_${route.model}_${k}`;
+        if (!seen.has(keyHash)) {
+          seen.add(keyHash);
+          plan.push({
+            provider: route.provider,
+            model: route.model,
+            keyIndex: k,
+            totalKeysForProvider: keys.length,
+            apiKey: keys[k],
+          });
+        }
       }
     }
 
@@ -74,6 +81,7 @@ export class RetryManagerService {
     prompt: string,
     systemInstruction?: string,
     jsonSchema?: any,
+    maxAttempts: number = this.AI_MAX_ATTEMPTS,
     traceId: string = `trace_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
   ): Promise<RetryExecutionResult> {
     const plan = this.buildAttemptPlan(routes);
@@ -92,7 +100,7 @@ export class RetryManagerService {
       traceId,
       task: taskType,
       attempt: 0,
-      maxAttempts: this.AI_MAX_ATTEMPTS,
+      maxAttempts,
       provider: plan[0].provider,
       model: plan[0].model,
       keyIndex: plan[0].keyIndex,
@@ -104,12 +112,14 @@ export class RetryManagerService {
 
     let fallbackUsed = false;
     let initialProvider = plan[0].provider;
+    
+    // Scoped cache to prevent redundantly checking the same bad key across different fallback models
+    const unhealthyKeysCache = new Set<string>();
 
     for (let i = 0; i < plan.length; i++) {
       const currentPlan = plan[i];
 
-      // Update context for the current attempt
-      context.attempt++;
+      // Update context for the current attempt plan item
       context.provider = currentPlan.provider;
       context.model = currentPlan.model;
       context.keyIndex = currentPlan.keyIndex;
@@ -137,6 +147,32 @@ export class RetryManagerService {
         );
       }
 
+      const attemptTimeout = Math.min(this.AI_SERVICE_DEFAULT_TIMEOUT_MS, remainingBudget);
+
+      const providerInstance = this.providers[currentPlan.provider];
+      if (!providerInstance) {
+        // Should not happen, but safe fallback
+        continue;
+      }
+
+      const apiKeyPrefix = currentPlan.apiKey.substring(0, 8);
+      const cacheKey = `${currentPlan.provider}_${apiKeyPrefix}`;
+      
+      if (unhealthyKeysCache.has(cacheKey)) {
+        continue; // silently skip without redundant logs or checks
+      }
+
+      // Check health FIRST before incrementing attempt budget
+      const isHealthy = await this.aiHealthService.isHealthy(currentPlan.provider, apiKeyPrefix);
+      if (!isHealthy) {
+        this.logger.debug(`Skipping unhealthy key ${apiKeyPrefix} for provider ${currentPlan.provider}`);
+        unhealthyKeysCache.add(cacheKey); // Cache it so we skip it completely next time
+        continue;
+      }
+
+      // We are actually going to attempt it now.
+      context.attempt++;
+
       if (context.attempt > context.maxAttempts) {
         throw new AIServiceExhaustedError(
           traceId,
@@ -145,14 +181,6 @@ export class RetryManagerService {
           context.history,
           'Global maximum attempts exceeded.',
         );
-      }
-
-      const attemptTimeout = Math.min(this.AI_SERVICE_DEFAULT_TIMEOUT_MS, remainingBudget);
-
-      const providerInstance = this.providers[currentPlan.provider];
-      if (!providerInstance) {
-        // Should not happen, but safe fallback
-        continue;
       }
 
       this.logger.log(
@@ -187,6 +215,9 @@ export class RetryManagerService {
       const durationMs = Date.now() - attemptStartTime;
 
       if (response.success) {
+        // Mark healthy
+        await this.aiHealthService.markHealthy(currentPlan.provider, apiKeyPrefix);
+
         this.logger.log(
           `[AI_ATTEMPT_SUCCESS] trace=${traceId} task=${taskType} attempt=${context.attempt}/${context.maxAttempts} provider=${currentPlan.provider} model=${currentPlan.model} key=${currentPlan.keyIndex + 1}/${currentPlan.totalKeysForProvider} duration=${durationMs}ms tokens_in=${response.input_tokens} tokens_out=${response.output_tokens}`,
         );
@@ -225,6 +256,15 @@ export class RetryManagerService {
         `[AI_ATTEMPT_FAILED] trace=${traceId} task=${taskType} attempt=${context.attempt}/${context.maxAttempts} provider=${currentPlan.provider} model=${currentPlan.model} key=${currentPlan.keyIndex + 1}/${currentPlan.totalKeysForProvider} error=${errorCategory} duration=${durationMs}ms message="${response.error}"`,
       );
 
+      // Update health state in MongoDB based on error type
+      if (errorCategory === 'RATE_LIMITED' || errorCategory === 'OVERLOADED') {
+        await this.aiHealthService.markRateLimited(currentPlan.provider, apiKeyPrefix);
+        unhealthyKeysCache.add(cacheKey);
+      } else if (errorCategory === 'AUTH_ERROR') {
+        await this.aiHealthService.markInvalid(currentPlan.provider, apiKeyPrefix, response.error || 'Auth Error');
+        unhealthyKeysCache.add(cacheKey);
+      }
+
       context.history.push({
         provider: currentPlan.provider,
         model: currentPlan.model,
@@ -239,6 +279,12 @@ export class RetryManagerService {
       });
 
       const policy = getRetryPolicy(errorCategory);
+
+      if (policy.retrySameKey) {
+        // Decrement loop counter so we retry the exact same plan item on next iteration
+        i--;
+        continue;
+      }
 
       if (!policy.nextKey) {
         // Skip remaining keys for this provider
