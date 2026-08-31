@@ -1,6 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { RetryManagerService, aiServiceEvents } from './retry-manager.service';
+import { RetryManagerService } from './retry-manager.service';
 import { KeyPoolService } from './key-pool.service';
+import { AiHealthService } from './ai-health.service';
 import { GeminiProvider } from './providers/gemini.provider';
 import { GroqProvider } from './providers/groq.provider';
 import { MistralProvider } from './providers/mistral.provider';
@@ -8,133 +9,260 @@ import { GLMProvider } from './providers/glm.provider';
 import { OpenRouterProvider } from './providers/openrouter.provider';
 import { RouteConfig } from './router.service';
 import { AIServiceExhaustedError } from './errors/ai-service-exhausted.error';
-import { describe, it, expect, beforeEach, afterEach, jest } from '@jest/globals';
 
 describe('RetryManagerService', () => {
   let service: RetryManagerService;
   let keyPoolService: jest.Mocked<KeyPoolService>;
+  let aiHealthService: jest.Mocked<AiHealthService>;
   let geminiProvider: jest.Mocked<GeminiProvider>;
-  let mistralProvider: jest.Mocked<MistralProvider>;
-  
+  let openRouterProvider: jest.Mocked<OpenRouterProvider>;
+
   beforeEach(async () => {
     keyPoolService = {
       getKeysForProvider: jest.fn(),
+      getNextKey: jest.fn(),
     } as any;
-    
+
+    aiHealthService = {
+      isHealthy: jest.fn().mockResolvedValue(true),
+      markHealthy: jest.fn().mockResolvedValue(undefined),
+      markRateLimited: jest.fn().mockResolvedValue(undefined),
+      markInvalid: jest.fn().mockResolvedValue(undefined),
+    } as any;
+
     geminiProvider = {
       call: jest.fn(),
     } as any;
-    
-    mistralProvider = {
+
+    openRouterProvider = {
       call: jest.fn(),
     } as any;
-    
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         RetryManagerService,
         { provide: KeyPoolService, useValue: keyPoolService },
+        { provide: AiHealthService, useValue: aiHealthService },
         { provide: GeminiProvider, useValue: geminiProvider },
         { provide: GroqProvider, useValue: {} },
-        { provide: MistralProvider, useValue: mistralProvider },
+        { provide: MistralProvider, useValue: {} },
         { provide: GLMProvider, useValue: {} },
-        { provide: OpenRouterProvider, useValue: {} },
+        { provide: OpenRouterProvider, useValue: openRouterProvider },
       ],
     }).compile();
 
     service = module.get<RetryManagerService>(RetryManagerService);
-    jest.spyOn(aiServiceEvents, 'emit').mockImplementation(() => true);
   });
 
-  afterEach(() => {
-    jest.clearAllMocks();
-  });
-
-  it('should build deterministic attempt plan', () => {
-    keyPoolService.getKeysForProvider.mockImplementation((p) => {
-      if (p === 'gemini') return ['gem-1'];
-      if (p === 'mistral') return ['mis-1', 'mis-2'];
-      return [];
-    });
-    
-    const routes: RouteConfig[] = [
-      { provider: 'gemini', model: 'gemini-1' },
-      { provider: 'mistral', model: 'mistral-1' },
-    ];
-    
-    const plan = service.buildAttemptPlan(routes);
-    expect(plan).toHaveLength(3);
-    expect(plan[0]).toMatchObject({ provider: 'gemini', keyIndex: 0, apiKey: 'gem-1' });
-    expect(plan[1]).toMatchObject({ provider: 'mistral', keyIndex: 0, apiKey: 'mis-1' });
-    expect(plan[2]).toMatchObject({ provider: 'mistral', keyIndex: 1, apiKey: 'mis-2' });
-  });
-
-  it('should succeed on first attempt', async () => {
-    keyPoolService.getKeysForProvider.mockReturnValue(['gem-1']);
-    geminiProvider.call.mockResolvedValue({
-      success: true,
-      data: 'success',
-      input_tokens: 10,
-      output_tokens: 20,
-    });
-    
-    const res = await service.executeWithFallback('test', [{ provider: 'gemini', model: 'gem-1' }], 'prompt');
-    expect(res.success).toBe(true);
-    expect(res.fallback_used).toBe(false);
-    expect(geminiProvider.call).toHaveBeenCalledTimes(1);
-  });
-
-  it('should fallback to next key on timeout and return total_attempts', async () => {
-    keyPoolService.getKeysForProvider.mockReturnValue(['mis-1', 'mis-2']);
-    
-    mistralProvider.call
-      .mockRejectedValueOnce({ code: 'ETIMEDOUT' })
-      .mockResolvedValueOnce({
-        success: true,
-        data: 'success',
-        input_tokens: 10,
-        output_tokens: 20,
-      });
+  describe('buildAttemptPlan', () => {
+    it('should deduplicate attempts with same provider, model, and key', () => {
+      keyPoolService.getKeysForProvider.mockReturnValue(['key1']);
       
-    const res = await service.executeWithFallback('test', [{ provider: 'mistral', model: 'mistral-1' }], 'prompt');
-    expect(res.success).toBe(true);
-    expect(res.fallback_used).toBe(false); // Same provider
-    expect(mistralProvider.call).toHaveBeenCalledTimes(2);
+      const routes: RouteConfig[] = [
+        { provider: 'gemini', model: 'model-a' },
+        { provider: 'gemini', model: 'model-a' }, // Duplicate!
+      ];
+
+      const plan = service.buildAttemptPlan(routes);
+      
+      expect(plan.length).toBe(1);
+      expect(plan[0].provider).toBe('gemini');
+      expect(plan[0].model).toBe('model-a');
+    });
   });
 
-  it('should skip provider keys on auth error', async () => {
-    keyPoolService.getKeysForProvider.mockImplementation((p) => {
-      if (p === 'mistral') return ['mis-1', 'mis-2', 'mis-3'];
-      if (p === 'gemini') return ['gem-1'];
-      return [];
-    });
-    
-    mistralProvider.call.mockRejectedValue({ response: { status: 401 } });
-    geminiProvider.call.mockResolvedValue({
-      success: true,
-      data: 'success',
-      input_tokens: 1,
-      output_tokens: 1,
-    });
-    
-    const res = await service.executeWithFallback(
-      'test', 
-      [{ provider: 'mistral', model: 'm1' }, { provider: 'gemini', model: 'g1' }], 
-      'prompt'
-    );
-    
-    expect(res.success).toBe(true);
-    expect(res.fallback_used).toBe(true);
-    // Mistral has 3 keys, but because of 401 on first key, it skips the rest!
-    expect(mistralProvider.call).toHaveBeenCalledTimes(1);
-    expect(geminiProvider.call).toHaveBeenCalledTimes(1);
-  });
+  describe('executeWithFallback', () => {
+    const routes: RouteConfig[] = [
+      { provider: 'gemini', model: 'gemini-model' },
+      { provider: 'openrouter', model: 'or-model' }
+    ];
 
-  it('should throw exhaust error if all fail', async () => {
-    keyPoolService.getKeysForProvider.mockReturnValue(['gem-1']);
-    geminiProvider.call.mockRejectedValue({ response: { status: 500 } });
-    
-    await expect(
-      service.executeWithFallback('test', [{ provider: 'gemini', model: 'gem-1' }], 'prompt')
-    ).rejects.toThrow(AIServiceExhaustedError);
+    it('should select second healthy key if first is rate limited', async () => {
+      keyPoolService.getKeysForProvider.mockImplementation((provider) => {
+        if (provider === 'gemini') return ['key1', 'key2'];
+        return [];
+      });
+
+      // Key 1 Rate limited
+      geminiProvider.call.mockRejectedValueOnce({
+        response: { status: 429 },
+        message: 'Rate limit exceeded',
+      });
+
+      // Key 2 Success
+      geminiProvider.call.mockResolvedValueOnce({
+        success: true,
+        data: 'success-data',
+        input_tokens: 10,
+        output_tokens: 10,
+      } as any);
+
+      const result = await service.executeWithFallback('test', routes, 'prompt');
+      
+      expect(result.success).toBe(true);
+      expect(result.data).toBe('success-data');
+      expect(geminiProvider.call).toHaveBeenCalledTimes(2);
+      expect(geminiProvider.call).toHaveBeenNthCalledWith(1, 'gemini-model', 'key1', 'prompt', undefined, undefined, expect.any(Number));
+      expect(geminiProvider.call).toHaveBeenNthCalledWith(2, 'gemini-model', 'key2', 'prompt', undefined, undefined, expect.any(Number));
+    });
+
+    it('should skip unhealthy keys without consuming maxAttempts budget', async () => {
+      keyPoolService.getKeysForProvider.mockImplementation((provider) => {
+        if (provider === 'gemini') return ['key1', 'key2', 'key3'];
+        return [];
+      });
+
+      // Mark first two keys unhealthy
+      aiHealthService.isHealthy.mockImplementation(async (provider, keyPrefix) => {
+        if (keyPrefix === 'key1'.substring(0, 8)) return false;
+        if (keyPrefix === 'key2'.substring(0, 8)) return false;
+        return true;
+      });
+
+      geminiProvider.call.mockResolvedValueOnce({
+        success: true,
+        data: 'success-data',
+      } as any);
+
+      // maxAttempts is strictly 1. We skip 2 keys. If budget was consumed, it would fail.
+      const result = await service.executeWithFallback('test', routes, 'prompt', undefined, undefined, 1);
+      
+      expect(result.success).toBe(true);
+      expect(geminiProvider.call).toHaveBeenCalledTimes(1);
+      expect(geminiProvider.call).toHaveBeenCalledWith('gemini-model', 'key3', 'prompt', undefined, undefined, expect.any(Number));
+    });
+
+    it('should fallback to next provider if Gemini keys are exhausted', async () => {
+      keyPoolService.getKeysForProvider.mockImplementation((provider) => {
+        if (provider === 'gemini') return ['key1', 'key2'];
+        if (provider === 'openrouter') return ['or-key1'];
+        return [];
+      });
+
+      // Both Gemini keys rate limited
+      geminiProvider.call.mockRejectedValue({
+        response: { status: 429 },
+        message: 'Rate limit',
+      });
+
+      // OpenRouter success
+      openRouterProvider.call.mockResolvedValueOnce({
+        success: true,
+        data: 'or-data',
+      } as any);
+
+      const result = await service.executeWithFallback('test', routes, 'prompt');
+      
+      expect(result.success).toBe(true);
+      expect(result.provider).toBe('openrouter');
+      expect(result.fallback_used).toBe(true);
+      
+      expect(geminiProvider.call).toHaveBeenCalledTimes(2);
+      expect(openRouterProvider.call).toHaveBeenCalledTimes(1);
+    });
+
+    it('should rotate keys correctly on TIMEOUT instead of endlessly retrying the same key', async () => {
+      keyPoolService.getKeysForProvider.mockImplementation((provider) => {
+        if (provider === 'gemini') return ['key1', 'key2'];
+        return [];
+      });
+
+      // Key 1 Timeout
+      geminiProvider.call.mockRejectedValueOnce({
+        code: 'ETIMEDOUT',
+        message: 'Request timeout',
+      });
+
+      // Key 2 Success
+      geminiProvider.call.mockResolvedValueOnce({
+        success: true,
+        data: 'timeout-success',
+      } as any);
+
+      const result = await service.executeWithFallback('test', routes, 'prompt');
+      
+      expect(result.success).toBe(true);
+      expect(geminiProvider.call).toHaveBeenCalledTimes(2);
+      expect(geminiProvider.call).toHaveBeenNthCalledWith(1, 'gemini-model', 'key1', 'prompt', undefined, undefined, expect.any(Number));
+      expect(geminiProvider.call).toHaveBeenNthCalledWith(2, 'gemini-model', 'key2', 'prompt', undefined, undefined, expect.any(Number));
+    });
+
+    it('should respect global maxAttempts even across fallback providers', async () => {
+      keyPoolService.getKeysForProvider.mockImplementation((provider) => {
+        if (provider === 'gemini') return ['key1', 'key2'];
+        if (provider === 'openrouter') return ['or-key1'];
+        return [];
+      });
+
+      geminiProvider.call.mockRejectedValue({
+        response: { status: 500 },
+        message: 'Server error',
+      });
+
+      openRouterProvider.call.mockRejectedValue({
+        response: { status: 500 },
+        message: 'Server error',
+      });
+
+      await expect(
+        service.executeWithFallback('test', routes, 'prompt', undefined, undefined, 2)
+      ).rejects.toThrow(AIServiceExhaustedError);
+      
+      // Total attempts made: 2 (exhausted maxAttempts of 2)
+      // Attempt 1: Gemini key 1
+      // Attempt 2: Gemini key 2
+      // Then Exhausted. OpenRouter is never called because budget is 2.
+      expect(geminiProvider.call).toHaveBeenCalledTimes(2);
+      expect(openRouterProvider.call).not.toHaveBeenCalled();
+    });
+
+    it('should full provider cascade: Gemini ❌ -> OpenRouter ❌ -> Groq ✅', async () => {
+      // Setup mock keys for 3 providers
+      keyPoolService.getKeysForProvider.mockImplementation((provider) => {
+        if (provider === 'gemini') return ['g-key1', 'g-key2'];
+        if (provider === 'openrouter') return ['o-key1', 'o-key2'];
+        if (provider === 'groq') return ['q-key1'];
+        return [];
+      });
+
+      // Expand routes for this test
+      const fullRoutes = [
+        ...routes,
+        { provider: 'groq', model: 'groq-model' },
+      ];
+
+      // Gemini is globally RATE_LIMITED for both keys
+      geminiProvider.call.mockRejectedValue({
+        response: { status: 429 },
+        message: 'Rate limit',
+      });
+
+      // OpenRouter is globally RATE_LIMITED for both keys
+      openRouterProvider.call.mockRejectedValue({
+        response: { status: 429 },
+        message: 'Rate limit',
+      });
+
+      // Groq succeeds
+      const groqProvider = {
+        call: jest.fn().mockResolvedValue({ success: true, data: 'groq-success' }),
+      };
+      (service as any).providers['groq'] = groqProvider;
+
+      const result = await service.executeWithFallback('test', fullRoutes, 'prompt', undefined, undefined, 10);
+      
+      expect(result.success).toBe(true);
+      expect(result.data).toBe('groq-success');
+
+      // The attempt counter should only count ACTUAL calls.
+      // Wait, 429 RATE_LIMITED consumes an attempt and marks the key unhealthy. 
+      // But let's check how many calls were made.
+      expect(geminiProvider.call).toHaveBeenCalledTimes(2);
+      expect(openRouterProvider.call).toHaveBeenCalledTimes(2);
+      expect(groqProvider.call).toHaveBeenCalledTimes(1);
+
+      // The key is marked unhealthy inside AiHealthService, which prevents it from being called again.
+      expect(aiHealthService.markRateLimited).toHaveBeenCalledTimes(4); // 2 gemini + 2 openrouter
+    });
   });
 });
