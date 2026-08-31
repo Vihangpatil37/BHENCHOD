@@ -2,9 +2,12 @@ import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { TransformInterceptor } from './common/interceptors/transform.interceptor';
 import { SanitizationInterceptor } from './common/interceptors/sanitization.interceptor';
-import { HttpExceptionFilter } from './common/filters/http-exception.filter';
+import { GlobalExceptionFilter } from './common/filters/global-exception.filter';
 import { ValidationPipe } from '@nestjs/common';
 import helmet from 'helmet';
+
+// Suppress dotenv injected env (0) logs which are verbose and unnecessary
+process.env.DOTENV_CONFIG_QUIET = 'true';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -40,7 +43,7 @@ async function bootstrap() {
   );
 
   // Register global exception filter
-  app.useGlobalFilters(new HttpExceptionFilter());
+  app.useGlobalFilters(new GlobalExceptionFilter());
 
   // Fail-fast: validate critical secrets at startup
   if (
