@@ -270,7 +270,7 @@ export class CareersService implements OnModuleInit {
       .findOneAndUpdate(
         { career_code: careerCode },
         { $set: dto },
-        { new: true },
+        { returnDocument: 'after' },
       )
       .exec();
     if (!career) {
