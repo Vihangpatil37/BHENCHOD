@@ -9,4 +9,5 @@ export class ChatResponseDto {
   model_used: string;
   cached: boolean;
   latency_ms: number;
+  conversation_id?: string;
 }

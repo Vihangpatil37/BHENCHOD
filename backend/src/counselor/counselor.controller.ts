@@ -28,14 +28,15 @@ export class CounselorController {
 
     if (!conversationId) {
       const session = await this.counselorService.startSession(userId, {});
-      conversationId = String(session._id);
+      conversationId = session._id.toString();
     }
 
-    return this.counselorService.sendMessage(
+    const response = await this.counselorService.sendMessage(
       userId,
       conversationId,
       dto.message,
     );
+    return { ...response, conversation_id: conversationId };
   }
 
   @Get('conversations')

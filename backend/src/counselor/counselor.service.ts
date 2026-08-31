@@ -75,11 +75,16 @@ export class CounselorService {
     return conversation;
   }
 
-  async getSessions(userId: string): Promise<Conversation[]> {
-    return this.conversationModel
+  async getSessions(userId: string): Promise<any[]> {
+    const sessions = await this.conversationModel
       .find({ user_id: userId })
+      .lean()
       .sort({ last_message_at: -1 })
       .exec();
+    return sessions.map((s: any) => ({
+      ...s,
+      _id: s._id.toString(),
+    }));
   }
 
   async getSessionHistory(
