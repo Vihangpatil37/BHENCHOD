@@ -79,10 +79,15 @@ export function classifyAIError(error: any): AIErrorCategory {
 export function getRetryPolicy(category: AIErrorCategory): RetryPolicy {
   switch (category) {
     case 'TIMEOUT':
+    case 'NETWORK_ERROR':
+      return {
+        retrySameKey: false,
+        nextKey: true,
+        nextProvider: true,
+      };
     case 'RATE_LIMITED':
     case 'OVERLOADED':
     case 'SERVER_ERROR':
-    case 'NETWORK_ERROR':
     case 'UNKNOWN':
       return {
         retrySameKey: false,
@@ -92,7 +97,7 @@ export function getRetryPolicy(category: AIErrorCategory): RetryPolicy {
     case 'AUTH_ERROR':
       return {
         retrySameKey: false,
-        nextKey: false, // Skip provider keys
+        nextKey: true,
         nextProvider: true,
       };
     case 'INVALID_REQUEST':
