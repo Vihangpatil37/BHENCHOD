@@ -13,8 +13,12 @@ export class KeyPoolService {
   private loadKeysFromEnv() {
     const providers = ['gemini', 'groq', 'mistral', 'glm', 'openrouter'];
     for (const provider of providers) {
-      const envVarName = `${provider.toUpperCase()}_API_KEYS`;
-      const envVal = process.env[envVarName];
+      const p = provider.toUpperCase();
+      const envVal = 
+        process.env[`${p}_API_KEYS`] || 
+        process.env[`${p}_API_KEY`] || 
+        (provider === 'glm' ? process.env['ZHIPU_API_KEY'] : undefined);
+
       if (envVal) {
         this.keys[provider] = envVal
           .split(',')
@@ -27,7 +31,7 @@ export class KeyPoolService {
       } else {
         this.keys[provider] = [];
         this.logger.warn(
-          `No API keys found for provider: ${provider} (Env variable: ${envVarName})`,
+          `No API keys found for provider: ${provider} (Env variables: ${p}_API_KEYS / ${p}_API_KEY)`,
         );
       }
     }
