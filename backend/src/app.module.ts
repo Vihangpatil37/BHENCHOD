@@ -13,6 +13,7 @@ import { CounselorModule } from './counselor/counselor.module';
 import { DashboardModule } from './dashboard/dashboard.module';
 import { AnalyticsModule } from './analytics/analytics.module';
 import { HistoryModule } from './history/history.module';
+import { QueueModule } from './queue/queue.module';
 import { JwtAuthGuard } from './auth/guards/jwt-auth.guard';
 import { RolesGuard } from './common/guards/roles.guard';
 
@@ -43,6 +44,7 @@ import { RolesGuard } from './common/guards/roles.guard';
     DashboardModule,
     AnalyticsModule,
     HistoryModule,
+    QueueModule,
   ],
   providers: [
     {
