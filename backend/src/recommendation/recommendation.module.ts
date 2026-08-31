@@ -15,6 +15,7 @@ import { RecommendationController } from './recommendation.controller';
 import { CareersModule } from '../careers/careers.module';
 import { OnboardingModule } from '../onboarding/onboarding.module';
 import { AIServiceModule } from '../ai-service/ai-service.module';
+import { QueueModule } from '../queue/queue.module';
 import { RECOMMENDATION_ENGINE_VERSION } from './config/recommendation.constants';
 import { AcademicEngine } from './engines/academic.engine';
 import { InterestEngine } from './engines/interest.engine';
@@ -27,6 +28,7 @@ import { DiversityEngine } from './engines/diversity.engine';
 import { OpportunityEngine } from './engines/opportunity.engine';
 import { ConfidenceEngine } from './engines/confidence.engine';
 import { ExplainabilityEngine } from './engines/explainability.engine';
+import { forwardRef } from '@nestjs/common';
 
 @Module({
   imports: [
@@ -40,6 +42,7 @@ import { ExplainabilityEngine } from './engines/explainability.engine';
     CareersModule,
     OnboardingModule,
     AIServiceModule,
+    forwardRef(() => QueueModule),
   ],
   controllers: [RecommendationController],
   providers: [

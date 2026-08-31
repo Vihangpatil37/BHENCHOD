@@ -6,18 +6,26 @@ import {
   Request,
   HttpCode,
   HttpStatus,
+  Inject,
+  forwardRef,
 } from '@nestjs/common';
 import { RecommendationService } from './recommendation.service';
 import { FeedbackDto } from './dto/recommendation.dto';
+import { QueueService } from '../queue/queue.service';
 
 @Controller('recommendations')
 export class RecommendationController {
-  constructor(private readonly recommendationService: RecommendationService) {}
+  constructor(
+    private readonly recommendationService: RecommendationService,
+    @Inject(forwardRef(() => QueueService))
+    private readonly queueService: QueueService,
+  ) {}
 
   @Post('generate')
-  @HttpCode(HttpStatus.OK)
+  @HttpCode(HttpStatus.ACCEPTED)
   async generate(@Request() req: any) {
-    return this.recommendationService.generateRecommendation(req.user.user_id);
+    const jobId = await this.queueService.enqueueRecommendationGeneration(req.user.user_id);
+    return { jobId, message: 'Recommendation generation started' };
   }
 
   @Get('latest')
@@ -26,9 +34,10 @@ export class RecommendationController {
   }
 
   @Post('regenerate')
-  @HttpCode(HttpStatus.OK)
+  @HttpCode(HttpStatus.ACCEPTED)
   async regenerate(@Request() req: any) {
-    return this.recommendationService.regenerate(req.user.user_id);
+    const jobId = await this.queueService.enqueueRecommendationRegeneration(req.user.user_id);
+    return { jobId, message: 'Recommendation regeneration started' };
   }
 
   @Post('feedback')
