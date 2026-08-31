@@ -66,15 +66,15 @@ describe('AuthService', () => {
       ).rejects.toThrow(ConflictException);
     });
 
-    it('creates user for new email', async () => {
+    it('creates user for new email and returns setup token', async () => {
       execMock.mockResolvedValue(null);
       const result = await service.register({
         email: 'new@t.com',
         password: 'Password1',
         full_name: 'New',
       });
-      expect(result.email).toBe('new@t.com');
-      expect(result).not.toHaveProperty('password_hash');
+      expect(result.message).toContain('2FA setup');
+      expect(result.setup_token).toBe('mock-token');
     });
   });
 
@@ -106,16 +106,16 @@ describe('AuthService', () => {
       expect(user.locked_until).toBeInstanceOf(Date);
     });
 
-    it('returns tokens on success and resets attempts', async () => {
-      const user = makeUser({ failed_login_attempts: 2 });
+    it('returns requires_2fa_setup on success and resets attempts if 2fa not enabled', async () => {
+      const user = makeUser({ failed_login_attempts: 2, is_two_factor_enabled: false });
       execMock.mockResolvedValue(user);
 
       const result = await service.login({
         email: 't@t.com',
         password: 'password123',
       });
-      expect(result.access_token).toBe('mock-token');
-      expect(result.user).toBeDefined();
+      expect(result.requires_2fa_setup).toBe(true);
+      expect(result.setup_token).toBe('mock-token');
       expect(user.failed_login_attempts).toBe(0);
       expect(user.locked_until).toBeUndefined();
     });
