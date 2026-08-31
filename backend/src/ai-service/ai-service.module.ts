@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
 import { AIRequestLog, AIRequestLogSchema } from './ai-request-log.schema';
+import { AiHealth, AiHealthSchema } from './schemas/ai-health.schema';
 import { KeyPoolService } from './key-pool.service';
 import { RouterService } from './router.service';
 import { PromptBuilderService } from './prompt-builder.service';
@@ -10,6 +11,7 @@ import { JsonValidatorService } from './json-validator.service';
 import { TokenLoggerService } from './token-logger.service';
 import { AIServiceClient } from './ai-service.client';
 import { AIServiceController } from './ai-service.controller';
+import { AiHealthService } from './ai-health.service';
 
 // Providers
 import { GeminiProvider } from './providers/gemini.provider';
@@ -22,6 +24,7 @@ import { OpenRouterProvider } from './providers/openrouter.provider';
   imports: [
     MongooseModule.forFeature([
       { name: AIRequestLog.name, schema: AIRequestLogSchema },
+      { name: AiHealth.name, schema: AiHealthSchema },
     ]),
   ],
   controllers: [AIServiceController],
@@ -34,6 +37,7 @@ import { OpenRouterProvider } from './providers/openrouter.provider';
     JsonValidatorService,
     TokenLoggerService,
     AIServiceClient,
+    AiHealthService,
     GeminiProvider,
     GroqProvider,
     MistralProvider,
@@ -46,6 +50,7 @@ import { OpenRouterProvider } from './providers/openrouter.provider';
     RouterService,
     PromptBuilderService,
     CacheService,
+    AiHealthService,
   ],
 })
 export class AIServiceModule {}
