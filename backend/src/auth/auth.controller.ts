@@ -35,14 +35,7 @@ export class AuthController {
     return this.authService.login(dto);
   }
 
-  @Public()
-  @UseGuards(ThrottlerGuard)
-  @Post('google')
-  @HttpCode(HttpStatus.OK)
-  async googleLogin(@Body('id_token') idToken: string) {
-    if (!idToken) throw new BadRequestException('id_token is required');
-    return this.authService.loginWithGoogle(idToken);
-  }
+
 
   @Public()
   @UseGuards(ThrottlerGuard)

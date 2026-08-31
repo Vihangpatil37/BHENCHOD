@@ -14,7 +14,6 @@ import * as bcrypt from 'bcrypt';
 import { randomUUID, randomBytes } from 'crypto';
 import { authenticator } from 'otplib';
 import * as qrcode from 'qrcode';
-import axios from 'axios';
 
 @Injectable()
 export class AuthService {
@@ -60,73 +59,7 @@ export class AuthService {
     };
   }
 
-  async loginWithGoogle(idToken: string) {
-    try {
-      const response = await axios.get(`https://oauth2.googleapis.com/tokeninfo?id_token=${idToken}`);
-      const data = response.data;
-      
-      if (data.aud !== process.env.GOOGLE_CLIENT_ID) {
-        throw new UnauthorizedException('Invalid Google Client ID');
-      }
-      
-      if (data.email_verified !== 'true') {
-        throw new UnauthorizedException('Google email not verified');
-      }
 
-      let user = await this.userModel.findOne({
-        $or: [{ google_id: data.sub }, { email: data.email.toLowerCase() }]
-      }).select('+is_two_factor_enabled').exec();
-
-      if (!user) {
-        const userId = randomUUID().replace(/-/g, '');
-        user = new this.userModel({
-          user_id: userId,
-          email: data.email.toLowerCase(),
-          full_name: data.name || data.email,
-          google_id: data.sub,
-          provider: 'google',
-          role: 'student',
-          failed_login_attempts: 0,
-          is_two_factor_enabled: false,
-        });
-        await user.save();
-      } else if (!user.google_id) {
-        user.google_id = data.sub;
-        await user.save();
-      }
-
-      if (user.locked_until && user.locked_until > new Date()) {
-        const waitTime = Math.ceil((user.locked_until.getTime() - Date.now()) / 1000 / 60);
-        throw new UnauthorizedException(`Account is locked. Try again in ${waitTime} minutes.`);
-      }
-
-      user.last_login = new Date();
-      await user.save();
-
-      if (!user.is_two_factor_enabled) {
-        const setupToken = this.jwtService.sign(
-          { sub: user.user_id, email: user.email, setup_2fa: true },
-          { secret: process.env.JWT_ACCESS_SECRET, expiresIn: '15m' }
-        );
-        return {
-          requires_2fa_setup: true,
-          setup_token: setupToken,
-        };
-      }
-
-      const twoFactorToken = this.jwtService.sign(
-        { sub: user.user_id, email: user.email, verify_2fa: true },
-        { secret: process.env.JWT_ACCESS_SECRET, expiresIn: '5m' }
-      );
-
-      return {
-        requires_2fa: true,
-        two_factor_token: twoFactorToken,
-      };
-    } catch (error) {
-      throw new UnauthorizedException('Invalid Google token');
-    }
-  }
 
   async login(dto: LoginDto) {
     const user = await this.userModel
