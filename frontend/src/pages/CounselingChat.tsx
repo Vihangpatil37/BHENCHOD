@@ -126,12 +126,17 @@ export const CounselingChat: React.FC = () => {
 
       const res: any = await client.post('/counselor/chat', payload);
 
+      if (res.jobId) {
+        const { pollJob } = await import('../api/client');
+        await pollJob(res.jobId, 1500, 120);
+      }
+
       if (!activeConvId && res.conversation_id) {
         setActiveConvId(res.conversation_id);
       }
 
-      if (res.response) {
-        const resConv: any = await client.get(`/counselor/conversations/${activeConvId}`);
+      if (res.response || res.jobId) {
+        const resConv: any = await client.get(`/counselor/conversations/${activeConvId || res.conversation_id}`);
         const rawMsgs = Array.isArray(resConv) ? resConv : resConv.messages || [];
         const mapped = rawMsgs.map((m: any) => ({
           ...m,
@@ -150,7 +155,11 @@ export const CounselingChat: React.FC = () => {
     if (!activeConvId) return;
     setRegenerating(true);
     try {
-      await client.post('/counselor/regenerate', { conversation_id: activeConvId });
+      const res: any = await client.post('/counselor/regenerate', { conversation_id: activeConvId });
+      if (res.jobId) {
+        const { pollJob } = await import('../api/client');
+        await pollJob(res.jobId, 1500, 120);
+      }
       await fetchMessages(activeConvId);
     } catch (err: any) {
       alert(err.message || 'Regeneration failed');
