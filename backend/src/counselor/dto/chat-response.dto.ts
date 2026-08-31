@@ -5,9 +5,11 @@ export class SearchResultDto {
 }
 
 export class ChatResponseDto {
-  response: string;
-  model_used: string;
-  cached: boolean;
-  latency_ms: number;
+  response?: string;
+  model_used?: string;
+  cached?: boolean;
+  latency_ms?: number;
   conversation_id?: string;
+  jobId?: string;
+  message?: string;
 }
