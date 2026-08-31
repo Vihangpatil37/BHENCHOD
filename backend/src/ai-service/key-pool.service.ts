@@ -57,4 +57,12 @@ export class KeyPoolService {
       index: idx,
     };
   }
+
+  // Map a prefix back to its array index without exposing the key
+  getKeyIndex(provider: string, apiKeyPrefix: string): number {
+    const name = provider.toLowerCase();
+    const keys = this.keys[name];
+    if (!keys) return -1;
+    return keys.findIndex(k => k.startsWith(apiKeyPrefix));
+  }
 }
